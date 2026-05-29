@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_12 record(s). Generated from `history.jsonl` — do not edit by hand._
+_13 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -16,3 +16,4 @@ _12 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 9 | 2026-05-29T20:03:33 | 0.0001 | 0.32458 | 0.32457 | +0.00001 | 18,689 | 18,696 | +0.04% | rejected | AdamW weight_decay 0 -> 1e-4 (engage the decoupled L2-to-zero knob that has never been used) |
 | 10 | 2026-05-29T20:07:33 | 0.0001 | 0.32458 | 0.33344 | -0.00886 | 18,689 | 18,703 | +0.07% | rejected | 500-step linear warmup multiplied on top of cosine LR schedule (motivated by w[0] \|grad\|~70, w[27] \|grad\|~40 -- Adam moments cold at step 0) |
 | 11 | 2026-05-29T20:09:57 | 0.0001 | 0.32458 | 0.32457 | +0.00001 | 18,689 | 18,689 | +0.00% | rejected | PENALTY_W_L2 0.5 -> 1.0 (double L2-to-default prior strength; iter 3 weakening was worse, so test the other direction) |
+| 12 | 2026-05-29T20:17:44 | 0.0001 | 0.32458 | 0.32458 | -0.00000 | 18,689 | 18,734 | +0.24% | rejected | Lower clip floor for w[11] (LT fail_d_exp) and w[20] (ST fail_d_exp) from 0.001 to 0.0; targets 36.8%/36.3% floor saturation. d^(-0)=1.0 safe. |
