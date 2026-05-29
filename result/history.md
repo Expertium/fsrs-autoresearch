@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_7 record(s). Generated from `history.jsonl` — do not edit by hand._
+_8 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Summary | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Reason |
 |--:|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -11,3 +11,4 @@ _7 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 4 | 2026-05-29T15:36:19 | RECENCY_C0 0.25->0.10, RECENCY_C1 0.75->0.90 (downweight old reviews further; preserve newest weight=1.0) | 0.0001 | 0.32498 | 0.32458 | +0.00040 | 18,563 | 18,563 | +0.00% | accepted | improvement +0.00040 > threshold 0.0001 (4x). Complexity unchanged. Improvement appears in both short_term (-0.00063) and long_term (-0.00050) splits — model generalizes better when older reviews are downweighted more aggressively. Again loss: 1.404->1.401. New champion at iter 4. |
 | 5 | 2026-05-29T15:38:27 | RECENCY_C0 0.10->0.05, C1 0.90->0.95 (push recency further along axis that worked in iter 4) | 0.0001 | 0.32458 | 0.32456 | +0.00001 | 18,563 | 18,563 | +0.00% | rejected | improvement +0.00001 < threshold 0.0001. The recency-weighting axis diminishing-returns past C0=0.10 — most of the gain was captured by iter 4. Iter 4 (C0=0.10) remains champion. |
 | 6 | 2026-05-29T15:45:06 | LR 2e-2 -> 1e-2 (halve initial LR; testing whether iter 4 recency shift changed LR optimum) | 0.0001 | 0.32458 | 0.32514 | -0.00056 | 18,563 | 18,563 | +0.00% | rejected | improvement -0.00056 < threshold 0.0001 (variant is markedly WORSE). Halving LR undertrained — cosine annealing from 1e-2 decays to 0 across 8 epochs, leaving the model far from its loss minimum. LR=2e-2 confirmed as a good initial rate. Original LR restored. |
+| 7 | 2026-05-29T15:59:27 | cosine LR scheduler eta_min 0.0 -> 0.05 (keep LR non-zero at end of decay; tests whether cosine->0 leaves loss on the table) | 0.0001 | 0.32458 | 0.32452 | +0.00005 | 18,689 | 18,691 | +0.01% | rejected | improvement +0.00006 < threshold 0.0001 (signal-noise). Direction matched iter 6 reversed: floor-at-5%-of-initial-LR moved LL the RIGHT way (vs iter 6 which destroyed +0.00056). Confirms cosine->0 endpoint leaves a small crumb on the table but eta_min=0.05 is too low a floor. Original scheduler restored. Follow-up: try eta_min=0.10-0.20, or warm restart / multistage decay. |
