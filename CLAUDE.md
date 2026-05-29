@@ -262,6 +262,12 @@ common if you bolt on a new mechanism without simplifying anything else.
 ### Pre-submission checklist (verify silently before writing the patch)
 
 - [ ] Forgetting curve monotonic in `delta_t` across the full clamp range?
+- [ ] If a clamp lower bound was moved into ≤ 0 territory (i.e. the param
+      is now allowed to be zero or negative), trace every formula that
+      consumes `w[i]` and confirm it still does the right thing for those
+      values. `torch.pow(base, -w[i])` blows up when `w[i]` flips sign,
+      `s ** -w[33]` reverses curvature, `exp(w[7] - 1.5)` is fine but
+      `log(w[i])` would die, etc. Don't hand-wave this — read each call site.
 - [ ] `w[0..3]` still ordered after any init/clamp changes?
 - [ ] `stability_after_review` monotonic in rating?
 - [ ] Higher `D` still slows `S` growth?
