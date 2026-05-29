@@ -55,7 +55,16 @@ float fsrs7_forgetting_curve(
 ) {
     const float t_over_s = elapsed_time / state.s;
 
-    const float decay1 = -fsrs_params.decay1;
+    // Stability modulation of the FAST component's decay (short-term curve
+    // shape). decay1_mag = clamp(decay1 * S^s_decay1, 0.01, 0.95); s_decay1=0
+    // recovers -fsrs_params.decay1 exactly (decay1 in [0.01,0.25]). The fast
+    // component dominates only at small S, so this targets short-term (sub-day)
+    // forgetting and barely touches high-S recall. Clamp keeps base1^(1/decay1)
+    // float-safe; base1<1 => factor1>0, so r1 stays monotone with p(0)=1,p(inf)=0.
+    const float decay1_mag = fsrs7_clamp(
+        fsrs_params.decay1 * powf(state.s, fsrs_params.s_decay1),
+        0.01f, 0.95f);
+    const float decay1 = -decay1_mag;
     const float factor1 = powf(fsrs_params.base1, 1.0f / decay1) - 1.0f;
     const float r1 = powf(1.0f + factor1 * t_over_s, decay1);
 

@@ -63,6 +63,15 @@ struct fsrs_params_t {
     // = no D-dependence. The clamp keeps |decay| in the float-safe range so
     // base^(1/decay) never overflows; endpoints p(0)=1, p(inf)=0 still hold.
     float d_decay;
+
+    // 37: Stability modulation of the FAST-forgetting component's DECAY.
+    // decay1_mag = clamp(decay1 * powf(S, s_decay1), 0.01, 0.95). Default 0 =
+    // no S-dependence (recovers decay1 exactly; decay1 stays in [0.01,0.25]).
+    // The fast component dominates the mixture only at small S, so this lever
+    // reshapes the short-term (sub-day) curve while staying near-invisible to
+    // high-S recall predictions. Clamp keeps base1^(1/decay1) float-safe and
+    // endpoints p(0)=1, p(inf)=0 hold (base1<1 => factor1>0, monotone).
+    float s_decay1;
 };
 
 __device__

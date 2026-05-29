@@ -123,6 +123,7 @@ clipper, diagnostics table, and this section).
 | `w[16..24]` | Short-term stability update |
 | `w[25..26]` | Long/short transition function |
 | `w[27..34]` | 8-param forgetting curve |
+| `w[35..37]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
 Training: 8 epochs, batch 1024, Adam, lr 2e-2, betas (0.8, 0.85).
 Loss = log-loss(per-review) + sched_penalty_1 + sched_penalty_2 + L2-to-defaults.

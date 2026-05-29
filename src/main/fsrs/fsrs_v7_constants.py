@@ -44,6 +44,7 @@ FSRS7_DEFAULT_35_VALUES = (
     0.3862,
     0.0,  # 35 d_weight (difficulty modulation of forgetting curve; 0 = neutral)
     0.0,  # 36 d_decay (difficulty modulation of slow-component decay/shape; 0 = neutral)
+    0.0,  # 37 s_decay1 (stability modulation of fast-component decay; 0 = neutral)
 )
 
 FSRS_MIN_VALUES = (
@@ -84,6 +85,7 @@ FSRS_MIN_VALUES = (
     0.1,
     -0.5,  # 35 d_weight min
     -0.3,  # 36 d_decay min
+    -0.3,  # 37 s_decay1 min
 )
 
 FSRS_MAX_VALUES = (
@@ -124,6 +126,7 @@ FSRS_MAX_VALUES = (
     1.1,
     0.5,  # 35 d_weight max
     0.3,  # 36 d_decay max
+    0.3,  # 37 s_decay1 max
 )
 
 FSRS7_L2_SIGMA_35_VALUES = (
@@ -164,4 +167,5 @@ FSRS7_L2_SIGMA_35_VALUES = (
     0.1489,
     0.2,  # 35 d_weight sigma (weak L2 prior toward 0 so data can move it)
     0.15,  # 36 d_decay sigma (weak prior; EB anchor lets population mean drift)
+    0.15,  # 37 s_decay1 sigma (weak prior; mirrors d_decay)
 )
