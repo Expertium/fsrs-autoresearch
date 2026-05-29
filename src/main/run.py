@@ -13,6 +13,7 @@ import time
 
 from src.autoresearch.complexity import score_paths
 from src.autoresearch.diagnostics import (
+    GradTracker,
     build_diagnostics_dict,
     format_markdown_report,
 )
@@ -276,7 +277,7 @@ def train_iter(
     seq_len: torch.Tensor,
     threads_per_block: int,
     batch_num_inner_batches: int,
-) -> tuple[torch.Tensor, fsrs_v7_optimizer.AdamWState, torch.Tensor]:
+) -> tuple[torch.Tensor, fsrs_v7_optimizer.AdamWState, torch.Tensor, torch.Tensor]:
     remaining = num_training_steps_cat - step_i_cat
     _, indices = torch.topk(remaining, k=batch_num_inner_batches)
     active_mask = remaining[indices] > 0
@@ -353,7 +354,7 @@ def train_iter(
     new_flat_fsrs_params = fsrs_v7_helpers.apply_parameter_clipper(new_flat_fsrs_params)
     new_step_i_cat = step_i_cat + active_params_mask_i
 
-    return new_flat_fsrs_params, new_optim_state, new_step_i_cat
+    return new_flat_fsrs_params, new_optim_state, new_step_i_cat, flat_grad
 
 
 def build_train_setup(data: Data, users: list[int]) -> TrainSetup:
@@ -403,6 +404,7 @@ def train(
     fsrs_params: torch.Tensor,
     data: Data,
     train_setup: TrainSetup,
+    tracker: GradTracker | None = None,
 ):
     train_split_lengths_cat = data.train_split_lengths
     num_training_steps_per_epoch_cat = train_setup.num_training_steps_per_epoch_cat
@@ -424,7 +426,7 @@ def train(
     flat_fsrs_params = fsrs_params.view(-1, fsrs_params.size(-1))
     optim_state = fsrs_v7_optimizer.init_adamw_state(flat_fsrs_params)
     for iter in tqdm(range(train_splits_length_cat_max), desc="Training", smoothing=0.06, disable=HIDE_PROGRESS):
-        flat_fsrs_params, optim_state, step_i_cat = train_iter(
+        flat_fsrs_params, optim_state, step_i_cat, flat_grad = train_iter(
             flat_fsrs_params,
             optim_state,
             step_i_cat,
@@ -442,6 +444,8 @@ def train(
             THREADS_PER_BLOCK,
             batch_num_inner_batches,
         )
+        if tracker is not None:
+            tracker.observe(flat_grad, step_i_cat, num_training_steps_per_epoch_cat)
 
     assert (step_i_cat >= num_training_steps_cat).all()
     assert (step_i_cat == num_training_steps_cat).any()
@@ -561,9 +565,10 @@ def run(
     users: list[int],
     data: Data,
     train_setup: TrainSetup,
+    tracker: GradTracker | None = None,
 ) -> torch.Tensor:
     fsrs_params = make_initial_fsrs_params(len(users))
-    fsrs_params = train(fsrs_params, data, train_setup)
+    fsrs_params = train(fsrs_params, data, train_setup, tracker=tracker)
     return fsrs_params
 
 
@@ -572,6 +577,7 @@ def train_cached_split(
     split_i: int,
     users: list[int],
     review_data,
+    tracker: GradTracker | None = None,
 ) -> torch.Tensor:
     train_data, train_setup = load_cached_train_only(
         cache_env,
@@ -579,7 +585,7 @@ def train_cached_split(
         DEVICE,
         review_data,
     )
-    return run(users, train_data, train_setup).detach()
+    return run(users, train_data, train_setup, tracker=tracker).detach()
 
 
 def evaluate_cached_split(
@@ -606,6 +612,7 @@ def run_cached_split(
     split_count: int,
     user_subset: list[int],
     user_max_train_split_lengths: torch.Tensor,
+    tracker: GradTracker | None = None,
 ) -> EvaluationResult:
     user_indices = torch.tensor(user_subset, dtype=torch.int32) - 1
     split_work = int(user_max_train_split_lengths[user_indices].sum().item())
@@ -617,7 +624,7 @@ def run_cached_split(
 
     torch.cuda.empty_cache()
     review_data = load_cached_review_data(cache_env, split_i, DEVICE)
-    fsrs_params = train_cached_split(cache_env, split_i, user_subset, review_data)
+    fsrs_params = train_cached_split(cache_env, split_i, user_subset, review_data, tracker=tracker)
 
     torch.cuda.empty_cache()
     result = evaluate_cached_split(cache_env, split_i, user_subset, review_data, fsrs_params)
@@ -662,6 +669,7 @@ def main() -> None:
     cache_env = load_or_rebuild_tensor_cache(env, user_splits)
 
     eval_aggregate = EvaluationAggregate()
+    grad_tracker = GradTracker()
     try:
         for split_i, user_subset in enumerate(user_splits):
             result = run_cached_split(
@@ -670,6 +678,7 @@ def main() -> None:
                 len(user_splits),
                 user_subset,
                 user_max_train_split_lengths,
+                tracker=grad_tracker,
             )
             eval_aggregate.add(result)
     finally:
@@ -710,10 +719,10 @@ def main() -> None:
     if WRITE_RESULT:
         write_evaluation_results(eval_aggregate)
 
-    _write_diagnostics(eval_aggregate)
+    _write_diagnostics(eval_aggregate, grad_tracker.summarise())
 
 
-def _write_diagnostics(eval_aggregate: EvaluationAggregate) -> None:
+def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict | None = None) -> None:
     """Produce result/diagnostics.{json,md} for the autoresearch loop."""
     def _flatten(bucket_dict: dict[str, dict[str, float]], names: tuple[str, ...]) -> dict:
         out: dict[str, float | int] = {}
@@ -747,7 +756,7 @@ def _write_diagnostics(eval_aggregate: EvaluationAggregate) -> None:
         rows=rows,
         loss_by_rating=flat_loss_by_rating,
         loss_by_delta_t=flat_loss_by_delta_t,
-        grad_summary=None,  # GradTracker not wired into train_iter yet
+        grad_summary=grad_summary,
         complexity_score=complexity_score,
     )
 
