@@ -708,13 +708,14 @@ def main() -> None:
             f"update EXPECTED_N_REVIEWS in src/main/config.py."
         )
 
-    fsrs_param_summary = eval_aggregate.fsrs_param_summary()
-    print(f"FSRS params count: {fsrs_param_summary.count}")
-    print(f"FSRS params mean: {format_param_stat(fsrs_param_summary.mean)}")
-    print(f"FSRS params median: {format_param_stat(fsrs_param_summary.median)}")
-    print(f"FSRS params bottom 10%: {format_param_stat(fsrs_param_summary.bottom_10)}")
-    print(f"FSRS params top 10%: {format_param_stat(fsrs_param_summary.top_10)}")
-    print(f"FSRS params std: {format_param_stat(fsrs_param_summary.std)}")
+    if not HIDE_PROGRESS:
+        fsrs_param_summary = eval_aggregate.fsrs_param_summary()
+        print(f"FSRS params count: {fsrs_param_summary.count}")
+        print(f"FSRS params mean: {format_param_stat(fsrs_param_summary.mean)}")
+        print(f"FSRS params median: {format_param_stat(fsrs_param_summary.median)}")
+        print(f"FSRS params bottom 10%: {format_param_stat(fsrs_param_summary.bottom_10)}")
+        print(f"FSRS params top 10%: {format_param_stat(fsrs_param_summary.top_10)}")
+        print(f"FSRS params std: {format_param_stat(fsrs_param_summary.std)}")
 
     if WRITE_RESULT:
         write_evaluation_results(eval_aggregate)
