@@ -254,8 +254,8 @@ def run_cpp_train_pass(
         batch_fsrs_params,
     )
 
-def masked_penalty(parameters_kp, mask_k, batch_size_k, training_set_size_k):
-    return (mask_k * fsrs_v7_helpers.penalty_loss(parameters_kp, batch_size_k, training_set_size_k)).sum()
+def masked_penalty(parameters_kp, mask_k, batch_size_k, training_set_size_k, anchor_p):
+    return (mask_k * fsrs_v7_helpers.penalty_loss(parameters_kp, batch_size_k, training_set_size_k, anchor_p)).sum()
 
 _penalty_grad = torch.func.grad(masked_penalty, argnums=0)
 
@@ -325,7 +325,10 @@ def train_iter(
         threads_per_block,
     )
     selected_grad = (per_example_grad * legal.unsqueeze(-1)).sum(dim=1)
-    penalty_grad = _penalty_grad(batch_fsrs_params, active_mask, train_r - train_l + 1, train_split_lengths_cat[indices])
+    # iter 24: empirical-Bayes anchor = live population mean over all (user,
+    # split) rows, detached so it acts as a fixed shrinkage target this step.
+    anchor_p = flat_fsrs_params.mean(dim=0).detach()
+    penalty_grad = _penalty_grad(batch_fsrs_params, active_mask, train_r - train_l + 1, train_split_lengths_cat[indices], anchor_p)
     grad = selected_grad + penalty_grad
     flat_grad = torch.zeros_like(flat_fsrs_params).scatter_add(
         0,
