@@ -128,13 +128,13 @@ def render_markdown(records: Iterable[dict]) -> str:
         "",
         f"_{len(rows)} record(s). Generated from `{JSONL_NAME}` — do not edit by hand._",
         "",
-        "| # | Time (UTC) | Summary | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Reason |",
-        "|--:|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|",
+        "| # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |",
+        "|--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|",
     ]
     for r in rows:
         lines.append(
-            "| {iteration} | {ts} | {summary} | {thresh} | {llb} | {lla} | "
-            "{imp} | {cxb} | {cxa} | {dcx} | {status} | {reason} |".format(
+            "| {iteration} | {ts} | {thresh} | {llb} | {lla} | "
+            "{imp} | {cxb} | {cxa} | {dcx} | {status} | {summary} |".format(
                 iteration=r.get("iteration", "?"),
                 ts=_fmt_timestamp(r.get("timestamp")),
                 summary=_escape_pipes(r.get("summary", "")),
@@ -146,7 +146,6 @@ def render_markdown(records: Iterable[dict]) -> str:
                 cxa=_fmt_int(r.get("complexity_after")),
                 dcx=_fmt_float(r.get("complexity_pct_change"), 2, sign=True, suffix="%"),
                 status=r.get("status", ""),
-                reason=_escape_pipes(r.get("reason", "")),
             )
         )
     return "\n".join(lines) + "\n"

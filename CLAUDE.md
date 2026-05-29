@@ -135,6 +135,15 @@ Metrics produced by `run.py`:
 - `logloss_by_review` — sanity check. Average over every review with no
   per-user normalisation; heavy users dominate.
 
+**Why Again log loss looks huge.** Don't chase it as a sign of FSRS being
+"bad on Again". A model that confidently predicts 85% retention has
+per-review log loss `-ln(0.85) ≈ 0.163` on a Good (label=1) review and
+`-ln(1 - 0.85) ≈ 1.897` on an Again (label=0) review. Again is the
+negative class, and any well-calibrated high-recall predictor has
+asymmetric per-class log loss with the negative class dominating. The
+Again-loss line in diagnostics is useful for *deltas* between variants,
+not as an absolute target.
+
 ## Adding a new model variant
 
 1. Copy `src/models/fsrs_v7.py` → `src/models/fsrs_vX.py`. Rename the class.
@@ -178,9 +187,10 @@ Python-side FSRS code only:
   / `FSRS_MAX_VALUES` (CUDA-path clamps), `FSRS7_L2_SIGMA_35_VALUES`
 - `src/main/run.py` — training loop (`train_iter`, optimizer setup)
 - `src/main/config.py` — only `BATCH_SIZE`, never `N_EPOCHS`
-
-Avoid `src/main/csrc/*` — touching the `.cu` or `.cpp` files there triggers
-the Enzyme/CUDA rebuild, which is multi-minute.
+- `src/main/csrc/fsrs/*` — CUDA forward/backward source. In bounds, but
+  touching it triggers a multi-minute Enzyme rebuild. Other paths under
+  `src/main/csrc/` (`fsrs_extension.cpp`, `fsrs_extension.cu`,
+  `fsrs_kernel/`) remain out of bounds.
 
 **Sync note for clamps + init_w:** `fsrs_v7_constants.FSRS_MIN_VALUES` /
 `FSRS_MAX_VALUES` / `FSRS7_DEFAULT_35_VALUES` are used by the CUDA training
@@ -377,8 +387,7 @@ iteration 0 with `status="champion"`.
 
 ## Things to be careful about
 
-- Don't touch `src/main/csrc/*` casually — they trigger a multi-minute
-  Enzyme/CUDA rebuild.
+- You can modify src/main/csrc/fsrs, just not other files in src/main/csrc. Don't worry about wasting a few more minutes if it means big log loss wins
 - `WRITE_RESULT = False` in `src/main/config.py:20` by default — flip to
   True only when you actually want per-user output (slow).
 - `compose.yaml:13` mounts `../anki-revlogs-3k` read-only — never write

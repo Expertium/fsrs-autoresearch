@@ -21,7 +21,7 @@ WRITE_RESULT = False
 WRITE_RESULT_FILE = "result/FSRS-7-dev.jsonl"
 
 # Only print the result metrics at the end
-HIDE_PROGRESS = False
+HIDE_PROGRESS = True
 
 BATCH_SIZE = 1024  # Should be a multiple of 128, the block sized used by the cuda kernel
 N_EPOCHS = 8 # nonnegative integer, set to 0 for no optimization
