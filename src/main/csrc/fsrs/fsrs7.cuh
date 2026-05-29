@@ -56,6 +56,13 @@ struct fsrs_params_t {
     // = no D-dependence (mixture weights stay > 0, so both curve endpoints
     // p(0)=1 and p(inf)=0 are preserved).
     float d_weight;
+
+    // 36: Difficulty modulation of the slow-forgetting component's DECAY
+    // (curve *shape*, distinct from d_weight's mixture-weight reweighting).
+    // decay2_mag = clamp(decay2 * exp(d_decay*(D-5)), 0.01, 0.95). Default 0
+    // = no D-dependence. The clamp keeps |decay| in the float-safe range so
+    // base^(1/decay) never overflows; endpoints p(0)=1, p(inf)=0 still hold.
+    float d_decay;
 };
 
 __device__

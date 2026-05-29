@@ -59,7 +59,15 @@ float fsrs7_forgetting_curve(
     const float factor1 = powf(fsrs_params.base1, 1.0f / decay1) - 1.0f;
     const float r1 = powf(1.0f + factor1 * t_over_s, decay1);
 
-    const float decay2 = -fsrs_params.decay2;
+    // Difficulty modulation of the slow component's DECAY (curve shape, not
+    // mixture weight). d_decay>0 => hard cards (D>5) get a steeper slow tail.
+    // Clamp to [0.01, 0.95] keeps |decay| safe: factor = base^(1/decay)
+    // overflows float once |decay| < ~0.008 (0.5^-128 > FLT_MAX). d_decay=0
+    // reduces to -fsrs_params.decay2 exactly (decay2 already in [0.01,0.95]).
+    const float decay2_mag = fsrs7_clamp(
+        fsrs_params.decay2 * expf(fsrs_params.d_decay * (state.d - 5.0f)),
+        0.01f, 0.95f);
+    const float decay2 = -decay2_mag;
     const float factor2 = powf(fsrs_params.base2, 1.0f / decay2) - 1.0f;
     const float r2 = powf(1.0f + factor2 * t_over_s, decay2);
 

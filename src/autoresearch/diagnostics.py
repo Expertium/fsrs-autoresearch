@@ -102,6 +102,7 @@ FSRS7_BOUNDS_STATIC: list[tuple[float | str, float | str]] = [
     (0.0,            0.9),             # 33 S weight power 1
     (0.1,            1.1),             # 34 S weight power 2
     (-0.5,           0.5),             # 35 d_weight (difficulty modulation)
+    (-0.3,           0.3),             # 36 d_decay (difficulty modulation of slow decay)
 ]
 
 # Source of truth for the parameter count — derived from the bounds table so
@@ -163,6 +164,7 @@ def fsrs7_effective_bounds(
         31: (0.01, 1.0), 32: (0.1, 1.0),
         33: (0.0, 0.9), 34: (0.1, 1.1),
         35: (-0.5, 0.5),
+        36: (-0.3, 0.3),
     }
     for idx, (lo, hi) in static_pairs.items():
         lower[:, idx] = lo
