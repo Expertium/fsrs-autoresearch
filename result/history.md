@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_15 record(s). Generated from `history.jsonl` — do not edit by hand._
+_16 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -19,3 +19,4 @@ _15 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 12 | 2026-05-29T20:17:44 | 0.0001 | 0.32458 | 0.32458 | -0.00000 | 18,689 | 18,734 | +0.24% | rejected | Lower clip floor for w[11] (LT fail_d_exp) and w[20] (ST fail_d_exp) from 0.001 to 0.0; targets 36.8%/36.3% floor saturation. d^(-0)=1.0 safe. |
 | 13 | 2026-05-29T20:30:55 | 0.0001 | 0.32458 | 0.32459 | -0.00001 | 18,689 | 18,734 | +0.24% | rejected | Anchor fail_d_exp at 0: lower floor (0.001->0) AND L2 default (0.0049->0 for w[11], 0.0107->0 for w[20]). Make 0 the natural resting value. |
 | 14 | 2026-05-29T20:34:45 | 0.0001 | 0.32458 | 0.32431 | +0.00027 | 18,689 | 18,734 | +0.24% | accepted | Sharpen recency curve: weight = C0 + C1 * (review_ord/N)^5 (was ^3). Same axis as iter 4 win; tests whether more concentration on most-recent training reviews further improves fit to test (most-recent time chunk). |
+| 15 | 2026-05-29T20:38:12 | 0.0001 | 0.32431 | 0.32422 | +0.00009 | 18,734 | 18,734 | +0.00% | rejected | Push recency exponent further: 5 -> 7. Tests whether the axis still has room past iter 14 champion. |
