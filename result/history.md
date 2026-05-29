@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_18 record(s). Generated from `history.jsonl` — do not edit by hand._
+_19 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -22,3 +22,4 @@ _18 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 15 | 2026-05-29T20:38:12 | 0.0001 | 0.32431 | 0.32422 | +0.00009 | 18,734 | 18,734 | +0.00% | rejected | Push recency exponent further: 5 -> 7. Tests whether the axis still has room past iter 14 champion. |
 | 16 | 2026-05-29T20:41:17 | 0.0001 | 0.32431 | 0.32467 | -0.00036 | 18,734 | 18,734 | +0.00% | rejected | Re-tune C0 at exp=5: C0/C1 0.10/0.90 -> 0.20/0.80. Tests whether sharper exp=5 curve wants more old-review floor weight as counterweight. |
 | 17 | 2026-05-29T20:43:41 | 0.0001 | 0.32431 | 0.32431 | +0.00000 | 18,734 | 18,734 | +0.00% | rejected | Lower C0 at exp=5: C0/C1 0.10/0.90 -> 0.05/0.95. Mirror of iter 16 (which pushed C0 up and lost). Tests if sharper exp=5 wants less old-review floor. |
+| 18 | 2026-05-29T20:46:25 | 0.0001 | 0.32431 | 0.32592 | -0.00161 | 18,734 | 18,800 | +0.35% | rejected | New axis: per-class gradient weighting via target_rating lookup table in Python. Down-weight Hard (0.5x) on hypothesis that barely-passed is noisy signal. |
