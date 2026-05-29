@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_8 record(s). Generated from `history.jsonl` — do not edit by hand._
+_9 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -12,3 +12,4 @@ _8 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 5 | 2026-05-29T15:38:27 | 0.0001 | 0.32458 | 0.32456 | +0.00001 | 18,563 | 18,563 | +0.00% | rejected | RECENCY_C0 0.10->0.05, C1 0.90->0.95 (push recency further along axis that worked in iter 4) |
 | 6 | 2026-05-29T15:45:06 | 0.0001 | 0.32458 | 0.32514 | -0.00056 | 18,563 | 18,563 | +0.00% | rejected | LR 2e-2 -> 1e-2 (halve initial LR; testing whether iter 4 recency shift changed LR optimum) |
 | 7 | 2026-05-29T15:59:27 | 0.0001 | 0.32458 | 0.32452 | +0.00005 | 18,689 | 18,691 | +0.01% | rejected | cosine LR scheduler eta_min 0.0 -> 0.05 (keep LR non-zero at end of decay; tests whether cosine->0 leaves loss on the table) |
+| 8 | 2026-05-29T19:57:23 | 0.0001 | 0.32458 | 0.32453 | +0.00005 | 18,689 | 18,885 | +1.05% | rejected | log-transform w[0..3]: store u=log(w) as the optimizer-visible param; CUDA still sees w via exp at boundary. Chain-rule dL/dw -> dL/du = dL/dw*w in train_iter and predict_test_set. Clipper bounds for first 4 -> log space. |
