@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_25 record(s). Generated from `history.jsonl` — do not edit by hand._
+_26 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -29,3 +29,4 @@ _25 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 22 | 2026-05-29T21:32:27 | 0.0004 | 0.32421 | 0.32390 | +0.00031 | 18,734 | 18,742 | +0.04% | rejected | STRUCTURAL: slip/guess recall calibration. Add w[35]=slip, w[36]=guess; p_cal = guess + (1-guess-slip)*retention, applied only to the prediction (internal retention for stability unchanged). IRT-style floor/ceiling to attack the dominant Again loss. Enzyme rebuild. |
 | 23 | 2026-05-29T21:50:06 | 0.0002 | 0.32421 | 0.32390 | +0.00031 | 18,734 | 18,740 | +0.03% | accepted | STRUCTURAL: difficulty-dependent forgetting curve. Add w[35]=d_weight; scale the slow-forgetting mixture component by exp(d_weight*(D-5)) in fsrs7_forgetting_curve. Endpoint/monotonicity safe (mixture weights stay >0). D never shaped the curve before, only S did. Enzyme rebuild. |
 | 24 | 2026-05-29T22:04:07 | 0.0001 | 0.32390 | 0.32377 | +0.00013 | 18,740 | 18,758 | +0.10% | accepted | STRUCTURAL: empirical-Bayes L2 prior. Shrink each (user,split) param row toward the live population mean (flat_fsrs_params.mean(dim=0), detached, recomputed per step) instead of the fixed FSRS7_DEFAULT anchor. Threaded anchor_p through train_iter -> masked_penalty -> penalty_loss; sigmas and PENALTY_W_L2 unchanged. 0 new params, no rebuild. |
+| 25 | 2026-05-29T22:16:53 | 0.0002 | 0.32377 | 0.32386 | -0.00009 | 18,758 | 18,762 | +0.02% | rejected | Restore learnable difficulty mean-reversion rate: replace hardcoded 0.01 in fsrs7_mean_reversion with trainable w[36]=mr_rate (default 0.01, bounds [0,1], sigma 0.2). Standard FSRS DOF this fork had pinned. Enzyme rebuild. |
