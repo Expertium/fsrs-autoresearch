@@ -279,6 +279,17 @@ Examples:
 - Change a formula with no new params: `0.0001`
 - Change optimizer with no new params: `0.0001`
 
+**Near-misses (improvement real but below threshold).** The threshold is a
+bright line: a variant that improves `logloss_by_user` but by less than its
+threshold is a **reject**, and the champion is unchanged — don't fudge it (a
+new parameter that can't clear its `+0.0002` hasn't earned its complexity).
+What to do *next* is the researcher's call: either **retry the idea from a
+slightly different angle** (reformulate, tighten a bound, tie/drop a parameter
+so the threshold falls, isolate the part that actually carried the signal) or
+**give up and pursue a different change** entirely. Use judgment — chase it if
+the near-miss exposed real, attributable signal worth recovering more cheaply;
+move on if it looks played out. Record the near-miss in history either way.
+
 ### Code complexity gate
 
 `score = AST_node_count + 40 * cyclomatic_complexity`, computed over the
