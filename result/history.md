@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_28 record(s). Generated from `history.jsonl` — do not edit by hand._
+_29 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -32,3 +32,4 @@ _28 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 25 | 2026-05-29T22:16:53 | 0.0002 | 0.32377 | 0.32386 | -0.00009 | 18,758 | 18,762 | +0.02% | rejected | Restore learnable difficulty mean-reversion rate: replace hardcoded 0.01 in fsrs7_mean_reversion with trainable w[36]=mr_rate (default 0.01, bounds [0,1], sigma 0.2). Standard FSRS DOF this fork had pinned. Enzyme rebuild. |
 | 26 | 2026-05-29T22:26:37 | 0.0002 | 0.32377 | 0.32345 | +0.00032 | 18,758 | 18,764 | +0.03% | accepted | STRUCTURAL: D-modulated forgetting-curve SHAPE. Add w[36]=d_decay; in fsrs7_forgetting_curve scale the slow component's decay: decay2_mag = clamp(decay2*exp(d_decay*(D-5)), 0.01, 0.95), decay2=-decay2_mag. Distinct mechanism from iter-23 d_weight (curve SHAPE vs mixture WEIGHT). Protective clamp prevents base^(1/decay) float overflow. Enzyme rebuild. |
 | 27 | 2026-05-29T22:37:36 | 0.0002 | 0.32345 | 0.32325 | +0.00020 | 18,764 | 18,770 | +0.03% | rejected | D-modulate FAST component decay (mirror of iter-26 on the slow component): add w[37]=d_decay1; decay1_mag = clamp(decay1*exp(d_decay1*(D-5)), 0.01, 0.95). Targets the short-term region. Enzyme rebuild. |
+| 28 | 2026-05-29T22:49:25 | 0.0001 | 0.32345 | 0.32342 | +0.00003 | 18,764 | 18,764 | +0.00% | rejected | Raise base2 (w[30]) forgetting-curve ceiling 0.99 -> 0.998. Evidence-driven: 16.9pct of users pinned at the 0.99 ceiling with the highest gradient (~29) of any bounded curve param, and default 0.9555 != ceiling (genuine data strain, not L2-at-default). base2<1 keeps p(inf)=0. Python-only (FSRS_MAX + diagnostics), no rebuild. |
