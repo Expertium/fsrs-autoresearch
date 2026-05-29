@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_27 record(s). Generated from `history.jsonl` — do not edit by hand._
+_28 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -31,3 +31,4 @@ _27 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 24 | 2026-05-29T22:04:07 | 0.0001 | 0.32390 | 0.32377 | +0.00013 | 18,740 | 18,758 | +0.10% | accepted | STRUCTURAL: empirical-Bayes L2 prior. Shrink each (user,split) param row toward the live population mean (flat_fsrs_params.mean(dim=0), detached, recomputed per step) instead of the fixed FSRS7_DEFAULT anchor. Threaded anchor_p through train_iter -> masked_penalty -> penalty_loss; sigmas and PENALTY_W_L2 unchanged. 0 new params, no rebuild. |
 | 25 | 2026-05-29T22:16:53 | 0.0002 | 0.32377 | 0.32386 | -0.00009 | 18,758 | 18,762 | +0.02% | rejected | Restore learnable difficulty mean-reversion rate: replace hardcoded 0.01 in fsrs7_mean_reversion with trainable w[36]=mr_rate (default 0.01, bounds [0,1], sigma 0.2). Standard FSRS DOF this fork had pinned. Enzyme rebuild. |
 | 26 | 2026-05-29T22:26:37 | 0.0002 | 0.32377 | 0.32345 | +0.00032 | 18,758 | 18,764 | +0.03% | accepted | STRUCTURAL: D-modulated forgetting-curve SHAPE. Add w[36]=d_decay; in fsrs7_forgetting_curve scale the slow component's decay: decay2_mag = clamp(decay2*exp(d_decay*(D-5)), 0.01, 0.95), decay2=-decay2_mag. Distinct mechanism from iter-23 d_weight (curve SHAPE vs mixture WEIGHT). Protective clamp prevents base^(1/decay) float overflow. Enzyme rebuild. |
+| 27 | 2026-05-29T22:37:36 | 0.0002 | 0.32345 | 0.32325 | +0.00020 | 18,764 | 18,770 | +0.03% | rejected | D-modulate FAST component decay (mirror of iter-26 on the slow component): add w[37]=d_decay1; decay1_mag = clamp(decay1*exp(d_decay1*(D-5)), 0.01, 0.95). Targets the short-term region. Enzyme rebuild. |
