@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_6 record(s). Generated from `history.jsonl` — do not edit by hand._
+_7 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Summary | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Reason |
 |--:|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -10,3 +10,4 @@ _6 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 3 | 2026-05-29T15:32:10 | PENALTY_W_L2 0.5 -> 0.25 (relax L2 prior; iter 2 evidence suggested L2 anchored bound-saturated params) | 0.0001 | 0.32498 | 0.32510 | -0.00012 | 18,563 | 18,563 | +0.00% | rejected | improvement -0.00012 < threshold 0.0001 (variant LL is WORSE). Relaxing L2 broadened p99 modestly (w[25] 2.81->2.95, w[26] p01 0.62->0.55) but did not reduce bound saturation (w[25] hit_lo still 40.1%, ~unchanged). Net LL got worse — the original L2 strength of 0.5 was actually preventing overfitting. PENALTY_W_L2 restored to 0.5. |
 | 4 | 2026-05-29T15:36:19 | RECENCY_C0 0.25->0.10, RECENCY_C1 0.75->0.90 (downweight old reviews further; preserve newest weight=1.0) | 0.0001 | 0.32498 | 0.32458 | +0.00040 | 18,563 | 18,563 | +0.00% | accepted | improvement +0.00040 > threshold 0.0001 (4x). Complexity unchanged. Improvement appears in both short_term (-0.00063) and long_term (-0.00050) splits — model generalizes better when older reviews are downweighted more aggressively. Again loss: 1.404->1.401. New champion at iter 4. |
 | 5 | 2026-05-29T15:38:27 | RECENCY_C0 0.10->0.05, C1 0.90->0.95 (push recency further along axis that worked in iter 4) | 0.0001 | 0.32458 | 0.32456 | +0.00001 | 18,563 | 18,563 | +0.00% | rejected | improvement +0.00001 < threshold 0.0001. The recency-weighting axis diminishing-returns past C0=0.10 — most of the gain was captured by iter 4. Iter 4 (C0=0.10) remains champion. |
+| 6 | 2026-05-29T15:45:06 | LR 2e-2 -> 1e-2 (halve initial LR; testing whether iter 4 recency shift changed LR optimum) | 0.0001 | 0.32458 | 0.32514 | -0.00056 | 18,563 | 18,563 | +0.00% | rejected | improvement -0.00056 < threshold 0.0001 (variant is markedly WORSE). Halving LR undertrained — cosine annealing from 1e-2 decays to 0 across 8 epochs, leaving the model far from its loss minimum. LR=2e-2 confirmed as a good initial rate. Original LR restored. |
