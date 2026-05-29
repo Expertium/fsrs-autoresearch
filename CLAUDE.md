@@ -215,8 +215,12 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
    S0(Again) ≤ S0(Hard) ≤ S0(Good) ≤ S0(Easy).
 3. `stability_after_review(rating=1) <= ... <= stability_after_review(rating=4)`
    — same ordering after a review.
-4. Higher `D` ⇒ slower growth of `S`. Difficulty must not let memory grow
-   faster.
+4. Higher `D` ⇒ post-review `S` is non-increasing in `D`. This applies to
+   **both** post-success and post-lapse stability: difficulty must not let
+   memory grow faster after a successful review, and it must not let post-lapse
+   stability rise either. In the failure formula `new_s_fail ∝ d^(-fail_d_exp)`,
+   this means `fail_d_exp >= 0` is a hard structural requirement
+   (`w[11]`, `w[20]`).
 5. **Do not change `N_EPOCHS`** (`src/main/config.py:27`). Don't rename it
    either. We're chasing architectural wins, not brute-force epochs.
 6. Do not skip users, change time-series splits, or change review-preprocessing
