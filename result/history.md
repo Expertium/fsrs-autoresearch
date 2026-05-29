@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_23 record(s). Generated from `history.jsonl` — do not edit by hand._
+_24 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -27,3 +27,4 @@ _23 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 20 | 2026-05-29T21:18:14 | 0.0001 | 0.32431 | 0.32421 | +0.00010 | 18,734 | 18,734 | +0.00% | accepted | LR 2e-2 -> 3e-2. Recency sharpening (iter 14, exp=5) reduced gradient mass from non-recent reviews; raise LR to restore effective step size under fixed-epoch cosine decay. |
 | 21 | 2026-05-29T21:20:13 | 0.0001 | 0.32421 | 0.32421 | +0.00000 | 18,734 | 18,734 | +0.00% | rejected | LR 3e-2 -> 4e-2. Confirmation probe for the iter-20 LR-up axis. |
 | 22 | 2026-05-29T21:32:27 | 0.0004 | 0.32421 | 0.32390 | +0.00031 | 18,734 | 18,742 | +0.04% | rejected | STRUCTURAL: slip/guess recall calibration. Add w[35]=slip, w[36]=guess; p_cal = guess + (1-guess-slip)*retention, applied only to the prediction (internal retention for stability unchanged). IRT-style floor/ceiling to attack the dominant Again loss. Enzyme rebuild. |
+| 23 | 2026-05-29T21:50:06 | 0.0002 | 0.32421 | 0.32390 | +0.00031 | 18,734 | 18,740 | +0.03% | accepted | STRUCTURAL: difficulty-dependent forgetting curve. Add w[35]=d_weight; scale the slow-forgetting mixture component by exp(d_weight*(D-5)) in fsrs7_forgetting_curve. Endpoint/monotonicity safe (mixture weights stay >0). D never shaped the curve before, only S did. Enzyme rebuild. |

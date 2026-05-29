@@ -42,6 +42,7 @@ FSRS7_DEFAULT_35_VALUES = (
     0.6232,
     0.1362,
     0.3862,
+    0.0,  # 35 d_weight (difficulty modulation of forgetting curve; 0 = neutral)
 )
 
 FSRS_MIN_VALUES = (
@@ -80,6 +81,7 @@ FSRS_MIN_VALUES = (
     0.1,
     0.0,
     0.1,
+    -0.5,  # 35 d_weight min
 )
 
 FSRS_MAX_VALUES = (
@@ -118,6 +120,7 @@ FSRS_MAX_VALUES = (
     1.0,
     0.9,
     1.1,
+    0.5,  # 35 d_weight max
 )
 
 FSRS7_L2_SIGMA_35_VALUES = (
@@ -156,4 +159,5 @@ FSRS7_L2_SIGMA_35_VALUES = (
     0.1397,
     0.1407,
     0.1489,
+    0.2,  # 35 d_weight sigma (weak L2 prior toward 0 so data can move it)
 )

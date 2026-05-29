@@ -50,6 +50,12 @@ struct fsrs_params_t {
     float base_weight2;
     float s_weight_power1;
     float s_weight_power2;
+
+    // 35: Difficulty modulation of the forgetting-curve mixture. Scales the
+    // slow-forgetting component's weight by exp(d_weight * (D - 5)). Default 0
+    // = no D-dependence (mixture weights stay > 0, so both curve endpoints
+    // p(0)=1 and p(inf)=0 are preserved).
+    float d_weight;
 };
 
 __device__

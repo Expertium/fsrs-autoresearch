@@ -101,7 +101,12 @@ FSRS7_BOUNDS_STATIC: list[tuple[float | str, float | str]] = [
     (0.1,            1.0),             # 32 weight 2
     (0.0,            0.9),             # 33 S weight power 1
     (0.1,            1.1),             # 34 S weight power 2
+    (-0.5,           0.5),             # 35 d_weight (difficulty modulation)
 ]
+
+# Source of truth for the parameter count — derived from the bounds table so
+# adding/removing a param only requires editing FSRS7_BOUNDS_STATIC above.
+N_PARAMS: int = len(FSRS7_BOUNDS_STATIC)
 
 
 def fsrs7_effective_bounds(
@@ -122,14 +127,14 @@ def fsrs7_effective_bounds(
     Returns:
         (lower, upper) each of shape ``[N, 35]``.
     """
-    if rows.ndim != 2 or rows.size(1) != 35:
-        raise ValueError(f"expected rows of shape [N, 35], got {tuple(rows.shape)}")
+    if rows.ndim != 2 or rows.size(1) != N_PARAMS:
+        raise ValueError(f"expected rows of shape [N, {N_PARAMS}], got {tuple(rows.shape)}")
     n = rows.size(0)
     device = rows.device
     dtype = rows.dtype
 
-    lower = torch.empty(n, 35, dtype=dtype, device=device)
-    upper = torch.empty(n, 35, dtype=dtype, device=device)
+    lower = torch.empty(n, N_PARAMS, dtype=dtype, device=device)
+    upper = torch.empty(n, N_PARAMS, dtype=dtype, device=device)
 
     # idx 0: (s_min, init_s_max/2)
     lower[:, 0] = s_min
@@ -157,6 +162,7 @@ def fsrs7_effective_bounds(
         29: (0.5, 0.85),
         31: (0.01, 1.0), 32: (0.1, 1.0),
         33: (0.0, 0.9), 34: (0.1, 1.1),
+        35: (-0.5, 0.5),
     }
     for idx, (lo, hi) in static_pairs.items():
         lower[:, idx] = lo
@@ -229,7 +235,7 @@ def param_distribution_stats(
         return v if isinstance(v, str) else f"{v:g}"
 
     out: list[ParamStats] = []
-    for i in range(35):
+    for i in range(N_PARAMS):
         lo_desc, hi_desc = FSRS7_BOUNDS_STATIC[i]
         out.append(
             ParamStats(
@@ -357,7 +363,7 @@ class GradTracker:
     inside the training loop without affecting the optimisation.
     """
 
-    n_params: int = 35
+    n_params: int = N_PARAMS
 
     # Initialised lazily on first observation so we adopt the model's dtype/device.
     abs_grad_sum_all: Optional[torch.Tensor] = None

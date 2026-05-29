@@ -64,7 +64,11 @@ float fsrs7_forgetting_curve(
     const float r2 = powf(1.0f + factor2 * t_over_s, decay2);
 
     const float weight1 = fsrs_params.base_weight1 * powf(state.s, -fsrs_params.s_weight_power1);
-    const float weight2 = fsrs_params.base_weight2 * powf(state.s, fsrs_params.s_weight_power2);
+    // Difficulty modulation: scale the slow component's weight by exp(d_weight*(D-5)).
+    // exp(...) > 0 always, so both weights stay positive and the mixture still
+    // satisfies p(0)=1, p(inf)=0. d_weight=0 recovers the S-only curve.
+    const float weight2 = fsrs_params.base_weight2 * powf(state.s, fsrs_params.s_weight_power2)
+        * expf(fsrs_params.d_weight * (state.d - 5.0f));
     const float retention = (weight1 * r1 + weight2 * r2) / (weight1 + weight2);
 
     return 1e-5f + (1.0f - 2e-5f) * retention;
