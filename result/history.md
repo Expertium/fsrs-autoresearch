@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_22 record(s). Generated from `history.jsonl` — do not edit by hand._
+_23 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -26,3 +26,4 @@ _22 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 19 | 2026-05-29T21:14:52 | 0.0001 | 0.32431 | 0.32445 | -0.00015 | 18,734 | 18,760 | +0.14% | rejected | Elapsed-time data weighting: multiply grad_weight by 1.5 when target review elapsed_days>1 (long-term). Hypothesis: align training distribution with test (more matured cards). |
 | 20 | 2026-05-29T21:18:14 | 0.0001 | 0.32431 | 0.32421 | +0.00010 | 18,734 | 18,734 | +0.00% | accepted | LR 2e-2 -> 3e-2. Recency sharpening (iter 14, exp=5) reduced gradient mass from non-recent reviews; raise LR to restore effective step size under fixed-epoch cosine decay. |
 | 21 | 2026-05-29T21:20:13 | 0.0001 | 0.32421 | 0.32421 | +0.00000 | 18,734 | 18,734 | +0.00% | rejected | LR 3e-2 -> 4e-2. Confirmation probe for the iter-20 LR-up axis. |
+| 22 | 2026-05-29T21:32:27 | 0.0004 | 0.32421 | 0.32390 | +0.00031 | 18,734 | 18,742 | +0.04% | rejected | STRUCTURAL: slip/guess recall calibration. Add w[35]=slip, w[36]=guess; p_cal = guess + (1-guess-slip)*retention, applied only to the prediction (internal retention for stability unchanged). IRT-style floor/ceiling to attack the dominant Again loss. Enzyme rebuild. |
