@@ -1,8 +1,8 @@
 LR: float = 2e-2
 BETAS: tuple = (0.8, 0.85)  # this is for Adam, default is (0.9, 0.999)
 
-RECENCY_C0 = 0.25
-RECENCY_C1 = 0.75
+RECENCY_C0 = 0.10  # iter 4: was 0.25; shift relative grad weight toward most-recent reviews (test split is time-most-recent chunk)
+RECENCY_C1 = 0.90  # iter 4: was 0.75; kept so newest review weight = C0 + C1 = 1.0
 
 PENALTY_W_L2 = 0.5
 
