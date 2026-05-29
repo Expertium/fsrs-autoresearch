@@ -1,0 +1,59 @@
+# Python cache/build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+*.egg
+MANIFEST
+
+# Native extension build outputs
+*.so
+*.pyd
+*.dll
+*.dylib
+*.o
+*.obj
+
+# Virtual environments and local env files
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Test/type/checker caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor/OS noise
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local benchmark data and outputs
+data/
+dataset/
+raw/
+evaluation/
+weights/
+wandb/
+result/*.jsonl
+result/*.csv
+result/*.parquet
+
+# Autoresearch loop history — keep tracked (the contract / audit trail)
+!result/history.jsonl
+
+# Local Docker Compose overrides
+compose.override.yaml
+docker-compose.override.yml

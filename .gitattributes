@@ -1,0 +1,2 @@
+# Keep shell scripts runnable in Linux containers even when checked out on Windows.
+*.sh text eol=lf

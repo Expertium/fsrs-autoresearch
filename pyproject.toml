@@ -1,0 +1,33 @@
+[project]
+name = "fsrs-gpu-benchmark"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fsrs-optimizer>=6.5.0",
+    "lmdb",
+    "numpy",
+    "pandas",
+    "pyarrow>=15",
+    "relplot>=1.0.3",
+    "scikit-learn",
+    "scipy>=1.16.3",
+    "setuptools",
+    "statsmodels>=0.14.6",
+    "tqdm",
+    "typing-extensions",
+    "wheel",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "torch",
+    "torch.*",
+]
+ignore_missing_imports = true

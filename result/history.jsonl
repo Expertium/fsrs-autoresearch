@@ -1,0 +1,1 @@
+{"iteration": 0, "summary": "baseline FSRS-7 (default init_w, --short --secs --recency, 8 epochs, Adam betas=(0.8, 0.85), lr=2e-2 cosine to 0)", "threshold": null, "ll_before": null, "ll_after": 0.32498, "complexity_before": null, "complexity_after": 18563, "status": "champion", "reason": "initial", "timestamp": "2026-05-29T15:04:27.232635+00:00"}
