@@ -237,16 +237,21 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
 10. Eval metric is and stays `logloss_by_review`. The **training** loss is
     allowed to change (focal, BCE+aux, etc.) but the proposal must explain
     why a different training loss is expected to improve eval log-loss.
-11. Predicted probability of recall `p` must lie in `[0, 1]` for **any**
-    parameter values within the allowed clamp ranges — it is fed straight into
+11. The predicted recall probability **is** a forgetting curve in `delta_t`
+    with **fixed, non-negotiable boundary conditions**:
+    - `p(delta_t = 0) = 1` — immediately after a review, recall is certain.
+    - `p(delta_t → ∞) → 0` — given unbounded time, the memory is fully lost.
+    Between those endpoints `p` is monotonically non-increasing in `delta_t`
+    (constraint 1) and stays in `[0, 1]` — it's fed straight into
     `−[y·ln p + (1−y)·ln(1−p)]`, so any `p ≤ 0` or `p ≥ 1` is a NaN/inf bomb.
-    The kernel already clamps the raw forgetting curve to `[1e-5, 1−1e-5]`. If
-    you add a post-transform on `p` (e.g. a slip/guess calibration
-    `p = guess + (1 − guess − slip)·retention`), bound the new params so the
-    floor `guess ≥ 0`, the ceiling `1 − slip ≤ 1`, and the slope
-    `1 − guess − slip ≥ 0` all hold across the clamp ranges (the slope
-    condition also preserves constraint 1's monotonicity). Keep a final
-    `[1e-5, 1−1e-5]` clamp on the transformed `p`.
+    This **forbids slip/guess-style asymptotes**: a learned floor (`p → g > 0`
+    as `t → ∞`) breaks the lower endpoint, and a learned ceiling
+    (`p → 1 − s < 1` at `t = 0`) breaks the upper one — both are off-limits no
+    matter how much they help log-loss. The *only* sanctioned deviation is the
+    existing numerical clamp to `[1e-5, 1−1e-5]` that keeps the log finite: it
+    is symmetric and ~1e-5, not a calibration knob. You may reshape the curve
+    **between** the endpoints freely (that's what the `w[27..34]` 2-component
+    mixture does today) — you just may not move the endpoints.
 
 ### Acceptance threshold
 
@@ -295,8 +300,8 @@ common if you bolt on a new mechanism without simplifying anything else.
 - [ ] `w[0..3]` still ordered after any init/clamp changes?
 - [ ] `stability_after_review` monotonic in rating?
 - [ ] Higher `D` still slows `S` growth?
-- [ ] Predicted `p ∈ [0, 1]` for all clamp-legal params, with a final
-      `[1e-5, 1−1e-5]` clamp on any post-transform (slip/guess etc.)?
+- [ ] Forgetting curve still pinned at `p(0)=1` and `p(∞)→0` (NO learned
+      floor/ceiling), monotonic in `delta_t`, and `p ∈ [0,1]`?
 - [ ] `N_EPOCHS` untouched?
 - [ ] Review filtering / splits / preprocessing unchanged?
 - [ ] All new stochastic ops seeded?
