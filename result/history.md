@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_11 record(s). Generated from `history.jsonl` — do not edit by hand._
+_12 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -15,3 +15,4 @@ _11 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 8 | 2026-05-29T19:57:23 | 0.0001 | 0.32458 | 0.32453 | +0.00005 | 18,689 | 18,885 | +1.05% | rejected | log-transform w[0..3]: store u=log(w) as the optimizer-visible param; CUDA still sees w via exp at boundary. Chain-rule dL/dw -> dL/du = dL/dw*w in train_iter and predict_test_set. Clipper bounds for first 4 -> log space. |
 | 9 | 2026-05-29T20:03:33 | 0.0001 | 0.32458 | 0.32457 | +0.00001 | 18,689 | 18,696 | +0.04% | rejected | AdamW weight_decay 0 -> 1e-4 (engage the decoupled L2-to-zero knob that has never been used) |
 | 10 | 2026-05-29T20:07:33 | 0.0001 | 0.32458 | 0.33344 | -0.00886 | 18,689 | 18,703 | +0.07% | rejected | 500-step linear warmup multiplied on top of cosine LR schedule (motivated by w[0] \|grad\|~70, w[27] \|grad\|~40 -- Adam moments cold at step 0) |
+| 11 | 2026-05-29T20:09:57 | 0.0001 | 0.32458 | 0.32457 | +0.00001 | 18,689 | 18,689 | +0.00% | rejected | PENALTY_W_L2 0.5 -> 1.0 (double L2-to-default prior strength; iter 3 weakening was worse, so test the other direction) |
