@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_56 record(s). Generated from `history.jsonl` — do not edit by hand._
+_57 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -60,3 +60,4 @@ _56 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 53 | 2026-05-30T20:22:54 | 0.0001 | 0.32120 | 0.32119 | +0.00002 | 16,846 | 16,846 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): best found LRG_DIFF 1->2.25, below threshold. |
 | 54 | 2026-05-30T20:41:27 | 0.0001 | 0.32120 | 0.32106 | +0.00014 | 16,846 | 16,816 | -0.18% | accepted | Unchain decay2 from decay1: removed the clipper's decay2 >= decay1 constraint (a vestigial pre-dual-trace ordering). r1 reads s_fast and r2 reads s -- independent curves -- and 11.6% of users were pinned at decay2 == decay1 wanting the slow trace a heavier tail. decay2 now clamps to its own [0.01, 0.95]. 0 params, complexity down. ACCEPTED (new champion). |
 | 55 | 2026-05-30T21:15:15 | 0.0001 | 0.32106 | 0.32117 | -0.00011 | 16,816 | 16,816 | +0.00% | rejected | Two-phase SGD (user idea): epoch-dependent per-group LR — freeze a param group's LR x0 outside a per-row training-progress window [LO,HI], reusing the iter-52 group-LR vector (0 new trainable params). Tested freezing the forgetting-curve group early/late. REJECTED (no phasing beat the champion). |
+| 56 | 2026-05-30T21:28:05 | 0.0001 | 0.32106 | 0.32103 | +0.00004 | 16,816 | 16,826 | +0.06% | rejected | Lower decay2_mag floor 0.01->0.003 + log-space factor2 (the iter-50 factor1 pattern) so the slow tail can be heavier for the ~3.8% of users pinned at the 0.01 floor. 0 params. REJECTED (near-miss +0.000039 < 0.0001 bar). |
