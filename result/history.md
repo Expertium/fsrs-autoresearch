@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_35 record(s). Generated from `history.jsonl` — do not edit by hand._
+_36 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -39,3 +39,4 @@ _35 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 32 | 2026-05-30T00:00:30 | 0.0006 | 0.32287 | 0.32280 | +0.00007 | 13,968 | 13,980 | +0.09% | rejected | STRUCTURAL: add a 3rd (short-term) forgetting-curve mixture component. New params decay3(38), base3(39), base_weight3(40); R3=(1+factor3*t/s)^(-decay3), weight3=base_weight3*s^(-s_weight_power1) (S-profile tied to the fast component so it concentrates at small S). base_weight3=0 recovers the 2-component champion. Targets residual short-term loss (0.355 vs 0.325 long-term). Enzyme rebuild. |
 | 33 | 2026-05-30T10:49:46 | 0.0001 | 0.32287 | 0.32271 | +0.00016 | 13,968 | 13,968 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): PENALTY_W_L2 0.5->0.75, BETA1 0.8->0.55. Numbers-only, complexity unchanged. |
 | 34 | 2026-05-30T11:41:47 | 0.0001 | 0.32271 | 0.32274 | -0.00004 | 13,968 | 13,986 | +0.13% | rejected | Full empirical-Bayes L2: prior VARIANCE also empirical -- sigma_eff^2 = fixed_sigma^2 + live population variance (per param, detached), folded into penalty_loss. Generalizes the iter-24 EB-mean anchor. 0 new params, Python-only (no rebuild). |
+| 35 | 2026-05-30T11:50:19 | 0.0001 | 0.32271 | 0.32269 | +0.00002 | 15,330 | 15,363 | +0.22% | rejected | Optimizer Adam -> NAdam (user suggestion): Nesterov lookahead on the first moment in adamw_update, m_nesterov = b1*m_t/(1-b1^(t+1)) + (1-b1)*g_t/(1-b1^t). No momentum-decay schedule, no new optimizer state. Python-only (no rebuild). |
