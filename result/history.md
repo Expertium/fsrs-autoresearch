@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_51 record(s). Generated from `history.jsonl` — do not edit by hand._
+_52 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -55,3 +55,4 @@ _51 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 48 | 2026-05-30T17:58:57 | 0.0012 | 0.32206 | 0.32205 | +0.00001 | 16,766 | 16,880 | +0.68% | rejected | NEW STATE VAR: recent-failure (lapse) EMA in [0,1] (non-Markovian leech signal, hardcoded EMA rate 0.7) feeding weight1 *= exp(lapse_mult*lapse) to boost the fast/short-term curve for leech-prone cards. +1 state var +1 param (lapse_mult). 3->4 state vars, 36->37 params. REJECTED. |
 | 49 | 2026-05-30T18:12:31 | 0.0002 | 0.32206 | 0.32206 | +0.00000 | 16,766 | 16,785 | +0.11% | rejected | Difficulty equilibrium: revert toward init_d(4) + learnable d_revert_offset (default 0), decoupling the long-run difficulty equilibrium from the easy-first-rating init. +1 param. 36->37 params. REJECTED. |
 | 50 | 2026-05-30T18:40:44 | 0.0001 | 0.32206 | 0.32147 | +0.00059 | 16,766 | 16,776 | +0.06% | accepted | Fast-curve sub-day forgetting: lower base1 (fast-component retention at t=s_fast) floor 0.5->0.2 and compute factor1 = base1^(1/decay1)-1 in LOG-SPACE (clamp exponent at 60 before exp) so it is float- AND autodiff-safe. The 0.5 floor was a numerical-overflow limit pinning 13% of users (grad 13) and capping how steeply the fast curve can forget at sub-day scales. 0 net params. ACCEPTED (new champion). |
+| 51 | 2026-05-30T19:15:20 | 0.0001 | 0.32147 | 0.32133 | +0.00013 | 16,776 | 16,776 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): LR 0.03->0.045, BETA2 0.85->0.899999. Numbers-only, complexity unchanged. |
