@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_34 record(s). Generated from `history.jsonl` — do not edit by hand._
+_35 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -38,3 +38,4 @@ _34 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 31 | 2026-05-29T23:39:04 | 0.0002 | 0.32287 | 0.32279 | +0.00008 | 13,968 | 13,974 | +0.04% | rejected | S-modulate the SLOW component's decay (mirror of iter-30 on the slow component): add w[38]=s_decay2; decay2_mag = clamp(decay2 * exp(d_decay*(D-5)) * S^s_decay2, 0.01, 0.95). Completes the decay-modulation family (fast/slow x D/S). The slow component dominates at high S, so this targets the long-term tail. Enzyme rebuild. |
 | 32 | 2026-05-30T00:00:30 | 0.0006 | 0.32287 | 0.32280 | +0.00007 | 13,968 | 13,980 | +0.09% | rejected | STRUCTURAL: add a 3rd (short-term) forgetting-curve mixture component. New params decay3(38), base3(39), base_weight3(40); R3=(1+factor3*t/s)^(-decay3), weight3=base_weight3*s^(-s_weight_power1) (S-profile tied to the fast component so it concentrates at small S). base_weight3=0 recovers the 2-component champion. Targets residual short-term loss (0.355 vs 0.325 long-term). Enzyme rebuild. |
 | 33 | 2026-05-30T10:49:46 | 0.0001 | 0.32287 | 0.32271 | +0.00016 | 13,968 | 13,968 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): PENALTY_W_L2 0.5->0.75, BETA1 0.8->0.55. Numbers-only, complexity unchanged. |
+| 34 | 2026-05-30T11:41:47 | 0.0001 | 0.32271 | 0.32274 | -0.00004 | 13,968 | 13,986 | +0.13% | rejected | Full empirical-Bayes L2: prior VARIANCE also empirical -- sigma_eff^2 = fixed_sigma^2 + live population variance (per param, detached), folded into penalty_loss. Generalizes the iter-24 EB-mean anchor. 0 new params, Python-only (no rebuild). |
