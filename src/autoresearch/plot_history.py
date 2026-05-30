@@ -103,16 +103,17 @@ def main() -> None:
 
     ax.set_xlabel("Iteration", fontsize=15)
     ax.set_ylabel("Log Loss", fontsize=15)
-    ax.set_title(f"FSRS-7 autoresearch — {len(champs)} kept improvements, {len(champs)+len(rejects)} rejected variants",
+    ax.set_title(f"FSRS-7 autoresearch — {len(champs)-1} accepted improvements, {len(rejects)} rejected variants",
                  fontsize=18)
-    ax.grid(True, axis="y", alpha=0.25)
+    ax.grid(True, alpha=0.25)
     ax.legend(loc="upper right", framealpha=0.9)
 
     # extra top headroom for the angled labels
     pad_top = (0.50 if not args.no_summaries else 0.10) * yr
     # ax.set_ylim(ymin - 0.06 * yr, ymax + pad_top)
-    ax.set_ylim(min([r["ll_after"] for r in champs]) * 0.995, max([r["ll_after"] for r in champs]) * 1.005)
+    ax.set_ylim(min([r["ll_after"] for r in champs]) * 0.9975, max([r["ll_after"] for r in champs]) * 1.005)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(0.0005))
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
     ax.set_xlim(xmin - 0.6, xmax + max(2.0, 0.08 * (xmax - xmin)))
 
 
