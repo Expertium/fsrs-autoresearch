@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_46 record(s). Generated from `history.jsonl` — do not edit by hand._
+_47 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -50,3 +50,4 @@ _46 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 43 | 2026-05-30T15:50:16 | 0.0006 | 0.32271 | 0.32206 | +0.00065 | 15,330 | 15,322 | -0.05% | accepted | ARC-1 BANKED -> NEW CHAMPION. Dual-trace memory finalized via the rule-compliant SIMPLIFICATION accounting: removed the 2 orphaned transition-era params (w25 transition_decay [dead] + w26 transition_scale/fast_init_mult) and hardcoded the fast-trace init at 0.8*initial_stability (the per-user multiplier was saturated, didn't earn a param). Net vs iter-33 champion: +1 state variable (s_fast), -2 params (38->36). Curve params shifted to w25..35; updated cuh struct, 4 constants tuples, clipper chained idx (26>=25, 28>=27), diagnostics bounds. Enzyme rebuild. |
 | 44 | 2026-05-30T16:22:19 | 0.0001 | 0.32206 | 0.32206 | +0.00000 | 15,322 | 15,322 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): best found LR 0.03->0.045, below threshold. |
 | 45 | 2026-05-30T16:54:43 | 0.0004 | 0.32206 | 0.32206 | -0.00000 | 15,322 | 15,330 | +0.05% | rejected | ARC 2 bet 1: generalized power-law forgetting curve. Each component (1+factor*x)^decay -> (1+factor*x^shape)^decay, x=dt/S; +2 shape exponents (shape1 fast idx36, shape2 slow idx37), convex-by-construction for shape in (0,1] (constraint 12). REJECTED — inert. |
+| 46 | 2026-05-30T17:28:06 | 0.0000 | 0.32206 | 0.32213 | -0.00007 | 16,766 | 16,755 | -0.07% | rejected | ABLATION: remove base_weight2 (the EXACT weight-scale redundancy — normalized mixture (w1*r1+w2*r2)/(w1+w2) depends only on w1/w2). base_weight1 becomes the sole ratio (max widened 1->10 to span the old set). 36->35 params. REJECTED. |
