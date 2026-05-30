@@ -6,6 +6,25 @@ RECENCY_C1 = 0.90  # iter 4: was 0.75; kept so newest review weight = C0 + C1 = 
 
 PENALTY_W_L2 = 0.75
 
+# Per-group learning-rate multipliers (iter-52): a separate effective LR per
+# functional parameter group, scaling the global LR. Tuned by coordinate descent
+# on logloss_by_user: the forgetting-curve + initial-stability groups OSCILLATE at
+# the global LR (largest last-epoch gradients; Adam already per-param normalizes,
+# so a big persistent gradient = bouncing around the optimum) and want a LOWER
+# rate to settle; the 18-param stability-update block is UNDER-converged and wants
+# a HIGHER rate; difficulty is already converged (neutral). A single LR can't
+# express this heterogeneity. (1,1,1,1) recovers the single-LR champion exactly.
+# Tuned, not back-propagated -> training hyperparameters, no new self.w scalar.
+LR_GROUP_MULT = (0.65, 1.0, 1.6, 0.7)  # (init_S w0-3, difficulty w4-6, stability-update w7-24, forgetting-curve w25-35)
+
+# Expanded to one multiplier per parameter index (length 36, matches the param layout).
+LR_GROUP_PER_PARAM = (
+    (LR_GROUP_MULT[0],) * 4     # w0-3   initial stability
+    + (LR_GROUP_MULT[1],) * 3   # w4-6   difficulty
+    + (LR_GROUP_MULT[2],) * 18  # w7-24  stability-after-review (long + short)
+    + (LR_GROUP_MULT[3],) * 11  # w25-35 forgetting curve (+ d_weight/d_decay/s_decay1)
+)
+
 FSRS7_DEFAULT_35_VALUES = (
     0.041,
     2.4175,

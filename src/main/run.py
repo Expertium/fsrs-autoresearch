@@ -337,7 +337,13 @@ def train_iter(
     )
 
     lr_schedule_multi = fsrs_v7_constants.LR * fsrs_v7_scheduler.scheduler(step_i_cat, num_training_steps_cat)
-    lr_schedule_multi = lr_schedule_multi.unsqueeze(-1).expand(-1, flat_fsrs_params.size(-1))
+    # iter-52: per-group LR — scale the global schedule by each parameter's group
+    # multiplier (length == n_params), broadcasting [N,1] * [P] -> [N,P]. At
+    # LR_GROUP_MULT=(1,1,1,1) this is identical to the old uniform expand.
+    lr_group_vec = torch.tensor(
+        fsrs_v7_constants.LR_GROUP_PER_PARAM,
+        device=flat_fsrs_params.device, dtype=lr_schedule_multi.dtype)
+    lr_schedule_multi = lr_schedule_multi.unsqueeze(-1) * lr_group_vec
 
     active_params_mask_i = torch.zeros_like(step_i_cat).scatter_add(
         0,
