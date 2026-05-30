@@ -374,6 +374,36 @@ proposals, not one. "Replace Adam with NAdam" and "add cosine annealing" are
 two proposals. Each iteration tests **one** change against the threshold
 + complexity gate so we can attribute the delta cleanly.
 
+### Automated hyperparameter tuning
+
+Tuning numeric *training* hyperparameters (LR, Adam betas, L2 strength) by hand
+is mechanical, so it's automated in `src/autoresearch/hp_tune.py`. It runs a
+greedy **coordinate-descent** search — steps each knob up/down (multiplicative
+for LR/L2, on the `1−β` scale for betas), keeps improvements, freezes knobs that
+don't help — and is **fully autonomous**: when the best config beats the champion
+by ≥ 0.0001 it commits the new champion (constants + diagnostics + history) and
+tags `iter-N-hp-tune`; otherwise it restores the champion and records a rejected
+pass. Editing numeric literals in place never changes the AST node count, so
+these tweaks are complexity-neutral — only the 0.0001 floor applies, no
+complexity gate. Training is deterministic (`seed` fixed) so every delta is real.
+
+Run it from the **host** (it shells out to `docker compose` per trial and to
+`git`); a pass is ~10–16 ~70 s runs (~15–20 min), so launch it in the background:
+
+```pwsh
+python -m src.autoresearch.hp_tune             # full auto pass (search + commit)
+python src/autoresearch/hp_tune.py --dry-run   # validate edits only, no GPU/git
+python src/autoresearch/hp_tune.py --no-commit # search only, leave best on disk
+```
+
+**Cadence:** run it every ~5 iterations. It self-maintains
+`result/.last_hptune_iter`; trigger when `latest_iter − last_hptune_iter ≥ 5`.
+Re-tuning matters most right after a structural change shifts the loss landscape
+and the old optima drift. It requires a clean git tree (refuses to auto-commit
+otherwise) and owns one iteration number per pass. The multi-knob pass is one
+logical unit, not a "lumping" violation — per-knob deltas are in the trial log
+(`result/hp_tune_last.json`).
+
 ### Iteration cost
 
 One full training run = **~102 seconds wall** on the RTX 4070 with 3000
