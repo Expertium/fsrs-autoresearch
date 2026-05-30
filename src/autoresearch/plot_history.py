@@ -24,6 +24,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")  # headless: render straight to a file, no display needed
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 REPO = Path(__file__).resolve().parents[2]
 HISTORY = REPO / "result" / "history.jsonl"
@@ -107,7 +108,9 @@ def main() -> None:
 
     # extra top headroom for the angled labels
     pad_top = (0.50 if not args.no_summaries else 0.10) * yr
-    ax.set_ylim(ymin - 0.06 * yr, ymax + pad_top)
+    # ax.set_ylim(ymin - 0.06 * yr, ymax + pad_top)
+    ax.set_ylim(min([r["ll_after"] for r in champs]) * 0.995, max([r["ll_after"] for r in champs]) * 1.005)
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.0005))
     ax.set_xlim(xmin - 0.6, xmax + max(2.0, 0.08 * (xmax - xmin)))
 
     fig.tight_layout()
