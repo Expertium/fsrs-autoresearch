@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_42 record(s). Generated from `history.jsonl` — do not edit by hand._
+_43 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -46,3 +46,4 @@ _42 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 39 | 2026-05-30T14:11:06 | 0.0002 | 0.32271 | 0.32322 | -0.00051 | 15,330 | 15,334 | +0.03% | rejected | STRUCTURAL: learnable post-lapse stability offset. w[38]=pls_offset replaces the hardcoded 1.0 in new_s_fail ((S+offset)^fail_s_exp - 1). Default 1.0, bounds [1,3], applies to long & short. Targets post-lapse recovery (Again loss). Enzyme rebuild. |
 | 40 | 2026-05-30T14:57:26 | 0.0010 | 0.32271 | 0.32216 | +0.00055 | 15,330 | 15,330 | +0.00% | rejected | ARC-1 DUAL-TRACE MEMORY (flagship structural bet): added a 2nd persistent stability state s_fast to fsrs_state_t (slow s + fast s_fast; 8->12B, scratch 14% of buffer). Forgetting curve = mixture of a FAST component (r1, t/s_fast) + SLOW component (r2, t/s), each weight keyed to its own trace. Per-review: slow trace updates via long_stability dynamics (reads s), fast trace via short_stability dynamics (reads s_fast); REMOVED the elapsed-time transition blend (w25/w26 now dead). +1 state var, 0 new params (38 unchanged, zero Python edits). Enzyme rebuild OK, no NaN. k=1 so global EB anchor intact -> clean comparison. |
 | 41 | 2026-05-30T15:06:30 | 0.0010 | 0.32271 | 0.32198 | +0.00073 | 15,330 | 15,330 | +0.00% | rejected | ARC-1 chase: repurposed dead w26 (transition_scale -> fast_init_mult). The fast trace inits to fast_init_mult * initial_stability (default 1.0 == iter-40, range [0.02,3.0], sigma 0.5) so it can start SMALLER than the slow trace and capture sub-day forgetting. No param-count change (38, w26 was dead) and no index shift. Builds on the iter-40 dual-trace (on HEAD). Enzyme rebuild. |
+| 42 | 2026-05-30T15:35:19 | 0.0010 | 0.32271 | 0.32197 | +0.00074 | 15,330 | 15,330 | +0.00% | rejected | ARC-1 chase: freed the fast-trace init (fast_init_mult floor 0.02->0.005, L2 sigma 0.5->1.0) to test whether per-user fast-init was over-regularized. Constants-only, no param/structure change (38). |
