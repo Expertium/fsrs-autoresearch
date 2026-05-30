@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_39 record(s). Generated from `history.jsonl` — do not edit by hand._
+_40 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -43,3 +43,4 @@ _39 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 36 | 2026-05-30T13:27:58 | 0.0002 | 0.32271 | 0.32271 | -0.00000 | 15,330 | 15,334 | +0.03% | rejected | STRUCTURAL: retrieval-prediction-error difficulty coupling (LINEAR). Add w[38]=d_surprise; fsrs7_next_d gains delta_d -= d_surprise*(label - retention), label=(rating>1), retention=predicted recall. Surprising lapse raises D, surprising success lowers D; also gives Good reviews (rating-delta 0) a D signal. Default 0 recovers champion. Enzyme rebuild. |
 | 37 | 2026-05-30T13:39:31 | 0.0002 | 0.32271 | 0.32270 | +0.00001 | 15,330 | 15,334 | +0.03% | rejected | STRUCTURAL: retrieval-SURPRISAL difficulty coupling (log form, user suggestion). w[38]=d_surprise; in fsrs7_next_d, delta_d -= d_surprise*(2*label-1)*(-ln(p_actual)), p_actual=retention if recalled else 1-retention (so -ln(p_actual)=review log loss=surprise, large when confidently wrong). Signed: surprising lapse raises D, surprising success lowers D. bounds [0,2], default 0. Enzyme rebuild. |
 | 38 | 2026-05-30T14:02:26 | 0.0002 | 0.32271 | 0.32266 | +0.00005 | 15,330 | 15,334 | +0.03% | rejected | STRUCTURAL: learnable difficulty-damping ceiling in s_inc. w[38]=d_damp_ceil replaces the hardcoded 11 (=max_D+1) in the (ceil-D) factor scaling stability growth on success. Default 11, bounds [10,15], applies to long & short stability. Enzyme rebuild. |
+| 39 | 2026-05-30T14:11:06 | 0.0002 | 0.32271 | 0.32322 | -0.00051 | 15,330 | 15,334 | +0.03% | rejected | STRUCTURAL: learnable post-lapse stability offset. w[38]=pls_offset replaces the hardcoded 1.0 in new_s_fail ((S+offset)^fail_s_exp - 1). Default 1.0, bounds [1,3], applies to long & short. Targets post-lapse recovery (Again loss). Enzyme rebuild. |
