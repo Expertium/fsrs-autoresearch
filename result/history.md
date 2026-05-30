@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_49 record(s). Generated from `history.jsonl` — do not edit by hand._
+_50 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -53,3 +53,4 @@ _49 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 46 | 2026-05-30T17:28:06 | 0.0000 | 0.32206 | 0.32213 | -0.00007 | 16,766 | 16,755 | -0.07% | rejected | ABLATION: remove base_weight2 (the EXACT weight-scale redundancy — normalized mixture (w1*r1+w2*r2)/(w1+w2) depends only on w1/w2). base_weight1 becomes the sole ratio (max widened 1->10 to span the old set). 36->35 params. REJECTED. |
 | 47 | 2026-05-30T17:44:50 | 0.0002 | 0.32206 | 0.32205 | +0.00001 | 16,766 | 16,847 | +0.48% | rejected | Retention-aware difficulty: next_d += d_surprise*(retention - outcome) (outcome=1 if recalled else 0). A surprising failure raises difficulty, a surprising recall lowers it. +1 param (d_surprise, default 0). 36->37 params. REJECTED (near-miss). |
 | 48 | 2026-05-30T17:58:57 | 0.0012 | 0.32206 | 0.32205 | +0.00001 | 16,766 | 16,880 | +0.68% | rejected | NEW STATE VAR: recent-failure (lapse) EMA in [0,1] (non-Markovian leech signal, hardcoded EMA rate 0.7) feeding weight1 *= exp(lapse_mult*lapse) to boost the fast/short-term curve for leech-prone cards. +1 state var +1 param (lapse_mult). 3->4 state vars, 36->37 params. REJECTED. |
+| 49 | 2026-05-30T18:12:31 | 0.0002 | 0.32206 | 0.32206 | +0.00000 | 16,766 | 16,785 | +0.11% | rejected | Difficulty equilibrium: revert toward init_d(4) + learnable d_revert_offset (default 0), decoupling the long-run difficulty equilibrium from the easy-first-rating init. +1 param. 36->37 params. REJECTED. |
