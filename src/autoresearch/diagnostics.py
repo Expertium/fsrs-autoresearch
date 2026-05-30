@@ -195,6 +195,7 @@ class ParamStats:
     p99: float
     hit_lower_pct: float
     hit_upper_pct: float
+    range_frac: float  # (p99 - p01) / static-clamp-width; range utilization
 
 
 def param_distribution_stats(
@@ -235,6 +236,18 @@ def param_distribution_stats(
     hit_lower = (rows_f32 <= lower + hit_eps).float().mean(dim=0) * 100.0
     hit_upper = (rows_f32 >= upper - hit_eps).float().mean(dim=0) * 100.0
 
+    # Range utilization: how much of each param's static clamp width the central
+    # 98% of the population (p01..p99) actually spans. The width per column comes
+    # from the per-row effective bounds — uppers are constant per column, and the
+    # chained lowers (w[1..3], w[28], w[30]) resolve to their realized population
+    # floor via amin (the referenced params all reach their static floors in
+    # practice). frac → 0 means the clamp range is far wider than the data uses
+    # (bound too wide, or the L2 prior pins the param); frac → 1 means the
+    # population fills the range and the bound may be too tight.
+    bound_lo = lower.amin(dim=0)
+    bound_hi = upper.amax(dim=0)
+    range_frac = (p99 - p01) / (bound_hi - bound_lo).clamp_min(1e-12)
+
     def _fmt(v: float | str) -> str:
         return v if isinstance(v, str) else f"{v:g}"
 
@@ -251,6 +264,7 @@ def param_distribution_stats(
                 p99=float(p99[i]),
                 hit_lower_pct=float(hit_lower[i]),
                 hit_upper_pct=float(hit_upper[i]),
+                range_frac=float(range_frac[i]),
             )
         )
     return out
@@ -493,6 +507,7 @@ def build_diagnostics_dict(
                 "p99": ps.p99,
                 "hit_lower_pct": ps.hit_lower_pct,
                 "hit_upper_pct": ps.hit_upper_pct,
+                "range_frac": ps.range_frac,
                 "mean_abs_grad_all_epochs": (
                     grad_summary["mean_abs_grad_all_epochs"][ps.index]
                     if grad_summary else None
@@ -558,19 +573,21 @@ def format_markdown_report(diag: dict) -> str:
 
     lines.append("## Per-parameter stats\n")
     lines.append(
-        "| i | bound_lo | bound_hi | p01 | median | p99 | hit_lo% | hit_hi% | mean|g| all | mean|g| last |"
+        "| i | bound_lo | bound_hi | p01 | median | p99 | hit_lo% | hit_hi% | (p99-p01)/rng | mean|g| all | mean|g| last |"
     )
-    lines.append("|--:|---|---|---:|---:|---:|---:|---:|---:|---:|")
+    lines.append("|--:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
     for pp in diag["per_param"]:
         g_all = pp.get("mean_abs_grad_all_epochs")
         g_last = pp.get("mean_abs_grad_last_epoch")
         g_all_s = f"{g_all:.2e}" if isinstance(g_all, (int, float)) else "—"
         g_last_s = f"{g_last:.2e}" if isinstance(g_last, (int, float)) else "—"
+        rf = pp.get("range_frac")
+        rf_s = f"{rf:.3f}" if isinstance(rf, (int, float)) else "—"
         lines.append(
             f"| {pp['index']} | {pp['bound_lower']} | {pp['bound_upper']} | "
             f"{pp['p01']:.4g} | {pp['median']:.4g} | {pp['p99']:.4g} | "
             f"{pp['hit_lower_pct']:.1f} | {pp['hit_upper_pct']:.1f} | "
-            f"{g_all_s} | {g_last_s} |"
+            f"{rf_s} | {g_all_s} | {g_last_s} |"
         )
     if not diag["config"]["grad_capture_wired"]:
         lines.append(
