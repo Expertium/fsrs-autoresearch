@@ -371,15 +371,26 @@ mutating). Each accepted variant must increase the score by **≤5%**, ideally
 ≤2%. Pick conservative implementations — auto-rejection on complexity is
 common if you bolt on a new mechanism without simplifying anything else.
 
+**C++/CUDA is scored too.** The active model is the custom CUDA forward, so
+`src/main/csrc/fsrs/fsrs7.cu` and `fsrs7.cuh` are in the scored set. C++ has no
+stdlib AST, so `complexity.py` scores it with the same `nodes + 40*cyclomatic`
+formula via a deterministic token model (`score_cpp_source`): nodes = token
+count (comments/strings/preprocessor stripped); cyclomatic = 1 + if/for/while/
+case/catch + `&&`/`||` + ternary. So formula complexity that lives in `.cu` is
+**no longer free** — moving a mechanism into CUDA counts against the gate just
+like Python. (The off-limits infra C++ — `fsrs_extension.*`, `fsrs_kernel/` —
+is *not* scored: it can't be mutated, so it would only add a fixed offset.)
+
 The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
-includes the `src/main/fsrs/` helpers, optimizer, and scheduler so a mutation
-can't dodge the gate by living in an unscored file. **Current champion
-complexity baseline: 15,322.** (iter-43's dual-trace bank removed 2 params,
-down from 15,330 — a *simpler* champion. It was 13,968 until `fsrs_v7_helpers.py`,
-`fsrs_v7_optimizer.py`, and `fsrs_v7_scheduler.py` were added to the scored
-set — a measurement change, not a model change; log loss is unaffected. The
-+5% gate is measured against this baseline, not the original 18,563.)
+includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
+model files so a mutation can't dodge the gate by living in an unscored file.
+**Current champion complexity baseline: 16,766.** (Re-baselined when C++ scoring
+was added: the 36-param dual-trace champion was 15,322 python-only; the two CUDA
+files add 1,436 — `fsrs7.cu` 1,230, `fsrs7.cuh` 206 — and wiring them into
+`mutation_files` added 8 to `run.py`, for 16,766. A measurement change, not a
+model change; log loss is unaffected. The +5% gate is measured against this
+baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 
@@ -518,13 +529,16 @@ afford a fairly hungry exploration policy.
 |---|---|
 | `logloss_by_user` (primary) | **0.32498** |
 | `logloss_by_review` (sanity) | 0.33844 |
-| Complexity score | **18,563** |
+| Complexity score | **18,563** (original python-only scoring) |
 
 This is the unmodified FSRS-7 with default `init_w` on anki-revlogs-3k,
 `--short --secs --recency`, 8 epochs. Every accepted variant must beat
 this on `logloss_by_user` by at least the threshold defined above, and
 keep the complexity within +5% of the *current champion's* score (not
-the original baseline).
+the original baseline). **Note:** the 18,563 here is the *original*
+python-only figure; complexity scoring now also counts the CUDA model
+files, so the current champion baseline is **16,766** on the new scale
+(see "Code complexity gate"). The `logloss` figures are unaffected.
 
 ### Per-run artifacts
 

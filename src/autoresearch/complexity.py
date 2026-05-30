@@ -20,6 +20,12 @@ function, +1 per branching construct:
     ternary (a if b else c)               → +1
     assert                                → +1
 
+C/C++/CUDA files (.cu/.cuh/.cpp/.h/…) are scored with the same
+`nodes + 40*cyclomatic` formula via a token-based model (see
+`score_cpp_source`), since there is no stdlib AST for C++. This lets the
+gate count model logic that lives in the custom CUDA forward (`fsrs7.cu`,
+`fsrs7.cuh`) instead of treating it as free.
+
 Standalone Python — no third-party deps. Runs on the host (no Docker
 needed).
 
@@ -46,6 +52,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -129,14 +136,70 @@ def score_source(source: str, filename: str = "<string>") -> tuple[int, int]:
     return ast_nodes, visitor.complexity
 
 
+# ── C / C++ / CUDA scoring ───────────────────────────────────────────────────
+#
+# There is no stdlib AST for C++, so we score it with a deterministic,
+# dependency-free token model that parallels the Python scorer's formula
+# (nodes + 40*cyclomatic):
+#   * "nodes"      ≈ count of source tokens (identifiers/keywords, numeric
+#                    literals, and operators/punctuation) after stripping
+#                    comments, string/char literals (each → one token, like a
+#                    Python Constant node), and preprocessor lines.
+#   * "cyclomatic" = 1 (base path) + one per decision construct
+#                    (if/for/while/case/catch) + one per `&&`/`||` operand
+#                    boundary + one per ternary `?`. This mirrors McCabe the
+#                    same way the Python visitor does (minus a per-function
+#                    base, which C++ function defs can't be regex-detected
+#                    reliably; the relative +5% gate is unaffected).
+# The scorer only needs to be deterministic and monotonic in real complexity:
+# the gate is a percentage of a baseline that now includes the C++ model files,
+# so formula complexity moved into .cu is finally counted, not free.
+
+_CPP_EXTS = {".cu", ".cuh", ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hh"}
+
+_CPP_TOKEN = re.compile(
+    r"[A-Za-z_]\w*"                       # identifiers / keywords
+    r"|\d+\.?\d*(?:[eE][+-]?\d+)?[fFuUlL]*"  # numeric literals
+    r"|::|->|\+\+|--|<<|>>|<=|>=|==|!=|&&|\|\||[-+*/%&|^!=<>]=?|[(){}\[\];,.?:~]"
+)
+_CPP_DECISION = re.compile(r"\b(?:if|for|while|case|catch)\b")
+
+
+def _strip_cpp(source: str) -> str:
+    """Remove comments, string/char literals, and preprocessor lines."""
+    source = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)  # block comments
+    source = re.sub(r"//[^\n]*", " ", source)                    # line comments
+    source = re.sub(r"(?m)^[ \t]*#.*$", " ", source)             # preprocessor
+    source = re.sub(r'"(?:\\.|[^"\\\n])*"', " _str_ ", source)   # string literals
+    source = re.sub(r"'(?:\\.|[^'\\\n])*'", " _chr_ ", source)   # char literals
+    return source
+
+
+def score_cpp_source(source: str) -> tuple[int, int]:
+    """Return (token_nodes, cyclomatic) for a C/C++/CUDA source string."""
+    code = _strip_cpp(source)
+    nodes = len(_CPP_TOKEN.findall(code))
+    cyclomatic = (
+        1
+        + len(_CPP_DECISION.findall(code))
+        + code.count("&&")
+        + code.count("||")
+        + code.count("?")
+    )
+    return nodes, cyclomatic
+
+
 def score_file(path: Path) -> FileStats:
     source = path.read_text(encoding="utf-8")
-    ast_nodes, cyc = score_source(source, str(path))
+    if path.suffix.lower() in _CPP_EXTS:
+        nodes, cyc = score_cpp_source(source)
+    else:
+        nodes, cyc = score_source(source, str(path))
     return FileStats(
         path=str(path),
-        ast_nodes=ast_nodes,
+        ast_nodes=nodes,  # token count for C++ files; true AST node count for .py
         cyclomatic=cyc,
-        score=ast_nodes + 40 * cyc,
+        score=nodes + 40 * cyc,
     )
 
 

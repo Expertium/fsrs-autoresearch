@@ -757,6 +757,12 @@ def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict |
         Path("src/main/fsrs/fsrs_v7_helpers.py"),
         Path("src/main/fsrs/fsrs_v7_optimizer.py"),
         Path("src/main/fsrs/fsrs_v7_scheduler.py"),
+        # The active model is the custom CUDA forward; these are the editable
+        # model files (the only csrc the loop may modify). Scored so formula
+        # complexity moved into .cu is counted, not free (token-based, see
+        # complexity.py::score_cpp_source).
+        Path("src/main/csrc/fsrs/fsrs7.cu"),
+        Path("src/main/csrc/fsrs/fsrs7.cuh"),
     ]
     complexity_score = score_paths(mutation_files)
 
