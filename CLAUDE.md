@@ -188,6 +188,15 @@ threshold + complexity gate, and keeps an archive of winners.
 > whole-formula reformulations) over safe +1-param tweaks, even though each big
 > bet is more likely to reject. Spend the iterations. There will be plenty.
 
+> **Autonomous wakeup cadence.** When self-pacing the loop with `ScheduleWakeup`
+> (dynamic `/loop` mode), use a **3-minute** delay (180 s) between normal
+> synchronous iterations — the user's chosen cadence (2026-05-30). 180 s also
+> stays inside the prompt-cache TTL, so context stays warm between iterations.
+> **Exception:** while a *tracked background job* (e.g. an `hp_tune` pass,
+> ~15–20 min) is running, don't poll it every 3 min — use a long fallback
+> (1200 s+) and rely on the background-completion notification, then resume the
+> 3-min cadence.
+
 **Note on `autoresearcher.md`:** that file was written before this codebase
 existed, assuming a tight-loop pipeline with a separate proposer LLM emitting
 structured dicts and a smaller patch-writer LLM doing `git apply`. We're not
