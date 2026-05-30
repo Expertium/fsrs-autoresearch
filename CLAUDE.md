@@ -186,7 +186,11 @@ Python-side FSRS code only:
 - `src/main/fsrs/fsrs_v7_constants.py` — `LR`, `BETAS`, `RECENCY_C0/C1`,
   `PENALTY_W_L2`, `FSRS7_DEFAULT_35_VALUES` (init_w), `FSRS_MIN_VALUES`
   / `FSRS_MAX_VALUES` (CUDA-path clamps), `FSRS7_L2_SIGMA_35_VALUES`
-- `src/main/run.py` — training loop (`train_iter`, optimizer setup)
+- `src/main/run.py` — training loop (`train_iter`, optimizer/scheduler wiring)
+- `src/main/fsrs/fsrs_v7_helpers.py` — L2 penalty (`penalty_loss`), recency
+  weighting (`gradient_weight`), parameter clipper (`apply_parameter_clipper`)
+- `src/main/fsrs/fsrs_v7_optimizer.py` — the Adam/AdamW/NAdam update rule
+- `src/main/fsrs/fsrs_v7_scheduler.py` — LR schedule (cosine decay)
 - `src/main/config.py` — only `BATCH_SIZE`, never `N_EPOCHS`
 - `src/main/csrc/fsrs/*` — CUDA forward/backward source. In bounds, but
   touching it triggers a multi-minute Enzyme rebuild. Other paths under
@@ -299,6 +303,15 @@ to a single `train.py`; we scope it to the same set of files we allow
 mutating). Each accepted variant must increase the score by **≤5%**, ideally
 ≤2%. Pick conservative implementations — auto-rejection on complexity is
 common if you bolt on a new mechanism without simplifying anything else.
+
+The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
+`score_paths`) and must stay in sync with the mutation-surface list above. It
+includes the `src/main/fsrs/` helpers, optimizer, and scheduler so a mutation
+can't dodge the gate by living in an unscored file. **Current champion
+complexity baseline: 15,330.** (It was 13,968 until `fsrs_v7_helpers.py`,
+`fsrs_v7_optimizer.py`, and `fsrs_v7_scheduler.py` were added to the scored
+set — a measurement change, not a model change; log loss is unaffected. The
++5% gate is measured against this baseline, not the original 18,563.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 

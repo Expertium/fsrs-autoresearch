@@ -744,13 +744,19 @@ def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict |
     rows = torch.cat(eval_aggregate.fsrs_param_rows_parts, dim=0)
 
     # Mutation-surface files for the complexity score — same set the loop
-    # is allowed to modify per CLAUDE.md. Keep in sync.
+    # is allowed to modify per CLAUDE.md. Keep in sync. The src/main/fsrs/
+    # helpers (penalty/recency/clipper), optimizer (Adam/NAdam), and scheduler
+    # (LR) are mutable training-loop code, so they are scored too — a mutation
+    # hidden in an unscored file would dodge the complexity gate.
     mutation_files = [
         Path("src/models/fsrs_v7.py"),
         Path("src/models/fsrs_v7_interval_penalty.py"),
         Path("src/main/run.py"),
         Path("src/main/config.py"),
         Path("src/main/fsrs/fsrs_v7_constants.py"),
+        Path("src/main/fsrs/fsrs_v7_helpers.py"),
+        Path("src/main/fsrs/fsrs_v7_optimizer.py"),
+        Path("src/main/fsrs/fsrs_v7_scheduler.py"),
     ]
     complexity_score = score_paths(mutation_files)
 
