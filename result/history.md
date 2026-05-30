@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_58 record(s). Generated from `history.jsonl` — do not edit by hand._
+_59 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -62,3 +62,4 @@ _58 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 55 | 2026-05-30T21:15:15 | 0.0001 | 0.32106 | 0.32117 | -0.00011 | 16,816 | 16,816 | +0.00% | rejected | Two-phase SGD (user idea): epoch-dependent per-group LR — freeze a param group's LR x0 outside a per-row training-progress window [LO,HI], reusing the iter-52 group-LR vector (0 new trainable params). Tested freezing the forgetting-curve group early/late. REJECTED (no phasing beat the champion). |
 | 56 | 2026-05-30T21:28:05 | 0.0001 | 0.32106 | 0.32103 | +0.00004 | 16,816 | 16,826 | +0.06% | rejected | Lower decay2_mag floor 0.01->0.003 + log-space factor2 (the iter-50 factor1 pattern) so the slow tail can be heavier for the ~3.8% of users pinned at the 0.01 floor. 0 params. REJECTED (near-miss +0.000039 < 0.0001 bar). |
 | 57 | 2026-05-30T21:45:10 | 0.0002 | 0.32106 | 0.32107 | -0.00000 | 16,816 | 16,930 | +0.68% | rejected | Trace coupling (bold structural bet, +1 param s_couple): on a SUCCESSFUL review the slow (consolidated) trace's stability INCREMENT (new_s_slow - s) is scaled by m=(s_fast/s)^s_couple -- the slow trace consolidates FROM the fast trace, a GRU-like cross-trace transition rather than two independent updates. Increment-scaling (not whole-value) keeps new_s>=s so constraints 3 (rating-monotone) & 4 (D-monotone) and the post-lapse cap all hold; exponent clamped before exp() for float+Enzyme safety; s_couple=0 recovers champion. REJECTED (+1 param needs +0.0002; got -0.000001). |
+| 58 | 2026-05-30T21:56:08 | 0.0002 | 0.32106 | 0.32105 | +0.00002 | 16,816 | 16,905 | +0.53% | rejected | Surprise-driven difficulty (bold structural bet, +1 param d_surprise): a Rescorla-Wagner prediction-error term on the difficulty update -- delta_d += -d_surprise*(outcome - retention), outcome=(rating>1). A surprising lapse (failed a card we predicted to recall) raises D more; a surprising success lowers it. Aim: sharpen D for lapse-prone cards so the active d_weight channel lowers their predicted retention and cuts the dominant Again-bucket loss. d_surprise=0 recovers champion; only changes how D evolves (constraints 3/4 untouched). REJECTED (+1 param needs +0.0002; got +0.0000166). |
