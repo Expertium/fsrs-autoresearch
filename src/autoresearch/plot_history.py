@@ -101,7 +101,7 @@ def main() -> None:
 
     ax.set_xlabel("Iteration", fontsize=15, fontweight="bold")
     ax.set_ylabel("Log Loss", fontsize=15, fontweight="bold")
-    ax.set_title("FSRS-7 autoresearch — champions vs rejected variants",
+    ax.set_title(f"FSRS-7 autoresearch — {len(champs)} kept improvements, {len(champs)+len(rejects)} rejected variants",
                  fontsize=12)
     ax.grid(True, axis="y", alpha=0.25)
     ax.legend(loc="upper right", framealpha=0.9)

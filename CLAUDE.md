@@ -170,6 +170,16 @@ AlphaEvolve/Karpathy-style: Claude reads the current champion, proposes a
 mutation, writes the patch, runs the benchmark, accepts or rejects against a
 threshold + complexity gate, and keeps an archive of winners.
 
+> **Iteration budget — this is a long campaign (150+ iterations).** The user
+> is running this loop autonomously for ~2 weeks, which is **150+ and likely
+> 300+ iterations**. Do **not** optimize for iteration economy, fear "wasting"
+> an iteration on an experiment that might reject, or try to "declare
+> converged" to stop early. A rejected structural probe is a *normal, valuable*
+> outcome — it maps the loss surface and rules out a hypothesis. With this
+> budget the right strategy is **bold structural bets** (new state variables,
+> whole-formula reformulations) over safe +1-param tweaks, even though each big
+> bet is more likely to reject. Spend the iterations. There will be plenty.
+
 **Note on `autoresearcher.md`:** that file was written before this codebase
 existed, assuming a tight-loop pipeline with a separate proposer LLM emitting
 structured dicts and a smaller patch-writer LLM doing `git apply`. We're not
