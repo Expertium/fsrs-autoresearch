@@ -1,10 +1,10 @@
 LR: float = 3e-2  # iter 20: was 2e-2; recency sharpening (iter 14, exp=5) cut gradient mass, raise LR to compensate
-BETAS: tuple = (0.8, 0.85)  # this is for Adam, default is (0.9, 0.999)
+BETAS: tuple = (0.55, 0.85)  # this is for Adam, default is (0.9, 0.999)
 
 RECENCY_C0 = 0.10  # iter 4: was 0.25; shift relative grad weight toward most-recent reviews (test split is time-most-recent chunk)
 RECENCY_C1 = 0.90  # iter 4: was 0.75; kept so newest review weight = C0 + C1 = 1.0
 
-PENALTY_W_L2 = 0.5
+PENALTY_W_L2 = 0.75
 
 FSRS7_DEFAULT_35_VALUES = (
     0.041,
