@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_47 record(s). Generated from `history.jsonl` — do not edit by hand._
+_48 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -51,3 +51,4 @@ _47 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 44 | 2026-05-30T16:22:19 | 0.0001 | 0.32206 | 0.32206 | +0.00000 | 15,322 | 15,322 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): best found LR 0.03->0.045, below threshold. |
 | 45 | 2026-05-30T16:54:43 | 0.0004 | 0.32206 | 0.32206 | -0.00000 | 15,322 | 15,330 | +0.05% | rejected | ARC 2 bet 1: generalized power-law forgetting curve. Each component (1+factor*x)^decay -> (1+factor*x^shape)^decay, x=dt/S; +2 shape exponents (shape1 fast idx36, shape2 slow idx37), convex-by-construction for shape in (0,1] (constraint 12). REJECTED — inert. |
 | 46 | 2026-05-30T17:28:06 | 0.0000 | 0.32206 | 0.32213 | -0.00007 | 16,766 | 16,755 | -0.07% | rejected | ABLATION: remove base_weight2 (the EXACT weight-scale redundancy — normalized mixture (w1*r1+w2*r2)/(w1+w2) depends only on w1/w2). base_weight1 becomes the sole ratio (max widened 1->10 to span the old set). 36->35 params. REJECTED. |
+| 47 | 2026-05-30T17:44:50 | 0.0002 | 0.32206 | 0.32205 | +0.00001 | 16,766 | 16,847 | +0.48% | rejected | Retention-aware difficulty: next_d += d_surprise*(retention - outcome) (outcome=1 if recalled else 0). A surprising failure raises difficulty, a surprising recall lowers it. +1 param (d_surprise, default 0). 36->37 params. REJECTED (near-miss). |
