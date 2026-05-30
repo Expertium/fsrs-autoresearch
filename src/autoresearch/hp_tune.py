@@ -3,8 +3,8 @@
 Automated hyperparameter tuner for the FSRS-7 autoresearch loop.
 
 The interesting part of the loop is the model-structure search; nudging numeric
-*training* hyperparameters (learning rate, Adam betas, L2 strength) up and down
-is mechanical and boring. This automates it.
+*training* hyperparameters (learning rate, Adam betas, L2 strength, and the
+per-group LR multipliers) up and down is mechanical and boring. This automates it.
 
 What it does
 ------------
@@ -111,6 +111,25 @@ def set_betas(text: str, b1: float, b2: float) -> str:
     return new
 
 
+def get_group_mult(text: str, i: int) -> float:
+    """Read element ``i`` of the LR_GROUP_MULT tuple (per-group LR multipliers)."""
+    m = re.search(r"^LR_GROUP_MULT\s*=\s*\(([^)]*)\)", text, re.MULTILINE)
+    if not m:
+        raise ValueError("could not read LR_GROUP_MULT")
+    parts = [p for p in (s.strip() for s in m.group(1).split(",")) if p]
+    return float(parts[i])
+
+
+def set_group_mult(text: str, i: int, value: float) -> str:
+    """Set element ``i`` of LR_GROUP_MULT in place, preserving the rest + comment."""
+    m = re.search(r"^LR_GROUP_MULT\s*=\s*\(([^)]*)\)", text, re.MULTILINE)
+    if not m:
+        raise ValueError("could not set LR_GROUP_MULT")
+    parts = [p for p in (s.strip() for s in m.group(1).split(",")) if p]
+    parts[i] = _fmt(value)
+    return text[:m.start(1)] + ", ".join(parts) + text[m.end(1):]
+
+
 # ── hyperparameter spec ──────────────────────────────────────────────────────
 @dataclass
 class HParam:
@@ -139,7 +158,7 @@ class HParam:
 
 
 def build_hparams() -> list[HParam]:
-    return [
+    hps = [
         HParam("LR",
                lambda t: get_scalar(t, "LR"),
                lambda t, v: set_scalar(t, "LR", v),
@@ -157,6 +176,19 @@ def build_hparams() -> list[HParam]:
                lambda t, v: set_betas(t, get_betas(t)[0], v),
                "beta", 1.5, 0.4, 0.999),
     ]
+    # Per-group LR multipliers (iter-52: LR_GROUP_MULT scales the global LR per
+    # parameter group — init-S, difficulty, stability-update, forgetting-curve).
+    # One knob per group, so coordinate descent nudges each up AND down => a pass
+    # tries >= 8 group-modifier combinations (4 groups x 2 directions). Range
+    # [0.25, 4.0] (user-specified bounds); step 1.5 multiplicative like LR/L2.
+    # Editing the tuple literal is complexity-neutral, same as the other knobs.
+    for i, gname in enumerate(["LRG_INIT_S", "LRG_DIFF", "LRG_STAB", "LRG_CURVE"]):
+        hps.append(HParam(
+            gname,
+            (lambda ii: lambda t: get_group_mult(t, ii))(i),
+            (lambda ii: lambda t, v: set_group_mult(t, ii, v))(i),
+            "mul", 1.5, 0.25, 4.0))
+    return hps
 
 
 # ── running the benchmark ────────────────────────────────────────────────────
@@ -337,7 +369,7 @@ def finalize(res: dict, threshold: float) -> None:
     (REPO / "result" / ".last_hptune_iter").write_text(str(n), encoding="utf-8")
 
     if accept:
-        summary = (f"AUTO hyperparameter tune (coordinate descent over LR/betas/L2): "
+        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): "
                    f"{cs}. Numbers-only, complexity unchanged.")
         reason = (f"Automated tuning pass. Improvement +{imp:.6f} >= threshold "
                   f"{threshold} over {res['n_runs']} runs. Changes: {cs}. "
@@ -354,7 +386,8 @@ def finalize(res: dict, threshold: float) -> None:
             "result/history.jsonl", "result/history.md",
             "result/.last_hptune_iter")
         msg = (f"iter {n} accepted: hyperparameter auto-tune ({cs})\n\n"
-               f"Automated coordinate-descent pass over LR / Adam betas / L2 strength.\n"
+               f"Automated coordinate-descent pass over training hyperparameters "
+               f"(LR, Adam betas, L2 strength, per-group LR multipliers).\n"
                f"LL_by_user {base_ll:.5f} -> {best_ll:.5f} (+{imp:.6f} >= {threshold} "
                f"thresh) over {res['n_runs']} runs. Numbers-only, complexity {cx} "
                f"unchanged. New champion.\n\n{TRAILER}")
@@ -365,7 +398,7 @@ def finalize(res: dict, threshold: float) -> None:
         # restore champion (covers the near-miss case where constants changed)
         git("checkout", "HEAD", "--", "src/main/fsrs/fsrs_v7_constants.py",
             "result/diagnostics.json", "result/diagnostics.md")
-        summary = (f"AUTO hyperparameter tune (coordinate descent over LR/betas/L2): "
+        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): "
                    f"best found {cs}, below threshold.")
         reason = (f"Automated tuning pass over {res['n_runs']} runs found no config "
                   f"clearing threshold {threshold}. Best: {cs}, improvement "
@@ -400,8 +433,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--rounds", type=int, default=3,
                     help="max coordinate-descent rounds (default 3)")
-    ap.add_argument("--max-runs", type=int, default=18,
-                    help="hard cap on benchmark runs per pass (default 18)")
+    ap.add_argument("--max-runs", type=int, default=36,
+                    help="hard cap on benchmark runs per pass (default 36; sized "
+                         "for the 8-knob set incl. the 4 per-group LR multipliers)")
     ap.add_argument("--threshold", type=float, default=0.0001,
                     help="acceptance threshold on logloss_by_user (default 1e-4)")
     ap.add_argument("--dry-run", action="store_true",
