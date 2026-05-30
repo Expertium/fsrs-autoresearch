@@ -59,3 +59,9 @@ compose.override.yaml
 docker-compose.override.yml
 result/history_plot.png
 result/hp_tune_last.json
+
+# compact-injector runtime files (src/autoresearch/compact_injector.py)
+result/.compact_request.txt
+result/.compact_injector.log
+result/.compact_injector.lock
+result/.compact_injector.stop
