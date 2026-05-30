@@ -410,6 +410,15 @@ baseline.)
       values. `torch.pow(base, -w[i])` blows up when `w[i]` flips sign,
       `s ** -w[33]` reverses curvature, `exp(w[7] - 1.5)` is fine but
       `log(w[i])` would die, etc. Don't hand-wave this — read each call site.
+- [ ] If a bound change lets a trainable base/exponent reach a region where a
+      `powf`/`exp` can **overflow float** (e.g. `base^(1/decay)` with small base
+      *and* small decay), clamping the *result* (`fminf` after the `powf`) is NOT
+      enough under Enzyme: it differentiates the pre-clamp expression whose
+      derivative also overflows, and `inf*(clamp'=0)=NaN` poisons the **backward**
+      pass — surfacing as a CUDA `input_val>=zero && input_val<=one` assert in the
+      BCE eval, not a forward NaN. Compute it in **log-space and clamp the exponent
+      before `exp()`** so value AND gradient stay finite (iter-50: base1 floor
+      0.5→0.2 needed `exp(min((1/decay1)·ln base1, 60)) - 1`).
 - [ ] `w[0..3]` still ordered after any init/clamp changes?
 - [ ] `stability_after_review` monotonic in rating?
 - [ ] Higher `D` still slows `S` growth?
