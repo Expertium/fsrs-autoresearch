@@ -11,10 +11,15 @@ float fsrs7_clamp(const float x, const float lo, const float hi) {
 }
 
 __device__ __forceinline__
-fsrs_state_t fsrs7_clamp_state(const float stability, const float difficulty) {
+fsrs_state_t fsrs7_clamp_state(
+    const float stability,
+    const float difficulty,
+    const float stability_fast
+) {
     return fsrs_state_t{
         fsrs7_clamp(stability, 1e-4f, 36500.0f),
         fsrs7_clamp(difficulty, 1.0f, 10.0f),
+        fsrs7_clamp(stability_fast, 1e-4f, 36500.0f),
     };
 }
 
@@ -53,37 +58,41 @@ float fsrs7_forgetting_curve(
     const float elapsed_time,
     const fsrs_state_t &state
 ) {
-    const float t_over_s = elapsed_time / state.s;
+    // DUAL-TRACE MEMORY (iter-40): the FAST recall component (r1) is driven by
+    // the fast trace s_fast; the SLOW component (r2) by the slow trace s. Each
+    // component "reads" its own memory store, so the curve is a true two-store
+    // mixture rather than two analytic components sharing a single stability.
+    const float t_over_s_fast = elapsed_time / state.s_fast;
+    const float t_over_s_slow = elapsed_time / state.s;
 
-    // Stability modulation of the FAST component's decay (short-term curve
-    // shape). decay1_mag = clamp(decay1 * S^s_decay1, 0.01, 0.95); s_decay1=0
-    // recovers -fsrs_params.decay1 exactly (decay1 in [0.01,0.25]). The fast
-    // component dominates only at small S, so this targets short-term (sub-day)
-    // forgetting and barely touches high-S recall. Clamp keeps base1^(1/decay1)
-    // float-safe; base1<1 => factor1>0, so r1 stays monotone with p(0)=1,p(inf)=0.
+    // FAST component. Its decay can still be S-modulated (s_decay1), now keyed
+    // to the fast trace it belongs to. s_decay1=0 recovers -decay1 exactly
+    // (decay1 in [0.01,0.25]). Clamp keeps base1^(1/decay1) float-safe; base1<1
+    // => factor1>0, so r1 stays monotone with r1(0)=1, r1(inf)=0.
     const float decay1_mag = fsrs7_clamp(
-        fsrs_params.decay1 * powf(state.s, fsrs_params.s_decay1),
+        fsrs_params.decay1 * powf(state.s_fast, fsrs_params.s_decay1),
         0.01f, 0.95f);
     const float decay1 = -decay1_mag;
     const float factor1 = powf(fsrs_params.base1, 1.0f / decay1) - 1.0f;
-    const float r1 = powf(1.0f + factor1 * t_over_s, decay1);
+    const float r1 = powf(1.0f + factor1 * t_over_s_fast, decay1);
 
-    // Difficulty modulation of the slow component's DECAY (curve shape, not
-    // mixture weight). d_decay>0 => hard cards (D>5) get a steeper slow tail.
-    // Clamp to [0.01, 0.95] keeps |decay| safe: factor = base^(1/decay)
-    // overflows float once |decay| < ~0.008 (0.5^-128 > FLT_MAX). d_decay=0
-    // reduces to -fsrs_params.decay2 exactly (decay2 already in [0.01,0.95]).
+    // SLOW component. Difficulty modulation of its DECAY (curve shape). d_decay>0
+    // => hard cards (D>5) get a steeper slow tail. Clamp to [0.01, 0.95] keeps
+    // |decay| safe: factor = base^(1/decay) overflows float once |decay| < ~0.008.
+    // d_decay=0 reduces to -decay2 exactly (decay2 already in [0.01,0.95]).
     const float decay2_mag = fsrs7_clamp(
         fsrs_params.decay2 * expf(fsrs_params.d_decay * (state.d - 5.0f)),
         0.01f, 0.95f);
     const float decay2 = -decay2_mag;
     const float factor2 = powf(fsrs_params.base2, 1.0f / decay2) - 1.0f;
-    const float r2 = powf(1.0f + factor2 * t_over_s, decay2);
+    const float r2 = powf(1.0f + factor2 * t_over_s_slow, decay2);
 
-    const float weight1 = fsrs_params.base_weight1 * powf(state.s, -fsrs_params.s_weight_power1);
-    // Difficulty modulation: scale the slow component's weight by exp(d_weight*(D-5)).
-    // exp(...) > 0 always, so both weights stay positive and the mixture still
-    // satisfies p(0)=1, p(inf)=0. d_weight=0 recovers the S-only curve.
+    // Mixture weights, each keyed to the trace its component reads: as the fast
+    // trace grows weight1 shrinks (S^-power1) and as the slow trace grows
+    // weight2 grows (S^+power2), shifting the mix from fast-dominated (freshly
+    // reviewed) to slow-dominated (well consolidated). exp(d_weight*(D-5))>0
+    // keeps both weights positive, so the mixture preserves p(0)=1, p(inf)=0.
+    const float weight1 = fsrs_params.base_weight1 * powf(state.s_fast, -fsrs_params.s_weight_power1);
     const float weight2 = fsrs_params.base_weight2 * powf(state.s, fsrs_params.s_weight_power2)
         * expf(fsrs_params.d_weight * (state.d - 5.0f));
     const float retention = (weight1 * r1 + weight2 * r2) / (weight1 + weight2);
@@ -148,7 +157,9 @@ fsrs_state_t fsrs7_init(
         static_cast<float>(first_rating)
     );
 
-    return fsrs7_clamp_state(initial_stability, initial_difficulty);
+    // Both traces start at the same initial stability; their dynamics diverge
+    // from the first review onward (slow = long-term, fast = short-term).
+    return fsrs7_clamp_state(initial_stability, initial_difficulty, initial_stability);
 }
 
 __device__
@@ -164,24 +175,31 @@ fsrs_state_t fsrs7_step(
         fsrs_state
     );
 
-    const float long_stability = fsrs7_stability_after_review_one_term(
+    // DUAL-TRACE update. The SLOW trace evolves by the long-term (consolidation)
+    // dynamics reading its own value (fsrs_state.s); the FAST trace evolves by
+    // the short-term dynamics reading its own value (fsrs_state.s_fast). This
+    // replaces the elapsed-time transition blend that collapsed long/short into
+    // a single S — the two persistent traces now carry that short-vs-long
+    // structure across reviews. transition_scale / transition_decay (w[25..26])
+    // are unused by this formulation; they stay in the struct so the param
+    // layout and the 38-wide param tensor are unchanged.
+    const float new_s_slow = fsrs7_stability_after_review_one_term(
         fsrs_state,
         retention,
         rating,
         fsrs_params.long_stability
     );
 
-    const float short_stability = fsrs7_stability_after_review_one_term(
-        fsrs_state,
+    // Read the fast trace as the stability input (difficulty is shared).
+    const fsrs_state_t fast_state{fsrs_state.s_fast, fsrs_state.d, fsrs_state.s_fast};
+    const float new_s_fast = fsrs7_stability_after_review_one_term(
+        fast_state,
         retention,
         rating,
         fsrs_params.short_stability
     );
 
-    const float coefficient =
-        1.0f - fsrs_params.transition_scale * expf(-fsrs_params.transition_decay * elapsed_time);
-    const float new_s = short_stability + coefficient * (long_stability - short_stability);
     const float new_d = fsrs7_next_d(fsrs_params, fsrs_state, rating);
 
-    return fsrs7_clamp_state(new_s, new_d);
+    return fsrs7_clamp_state(new_s_slow, new_d, new_s_fast);
 }

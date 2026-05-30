@@ -3,8 +3,21 @@
 #include <stdint.h>
 
 struct fsrs_state_t {
+    // DUAL-TRACE MEMORY (iter-40). Two persistent stability states instead of
+    // one. `s` is the SLOW / consolidated trace (long-term memory); `s_fast` is
+    // the FAST trace (recent, short-term memory). The forgetting curve mixes a
+    // recall component driven by each trace; after each review the slow trace
+    // updates via the long-term (consolidation) dynamics and the fast trace via
+    // the short-term dynamics. This replaces the single-S + transition-blend
+    // approximation with an explicit two-store memory model, attacking the
+    // Markovian (S,D) limitation that the residual short-term / Again loss lives
+    // in. Adding a field to fsrs_state_t (NOT fsrs_params_t) carries through the
+    // kernel + Enzyme autodiff generically and needs no Python-side glue; param
+    // count stays 38. Scratch: peak 5.9M slots ⇒ 12 B/state = 71 MB of the
+    // 500 MB buffer (14%), measured iter-40, so headroom is ample.
     float s;
     float d;
+    float s_fast;
 };
 
 struct fsrs_stability_after_review_params_t {
