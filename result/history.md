@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_45 record(s). Generated from `history.jsonl` — do not edit by hand._
+_46 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -49,3 +49,4 @@ _45 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 42 | 2026-05-30T15:35:19 | 0.0010 | 0.32271 | 0.32197 | +0.00074 | 15,330 | 15,330 | +0.00% | rejected | ARC-1 chase: freed the fast-trace init (fast_init_mult floor 0.02->0.005, L2 sigma 0.5->1.0) to test whether per-user fast-init was over-regularized. Constants-only, no param/structure change (38). |
 | 43 | 2026-05-30T15:50:16 | 0.0006 | 0.32271 | 0.32206 | +0.00065 | 15,330 | 15,322 | -0.05% | accepted | ARC-1 BANKED -> NEW CHAMPION. Dual-trace memory finalized via the rule-compliant SIMPLIFICATION accounting: removed the 2 orphaned transition-era params (w25 transition_decay [dead] + w26 transition_scale/fast_init_mult) and hardcoded the fast-trace init at 0.8*initial_stability (the per-user multiplier was saturated, didn't earn a param). Net vs iter-33 champion: +1 state variable (s_fast), -2 params (38->36). Curve params shifted to w25..35; updated cuh struct, 4 constants tuples, clipper chained idx (26>=25, 28>=27), diagnostics bounds. Enzyme rebuild. |
 | 44 | 2026-05-30T16:22:19 | 0.0001 | 0.32206 | 0.32206 | +0.00000 | 15,322 | 15,322 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): best found LR 0.03->0.045, below threshold. |
+| 45 | 2026-05-30T16:54:43 | 0.0004 | 0.32206 | 0.32206 | -0.00000 | 15,322 | 15,330 | +0.05% | rejected | ARC 2 bet 1: generalized power-law forgetting curve. Each component (1+factor*x)^decay -> (1+factor*x^shape)^decay, x=dt/S; +2 shape exponents (shape1 fast idx36, shape2 slow idx37), convex-by-construction for shape in (0,1] (constraint 12). REJECTED — inert. |
