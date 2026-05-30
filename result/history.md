@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_53 record(s). Generated from `history.jsonl` — do not edit by hand._
+_54 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -57,3 +57,4 @@ _53 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 50 | 2026-05-30T18:40:44 | 0.0001 | 0.32206 | 0.32147 | +0.00059 | 16,766 | 16,776 | +0.06% | accepted | Fast-curve sub-day forgetting: lower base1 (fast-component retention at t=s_fast) floor 0.5->0.2 and compute factor1 = base1^(1/decay1)-1 in LOG-SPACE (clamp exponent at 60 before exp) so it is float- AND autodiff-safe. The 0.5 floor was a numerical-overflow limit pinning 13% of users (grad 13) and capping how steeply the fast curve can forget at sub-day scales. 0 net params. ACCEPTED (new champion). |
 | 51 | 2026-05-30T19:15:20 | 0.0001 | 0.32147 | 0.32133 | +0.00013 | 16,776 | 16,776 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): LR 0.03->0.045, BETA2 0.85->0.899999. Numbers-only, complexity unchanged. |
 | 52 | 2026-05-30T19:47:20 | 0.0001 | 0.32133 | 0.32120 | +0.00013 | 16,776 | 16,846 | +0.42% | accepted | Per-group learning rates: split the single global LR into 4 group multipliers (init-S w0-3, difficulty w4-6, stability-update w7-24, forgetting-curve w25-35) scaling the existing per-param LR tensor in run.py. LR_GROUP_MULT=(0.65,1.0,1.6,0.7), tuned by coordinate descent. No new self.w scalar (tuned hyperparameters). ACCEPTED (new champion). |
+| 53 | 2026-05-30T20:22:54 | 0.0001 | 0.32120 | 0.32119 | +0.00002 | 16,846 | 16,846 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): best found LRG_DIFF 1->2.25, below threshold. |
