@@ -57,3 +57,5 @@ result/*.parquet
 # Local Docker Compose overrides
 compose.override.yaml
 docker-compose.override.yml
+result/history_plot.png
+result/hp_tune_last.json
