@@ -26,7 +26,7 @@ Schema of one record::
         "complexity_before":    int|None,    # champion's complexity score
         "complexity_after":     int,         # this iteration's complexity score
         "complexity_pct_change": float|None, # 100 * (after − before) / before
-        "status":               str,    # "champion" | "accepted" | "rejected"
+        "status":               str,    # "accepted" | "rejected" (incl. the iter-0 baseline = "accepted")
         "reason":               str,    # free text
     }
 
@@ -57,7 +57,11 @@ _REQUIRED_FIELDS = (
     "status",
     "reason",
 )
-_VALID_STATUSES = {"champion", "accepted", "rejected"}
+# Status is binary: a variant either cleared its threshold ("accepted") or did
+# not ("rejected"). The iter-0 baseline is recorded as "accepted". There is no
+# "champion" status — the current champion is simply the most recent "accepted"
+# record (see the FSRS history-status memo).
+_VALID_STATUSES = {"accepted", "rejected"}
 
 
 def append_iteration(

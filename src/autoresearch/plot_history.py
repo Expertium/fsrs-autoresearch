@@ -30,7 +30,9 @@ REPO = Path(__file__).resolve().parents[2]
 HISTORY = REPO / "result" / "history.jsonl"
 DEFAULT_OUT = REPO / "result" / "history_plot.png"
 
-CHAMPION = {"champion", "accepted"}
+# The best-so-far frontier is the set of accepted records (the iter-0 baseline
+# is "accepted" too). "champion" is not a status value — see history.py.
+CHAMPION = {"accepted"}
 GREEN = "#2ca02c"
 GREEN_DARK = "#176117"
 GREY = "0.70"
@@ -99,10 +101,10 @@ def main() -> None:
                         rotation=args.rotation, rotation_mode="anchor",
                         ha="left", va="bottom", fontsize=7, color=GREEN_DARK)
 
-    ax.set_xlabel("Iteration", fontsize=15, fontweight="bold")
-    ax.set_ylabel("Log Loss", fontsize=15, fontweight="bold")
+    ax.set_xlabel("Iteration", fontsize=15)
+    ax.set_ylabel("Log Loss", fontsize=15)
     ax.set_title(f"FSRS-7 autoresearch — {len(champs)} kept improvements, {len(champs)+len(rejects)} rejected variants",
-                 fontsize=12)
+                 fontsize=18)
     ax.grid(True, axis="y", alpha=0.25)
     ax.legend(loc="upper right", framealpha=0.9)
 
@@ -112,6 +114,7 @@ def main() -> None:
     ax.set_ylim(min([r["ll_after"] for r in champs]) * 0.995, max([r["ll_after"] for r in champs]) * 1.005)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(0.0005))
     ax.set_xlim(xmin - 0.6, xmax + max(2.0, 0.08 * (xmax - xmin)))
+
 
     fig.tight_layout()
     fig.savefig(args.out, dpi=130)
