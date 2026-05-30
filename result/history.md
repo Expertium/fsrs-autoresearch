@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_62 record(s). Generated from `history.jsonl` — do not edit by hand._
+_63 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -66,3 +66,4 @@ _62 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 60 | 2026-05-30T22:37:23 | 0.0001 | 0.32106 | 0.32114 | -0.00008 | 16,816 | 16,816 | +0.00% | rejected | L2-sigma empirical-Bayes calibration, STD variant (user idea): set each regularized param's L2 sigma proportional to its EMPIRICAL population std across the trained (user,split) rows, strength-normalized (x1.636) so the champion's total L2 penalty mass (params 4-35) is preserved -- isolating the per-param SHAPE of the prior from its overall strength. init-S (w0-3) left unregularized at 9999. 0 new params, complexity-neutral. REJECTED (worse). |
 | 61 | 2026-05-30T22:40:21 | 0.0001 | 0.32106 | 0.32146 | -0.00039 | 16,816 | 16,816 | +0.00% | rejected | L2-sigma empirical-Bayes calibration, robust MAD variant (user idea): set each regularized param's L2 sigma proportional to 1.4826*MAD of its trained population (outlier-robust spread), strength-normalized (x3.582) to preserve the champion total L2 penalty mass; init-S (w0-3) left at 9999. 0 new params, complexity-neutral. REJECTED (much worse than both champion and the std variant). |
 | 62 | 2026-05-30T23:08:28 | 0.0000 | 0.32106 | 0.32121 | -0.00015 | 16,816 | 16,805 | -0.07% | rejected | Ablate base_weight2 (pure ablation surfaced by the covariance idea): the forgetting-curve mixture (w1*r1 + w2*r2)/(w1+w2) is scale-invariant in (base_weight1, base_weight2) -- only the ratio is identifiable -- and the two showed a -0.72 cross-user correlation (the empirical fingerprint of that degeneracy). Fixed base_weight2=1.0, removed it (36->35 params), widened base_weight1 max 1.0->2.0 to carry the full ratio. REJECTED (worse). |
+| 63 | 2026-05-30T23:42:40 | 0.0001 | 0.32106 | 0.32104 | +0.00003 | 16,816 | 16,816 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): best found BETA2 0.899999->0.955555, LRG_DIFF 1->1.5, below threshold. |
