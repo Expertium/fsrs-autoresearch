@@ -25,7 +25,10 @@ def apply_parameter_clipper(parameters_b):
         clipped[..., 3] = torch.maximum(clipped[..., 3], clipped[..., 2])
         # iter-43: curve params shifted down by 2 after removing the two dead
         # transition-era params (old 27/29 -> 25/27, old 28/30 -> 26/28).
-        clipped[..., 26] = torch.maximum(clipped[..., 26], clipped[..., 25])  # decay2 >= decay1
+        # iter-54: dropped the decay2 >= decay1 chain (a vestigial pre-dual-trace
+        # ordering). r1 reads s_fast and r2 reads s -- independent curves -- and
+        # 11.6% of users were pinned at decay2 == decay1, wanting the slow trace a
+        # heavier tail (decay2 < decay1). decay2 now clamps to its own [0.01, 0.95].
         clipped[..., 28] = torch.maximum(clipped[..., 28], clipped[..., 27])  # base2  >= base1
     return clipped
 

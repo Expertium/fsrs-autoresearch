@@ -94,7 +94,7 @@ FSRS7_BOUNDS_STATIC: list[tuple[float | str, float | str]] = [
     # iter-43: removed the two dead transition-era params (old 25/26); curve
     # block shifted down by 2 (old 27..37 -> 25..35).
     (0.01,           0.25),            # 25 Forgetting curve, decay 1
-    ("w[25]",        0.95),            # 26 decay 2 (lower chained to w[25])
+    (0.01,           0.95),            # 26 decay 2 (iter-54: unchained from w[25])
     (0.2,            0.85),            # 27 base 1
     ("w[27]",        0.99),            # 28 base 2 (lower chained to w[27])
     (0.01,           1.0),             # 29 weight 1
@@ -171,8 +171,8 @@ def fsrs7_effective_bounds(
         lower[:, idx] = lo
         upper[:, idx] = hi
 
-    # idx 26: decay2 lower chained to w[25] (decay1); upper 0.95
-    lower[:, 26] = rows[:, 25]
+    # idx 26: decay2 — iter-54 unchained from w[25] (decay1); static [0.01, 0.95]
+    lower[:, 26] = 0.01
     upper[:, 26] = 0.95
     # idx 28: base2 lower chained to w[27] (base1); upper 0.99
     lower[:, 28] = rows[:, 27]

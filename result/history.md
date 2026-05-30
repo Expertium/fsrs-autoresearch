@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_54 record(s). Generated from `history.jsonl` — do not edit by hand._
+_55 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -58,3 +58,4 @@ _54 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 51 | 2026-05-30T19:15:20 | 0.0001 | 0.32147 | 0.32133 | +0.00013 | 16,776 | 16,776 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over LR/betas/L2): LR 0.03->0.045, BETA2 0.85->0.899999. Numbers-only, complexity unchanged. |
 | 52 | 2026-05-30T19:47:20 | 0.0001 | 0.32133 | 0.32120 | +0.00013 | 16,776 | 16,846 | +0.42% | accepted | Per-group learning rates: split the single global LR into 4 group multipliers (init-S w0-3, difficulty w4-6, stability-update w7-24, forgetting-curve w25-35) scaling the existing per-param LR tensor in run.py. LR_GROUP_MULT=(0.65,1.0,1.6,0.7), tuned by coordinate descent. No new self.w scalar (tuned hyperparameters). ACCEPTED (new champion). |
 | 53 | 2026-05-30T20:22:54 | 0.0001 | 0.32120 | 0.32119 | +0.00002 | 16,846 | 16,846 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): best found LRG_DIFF 1->2.25, below threshold. |
+| 54 | 2026-05-30T20:41:27 | 0.0001 | 0.32120 | 0.32106 | +0.00014 | 16,846 | 16,816 | -0.18% | accepted | Unchain decay2 from decay1: removed the clipper's decay2 >= decay1 constraint (a vestigial pre-dual-trace ordering). r1 reads s_fast and r2 reads s -- independent curves -- and 11.6% of users were pinned at decay2 == decay1 wanting the slow trace a heavier tail. decay2 now clamps to its own [0.01, 0.95]. 0 params, complexity down. ACCEPTED (new champion). |
