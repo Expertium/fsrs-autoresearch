@@ -319,6 +319,33 @@ constant outside `self.w` does NOT count. A new variable returned in
 add 1, threshold = `max(-3*0.0002 + 0.0002, 0.0002) = 0.0002` — simplifying
 formulas with fewer parameters must still yield an improvement to be kept.
 
+**Pure ablation (removing parameter(s) only) — threshold `0.0000`.** A
+standalone iteration whose *only* change is removing one or more parameters —
+fixing a param to a constant, tying two params, or collapsing a proven
+redundancy — and which adds **no** new params, state, capacity, or formula
+freedom. Such an iteration is accepted iff
+
+> `old_logloss_by_user − new_logloss_by_user ≥ 0.0000`
+
+i.e. **the simpler model must merely not be worse.** This is deliberately
+distinct from the "removing while adding" rule above (which floors at 0.0002):
+a *pure* removal isn't asked to *improve* the loss, only to not damage it,
+because the win is the parsimony itself (fewer params + lower complexity
+score). A tie within the ~2e-6 GPU-noise floor counts as "not worse" → accept.
+Constraints (rules 1–12) of course still hold.
+
+Run an ablation as **its own iteration** — never bundle a removal with any
+other change, or the delta can't be attributed. Good ablation targets:
+- **Structural redundancy** — params that only ever appear in one combination,
+  so one is mathematically free to fix (e.g. an un-normalized mixture weight
+  whose overall scale cancels: only the *ratio* of the two weights matters).
+  These are guaranteed not to worsen the achievable loss (identical function
+  class); expect `Δ ≈ 0`.
+- **Empirically inert** — params the diagnostics flag with near-zero
+  `range_frac` **and** near-zero mean gradient (and/or median pinned at their
+  neutral/default value): the data isn't using them. Removal *tests* the
+  hypothesis; the 0.0000 bar means a truly-dead param leaves the loss unmoved.
+
 Examples:
 - Add 1 state variable + 3 new params: `0.0010 + 3*0.0002 = 0.0016`
 - Change a formula with no new params: `0.0001`
@@ -408,9 +435,29 @@ Diagnostics:
         p01 / median / p99:  __ / __ / __   # over all (user, split) rows
         Hit lower bound on __% of users
         Hit upper bound on __% of users
+        (p99-p01)/(upper-lower): __          # range utilization, see below
         Mean gradient across all epochs: __
         Mean gradient at the last epoch: __
 ```
+
+**Range utilization `(p99 − p01) / (upper_bound − lower_bound)`** (the
+`range_frac` field; column `(p99-p01)/rng` in the Markdown table). The
+numerator is the spread of the central 98% of the population; the denominator
+is the param's static clamp width (the per-user effective bounds — uppers are
+constant per column, chained lowers like `w[1..3]`, `w[28]`, `w[30]` resolve to
+their realized population floor). It answers "how much of the allowed range
+does the population actually use?":
+- **`frac → 0`** — the population is pinned into a sliver of its range. Either
+  the **bound is far wider than needed**, or (more often here) the **L2 prior
+  is pinning the param** to the population mean / its default. A near-zero
+  `frac` *and* a near-zero gradient ⇒ the param is **inert** — a prime
+  candidate for an ablation iteration (see "Removing parameters", below).
+- **`frac → 1`** (or hit-bound % high) — the population **fills or strains the
+  clamp**; the bound may be **too tight** and worth widening.
+- **mid `frac`** — the param is doing genuine per-user work across a healthy
+  span; leave it.
+Read it alongside the hit-bound % and gradient columns, not alone (e.g. a wide
+`frac` with ~0 median just means the param is used in both directions).
 
 Last two gradient rows require the `GradTracker` patch into `train_iter`
 described in `diagnostics.py::GradTracker` (returning `flat_grad` from
