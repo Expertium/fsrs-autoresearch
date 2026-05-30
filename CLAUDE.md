@@ -119,13 +119,21 @@ clipper, diagnostics table, and this section).
 |---|---|
 | `w[0..3]` | Initial stability per rating (Again/Hard/Good/Easy) |
 | `w[4..6]` | Difficulty |
-| `w[7..15]` | Long-term stability update |
-| `w[16..24]` | Short-term stability update |
-| `w[25..26]` | Long/short transition function |
-| `w[27..34]` | 8-param forgetting curve |
-| `w[35..37]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
+| `w[7..15]` | Long-term stability update — drives the **slow** trace `s` |
+| `w[16..24]` | Short-term stability update — drives the **fast** trace `s_fast` |
+| `w[25..32]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
+| `w[33..35]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
-Training: 8 epochs, batch 1024, Adam, lr 2e-2, betas (0.8, 0.85).
+**Champion = iter-43 (dual-trace memory), 36 params.** iter-40 added a 2nd
+stability state `s_fast` (fast trace) alongside `s` (slow trace); each drives
+its own forgetting-curve component and updates via the short-/long-term
+stability dynamics respectively. This **removed the old long/short transition
+blend** (its 2 params, formerly `w[25..26]`, were deleted in iter-43 — that's
+why the curve params shifted down by 2). The fast trace's initial stability is
+**hardcoded** at `0.8 * initial_stability` (a per-user multiplier didn't earn
+its param). State variables: **3** (`s`, `d`, `s_fast`).
+
+Training: 8 epochs, batch 1024, Adam, lr 3e-2, betas (0.55, 0.85).
 Loss = log-loss(per-review) + sched_penalty_1 + sched_penalty_2 + L2-to-defaults.
 
 Metrics produced by `run.py`:
@@ -217,8 +225,9 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
 
 1. Add/remove parameters/constants in FSRS formulas; modify clamp ranges,
    default values, and the L2-penalty sigmas.
-2. Add new formulas or new state variables (currently 2: `S` = memory
-   stability, `D` = difficulty).
+2. Add new formulas or new state variables (currently **3**: `s` = slow memory
+   stability, `d` = difficulty, `s_fast` = fast memory stability [dual-trace,
+   iter-43]).
 3. Modify the training loop: learning rate, betas, lr scheduler, optimizer
    choice (Adam → AdamW/SGD/etc.), recency weighting — **except `n_epoch`**.
 
@@ -339,7 +348,8 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, and scheduler so a mutation
 can't dodge the gate by living in an unscored file. **Current champion
-complexity baseline: 15,330.** (It was 13,968 until `fsrs_v7_helpers.py`,
+complexity baseline: 15,322.** (iter-43's dual-trace bank removed 2 params,
+down from 15,330 — a *simpler* champion. It was 13,968 until `fsrs_v7_helpers.py`,
 `fsrs_v7_optimizer.py`, and `fsrs_v7_scheduler.py` were added to the scored
 set — a measurement change, not a model change; log loss is unaffected. The
 +5% gate is measured against this baseline, not the original 18,563.)
