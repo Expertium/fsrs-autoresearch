@@ -157,9 +157,13 @@ fsrs_state_t fsrs7_init(
         static_cast<float>(first_rating)
     );
 
-    // Both traces start at the same initial stability; their dynamics diverge
-    // from the first review onward (slow = long-term, fast = short-term).
-    return fsrs7_clamp_state(initial_stability, initial_difficulty, initial_stability);
+    // The fast trace starts at fast_init_mult * initial_stability (iter-41) so it
+    // can begin smaller than the slow trace for sharper sub-day forgetting; their
+    // dynamics diverge from the first review onward (slow long-term, fast short-term).
+    return fsrs7_clamp_state(
+        initial_stability,
+        initial_difficulty,
+        fsrs_params.fast_init_mult * initial_stability);
 }
 
 __device__
