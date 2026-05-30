@@ -267,6 +267,27 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
     is symmetric and ~1e-5, not a calibration knob. You may reshape the curve
     **between** the endpoints freely (that's what the `w[27..34]` 2-component
     mixture does today) — you just may not move the endpoints.
+12. **Forgetting-curve smoothness / shape** (added 2026-05-30). Beyond the
+    endpoints (constraint 11), the curve `p(delta_t)` must stay *well-behaved*
+    to rule out implausible, wiggly forgetting curves. For `delta_t > 0`:
+    - `p` is **continuous** and **monotonically non-increasing** (already implied
+      by constraints 1 & 11), **and**
+    - its **first derivative `p'(delta_t)` is itself continuous and monotone** —
+      the curve is C¹ (no kinks / slope jumps) with **no inflection points**. For
+      a curve falling from 1 toward 0 this means it is **convex**: forgetting is
+      fastest right after a review, then decelerates — no S-shapes, bumps, or
+      kinks.
+    A **jump at exactly `delta_t = 0` is allowed**: the curve may approach a limit
+    `< 1` as `delta_t → 0⁺` while we *define* `p(0) := 1` (cf. defining
+    `sin(x)/x := 1` at `x = 0`). This lets a curve drop sharply right after a
+    review (helpful for sub-day forgetting) without a smooth ramp back up to 1.
+    Rationale: keeps any flexible curve family (splines, monotone nets, extra
+    mixture components) from producing weird shapes. The current `w[27..34]`
+    mixture **complies** — a fixed convex combination of convex, decreasing
+    power-law components is convex and C¹. Combination rules that introduce an
+    inflection are **off-limits** — e.g. a probabilistic noisy-OR
+    `1 − (1−r₁)(1−r₂)` is concave near 0 then convex (an inflection), so it is
+    forbidden even though each component `rᵢ` is individually convex.
 
 ### Acceptance threshold
 
