@@ -15,27 +15,27 @@ HOW IT WORKS
 ------------
 Polls ``result/.compact_request.txt``. The agent writes that file (one line:
 ``/compact <focus>``) right after an auto-tune commit, when compaction is due.
-When it appears, this finds the ``claude.exe`` console and "types" the line in
-via the Windows console input buffer (AttachConsole + WriteConsoleInputW), then
-presses Enter. The request file is deleted so it fires exactly once.
+When it appears, this finds the native ``claude.exe`` GUI window, brings it to
+the foreground, and "types" the line via Win32 ``SendInput`` (Unicode key events
+for the text, then a real Enter to submit). The request file is deleted so it
+fires exactly once.
 
-Each injection runs in a short-lived child process: AttachConsole/FreeConsole
-are per-process, so isolating them keeps this watcher's own console (and its
-live --foreground log) intact.
+The native ``claude.exe`` renders its TUI in its own GUI window (HWND with title
+"Claude") and reads the keyboard from the Windows message queue -- it has no
+attachable console -- so console injection (WriteConsoleInput) does NOT work;
+SendInput into the focused window is the right mechanism (same as typing into an
+Electron/Chromium app). The window must be foreground to receive input, so this
+briefly raises it; it verifies focus first, so it can never type elsewhere.
 
-The mechanism is validated: WriteConsoleInput delivers characters and Enter to a
-raw-mode reader, and because a process tree shares one console, attaching to the
-top ``claude.exe`` PID reaches the TUI's input no matter which child reads it.
-
-RUN IT  (from the repo root, once per Claude session)
------------------------------------------------------
+RUN IT  (from anywhere; paths resolve from the script location)
+---------------------------------------------------------------
     python  src\\autoresearch\\compact_injector.py --foreground   # watch the log live
     pythonw src\\autoresearch\\compact_injector.py                # background, no window
 
 Stop it: close the foreground window, ``Stop-Process`` the pythonw, or create
 the file ``result/.compact_injector.stop``.
 
-Windows only (uses the Win32 console API).
+Windows only.
 """
 from __future__ import annotations
 
@@ -43,7 +43,6 @@ import argparse
 import ctypes
 import ctypes.wintypes as w
 import os
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -58,103 +57,148 @@ LOG = RESULT / ".compact_injector.log"
 FOREGROUND = False
 
 k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+u32 = ctypes.WinDLL("user32", use_last_error=True)
 
-# ── console input injection ──────────────────────────────────────────────────
-KEY_EVENT = 0x0001
-GENERIC_RW = 0xC0000000
-SHARE_RW = 0x00000003
-OPEN_EXISTING = 3
-INVALID = w.HANDLE(-1).value
+# ── find the Claude GUI window for a pid ─────────────────────────────────────
+WNDENUMPROC = ctypes.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
+u32.EnumWindows.argtypes = [WNDENUMPROC, w.LPARAM]
+u32.EnumWindows.restype = w.BOOL
+u32.GetWindowThreadProcessId.argtypes = [w.HWND, ctypes.POINTER(w.DWORD)]
+u32.GetWindowThreadProcessId.restype = w.DWORD
+u32.IsWindowVisible.argtypes = [w.HWND]
+u32.IsWindowVisible.restype = w.BOOL
+u32.GetWindowTextLengthW.argtypes = [w.HWND]
+u32.GetWindowTextLengthW.restype = ctypes.c_int
 
 
-class _KEY(ctypes.Structure):
+def find_window_for_pid(pid: int):
+    result: list[int] = []
+
+    def _cb(hwnd, _lparam):
+        owner = w.DWORD(0)
+        u32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if (owner.value == pid and u32.IsWindowVisible(hwnd)
+                and u32.GetWindowTextLengthW(hwnd) > 0):
+            result.append(hwnd)
+            return False  # stop enumerating
+        return True
+
+    u32.EnumWindows(WNDENUMPROC(_cb), 0)
+    return result[0] if result else None
+
+
+# ── force a window to the foreground (AttachThreadInput trick) ───────────────
+u32.GetForegroundWindow.restype = w.HWND
+u32.SetForegroundWindow.argtypes = [w.HWND]
+u32.SetForegroundWindow.restype = w.BOOL
+u32.BringWindowToTop.argtypes = [w.HWND]
+u32.ShowWindow.argtypes = [w.HWND, ctypes.c_int]
+u32.IsIconic.argtypes = [w.HWND]
+u32.IsIconic.restype = w.BOOL
+u32.AttachThreadInput.argtypes = [w.DWORD, w.DWORD, w.BOOL]
+u32.AttachThreadInput.restype = w.BOOL
+k32.GetCurrentThreadId.restype = w.DWORD
+SW_RESTORE = 9
+
+
+def _force_foreground(hwnd) -> bool:
+    if u32.GetForegroundWindow() == hwnd:
+        return True
+    if u32.IsIconic(hwnd):
+        u32.ShowWindow(hwnd, SW_RESTORE)
+    cur = k32.GetCurrentThreadId()
+    target = u32.GetWindowThreadProcessId(hwnd, None)
+    fg = u32.GetForegroundWindow()
+    fg_tid = u32.GetWindowThreadProcessId(fg, None) if fg else 0
+    att_fg = att_t = False
+    try:
+        if fg_tid and fg_tid != cur:
+            att_fg = bool(u32.AttachThreadInput(cur, fg_tid, True))
+        if target and target != cur:
+            att_t = bool(u32.AttachThreadInput(cur, target, True))
+        u32.BringWindowToTop(hwnd)
+        u32.SetForegroundWindow(hwnd)
+    finally:
+        if att_fg:
+            u32.AttachThreadInput(cur, fg_tid, False)
+        if att_t:
+            u32.AttachThreadInput(cur, target, False)
+    time.sleep(0.12)
+    return u32.GetForegroundWindow() == hwnd
+
+
+# ── SendInput keyboard injection ─────────────────────────────────────────────
+INPUT_KEYBOARD = 1
+KEYEVENTF_KEYUP = 0x0002
+KEYEVENTF_UNICODE = 0x0004
+VK_RETURN = 0x0D
+ULONG_PTR = ctypes.c_size_t
+
+
+class KEYBDINPUT(ctypes.Structure):
     _fields_ = [
-        ("bKeyDown", w.BOOL), ("wRepeatCount", w.WORD), ("wVirtualKeyCode", w.WORD),
-        ("wVirtualScanCode", w.WORD), ("UnicodeChar", ctypes.c_wchar), ("dwControlKeyState", w.DWORD),
+        ("wVk", w.WORD), ("wScan", w.WORD), ("dwFlags", w.DWORD),
+        ("time", w.DWORD), ("dwExtraInfo", ULONG_PTR),
     ]
 
 
-class _U(ctypes.Union):
-    _fields_ = [("KeyEvent", _KEY), ("_pad", ctypes.c_byte * 16)]
+class _IU(ctypes.Union):
+    _fields_ = [("ki", KEYBDINPUT), ("_pad", ctypes.c_byte * 32)]
 
 
-class INPUT_RECORD(ctypes.Structure):
-    _fields_ = [("EventType", w.WORD), ("Event", _U)]
+class INPUT(ctypes.Structure):
+    _fields_ = [("type", w.DWORD), ("u", _IU)]
 
 
-k32.AttachConsole.argtypes = [w.DWORD]; k32.AttachConsole.restype = w.BOOL
-k32.FreeConsole.restype = w.BOOL
-k32.CreateFileW.argtypes = [w.LPCWSTR, w.DWORD, w.DWORD, ctypes.c_void_p, w.DWORD, w.DWORD, w.HANDLE]
-k32.CreateFileW.restype = w.HANDLE
-k32.WriteConsoleInputW.argtypes = [w.HANDLE, ctypes.c_void_p, w.DWORD, ctypes.POINTER(w.DWORD)]
-k32.WriteConsoleInputW.restype = w.BOOL
-k32.CloseHandle.argtypes = [w.HANDLE]
+u32.SendInput.argtypes = [w.UINT, ctypes.POINTER(INPUT), ctypes.c_int]
+u32.SendInput.restype = w.UINT
 
 
-def _key_down(ch: str) -> INPUT_RECORD:
-    rec = INPUT_RECORD()
-    rec.EventType = KEY_EVENT
-    e = rec.Event.KeyEvent
-    e.bKeyDown = 1
-    e.wRepeatCount = 1
-    e.wVirtualKeyCode = 0x0D if ch == "\r" else 0
-    e.wVirtualScanCode = 0
-    e.UnicodeChar = ch
-    e.dwControlKeyState = 0
+def _ki(wVk: int, wScan: int, flags: int) -> INPUT:
+    rec = INPUT()
+    rec.type = INPUT_KEYBOARD
+    rec.u.ki = KEYBDINPUT(wVk, wScan, flags, 0, 0)
     return rec
 
 
+def _send(inputs: list[INPUT]) -> None:
+    arr = (INPUT * len(inputs))(*inputs)
+    sent = u32.SendInput(len(inputs), arr, ctypes.sizeof(INPUT))
+    if sent != len(inputs):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+
 def inject(pid: int, text: str) -> int:
-    """Type ``text`` into pid's console as one submitted line.
+    """Type ``text`` into pid's GUI window as one submitted line.
 
     Internal CR/LF are flattened to spaces so a multi-line focus can't submit
-    early; exactly one trailing CR is appended to submit. NOTE: this calls
-    Free/AttachConsole on the *current* process -- run it in a throwaway child
-    (see ``_deliver``) so the watcher keeps its own console.
+    early; a real Enter is sent at the end to submit.
     """
     body = text.replace("\r", " ").replace("\n", " ").rstrip()
-    seq = body + "\r"
-    k32.FreeConsole()
-    if not k32.AttachConsole(pid):
-        raise ctypes.WinError(ctypes.get_last_error())
-    try:
-        hin = k32.CreateFileW("CONIN$", GENERIC_RW, SHARE_RW, None, OPEN_EXISTING, 0, None)
-        if hin in (0, INVALID):
-            raise ctypes.WinError(ctypes.get_last_error())
-        total = 0
-        for i in range(0, len(seq), 128):
-            chunk = seq[i:i + 128]
-            recs = [_key_down(c) for c in chunk]
-            arr = (INPUT_RECORD * len(recs))(*recs)
-            nwr = w.DWORD(0)
-            if not k32.WriteConsoleInputW(hin, ctypes.byref(arr), len(recs), ctypes.byref(nwr)):
-                err = ctypes.get_last_error()
-                k32.CloseHandle(hin)
-                raise ctypes.WinError(err)
-            total += nwr.value
-            time.sleep(0.01)
-        k32.CloseHandle(hin)
-        return total
-    finally:
-        k32.FreeConsole()
-
-
-def _deliver(pid: int, request: Path) -> str:
-    """Run one injection in a console-less child so our own console survives."""
-    try:
-        r = subprocess.run(
-            [sys.executable, os.path.abspath(__file__),
-             "--_inject-pid", str(pid), "--_inject-file", str(request)],
-            capture_output=True, text=True, timeout=20,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-        return (r.stdout or "").strip() or (r.stderr or "").strip() or f"ERR rc={r.returncode}"
-    except Exception as ex:  # noqa: BLE001
-        return f"ERR {ex!r}"
+    hwnd = find_window_for_pid(pid)
+    if not hwnd:
+        raise OSError(f"no visible window for pid {pid}")
+    if not _force_foreground(hwnd):
+        raise OSError("could not bring the Claude window to the foreground; will retry")
+    batch: list[INPUT] = []
+    for ch in body:
+        code = ord(ch)
+        batch.append(_ki(0, code, KEYEVENTF_UNICODE))
+        batch.append(_ki(0, code, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP))
+        if len(batch) >= 40:
+            _send(batch)
+            batch = []
+            time.sleep(0.004)
+    if batch:
+        _send(batch)
+    time.sleep(0.05)
+    _send([_ki(VK_RETURN, 0, 0), _ki(VK_RETURN, 0, KEYEVENTF_KEYUP)])
+    return len(body)
 
 
 # ── process enumeration (Toolhelp32) ─────────────────────────────────────────
 TH32CS_SNAPPROCESS = 0x00000002
+INVALID = w.HANDLE(-1).value
 
 
 class PROCENTRY(ctypes.Structure):
@@ -192,8 +236,8 @@ def _alive(pid: int) -> bool:
 
 
 def find_claude_pid() -> int | None:
-    """The top-level claude.exe (the console owner): prefer the one parented to
-    explorer.exe; fall back to any claude.exe not parented to another claude."""
+    """The top-level claude.exe (the GUI-window owner): prefer the one parented
+    to explorer.exe; fall back to any claude.exe not parented to another claude."""
     procs = _procs()
     byid = {p[0]: p for p in procs}
 
@@ -237,24 +281,11 @@ def _read_stable(path: Path, settle: float = 0.2) -> str:
 def main() -> None:
     global FOREGROUND
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--pid", type=int, default=0, help="claude.exe console PID (default: auto-detect)")
+    ap.add_argument("--pid", type=int, default=0, help="claude.exe PID (default: auto-detect)")
     ap.add_argument("--interval", type=float, default=1.5, help="poll seconds (default 1.5)")
     ap.add_argument("--foreground", action="store_true", help="run in console, echo the log")
     ap.add_argument("--once", action="store_true", help="deliver one pending request, then exit")
-    ap.add_argument("--_inject-pid", dest="inject_pid", type=int, default=0, help=argparse.SUPPRESS)
-    ap.add_argument("--_inject-file", dest="inject_file", default="", help=argparse.SUPPRESS)
     a = ap.parse_args()
-
-    # internal one-shot injection child (keeps the parent watcher's console)
-    if a.inject_pid:
-        try:
-            text = Path(a.inject_file).read_text(encoding="utf-8")
-            n = inject(a.inject_pid, text)
-            sys.stdout.write(f"OK {n}")
-        except Exception as ex:  # noqa: BLE001
-            sys.stdout.write(f"ERR {ex!r}")
-        return
-
     FOREGROUND = a.foreground
     RESULT.mkdir(parents=True, exist_ok=True)
 
@@ -282,19 +313,19 @@ def main() -> None:
                 if text.strip():
                     pid = a.pid or find_claude_pid()
                     if not pid:
-                        log("claude.exe console not found; will retry.")
+                        log("claude.exe not found; will retry.")
                     else:
-                        res = _deliver(pid, REQUEST)
-                        if res.startswith("OK"):
-                            log(f"delivered to claude pid {pid} ({res}): {text.strip()[:70]!r}")
+                        try:
+                            n = inject(pid, text)
+                            log(f"delivered {n} chars to claude pid {pid}: {text.strip()[:70]!r}")
                             try:
                                 REQUEST.unlink()
                             except OSError:
                                 pass
                             if a.once:
                                 break
-                        else:
-                            log(f"inject failed (pid {pid}): {res}; will retry next poll.")
+                        except OSError as ex:
+                            log(f"inject failed (pid {pid}): {ex}; will retry next poll.")
             time.sleep(a.interval)
     finally:
         try:
@@ -306,5 +337,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     if os.name != "nt":
-        sys.exit("compact_injector.py is Windows-only (uses the Win32 console API).")
+        sys.exit("compact_injector.py is Windows-only.")
     main()
