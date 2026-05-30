@@ -23,8 +23,10 @@ def apply_parameter_clipper(parameters_b):
         clipped[..., 1] = torch.maximum(clipped[..., 1], clipped[..., 0])
         clipped[..., 2] = torch.maximum(clipped[..., 2], clipped[..., 1])
         clipped[..., 3] = torch.maximum(clipped[..., 3], clipped[..., 2])
-        clipped[..., 28] = torch.maximum(clipped[..., 28], clipped[..., 27])
-        clipped[..., 30] = torch.maximum(clipped[..., 30], clipped[..., 29])
+        # iter-43: curve params shifted down by 2 after removing the two dead
+        # transition-era params (old 27/29 -> 25/27, old 28/30 -> 26/28).
+        clipped[..., 26] = torch.maximum(clipped[..., 26], clipped[..., 25])  # decay2 >= decay1
+        clipped[..., 28] = torch.maximum(clipped[..., 28], clipped[..., 27])  # base2  >= base1
     return clipped
 
 @torch.compile(fullgraph=True)

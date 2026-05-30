@@ -32,8 +32,6 @@ FSRS7_DEFAULT_35_VALUES = (
     2.6413,
     0.5594,
     1.3,
-    2.5,
-    1.0,
     0.0723,
     0.1634,
     0.5,
@@ -73,8 +71,6 @@ FSRS_MIN_VALUES = (
     0.0,
     0.0,
     1.0,
-    2.5,
-    0.02,  # 26 fast_init_mult min (iter-41; repurposed from dead transition_scale)
     0.01,
     0.01,
     0.5,
@@ -114,8 +110,6 @@ FSRS_MAX_VALUES = (
     5.0,
     1.0,
     7.0,
-    15.0,
-    3.0,  # 26 fast_init_mult max (iter-41; repurposed from dead transition_scale)
     0.25,
     0.95,
     0.85,
@@ -155,8 +149,6 @@ FSRS7_L2_SIGMA_35_VALUES = (
     0.4608,
     0.311,
     0.864,
-    0.4053,
-    0.5,  # 26 fast_init_mult sigma (iter-41; widened so the repurposed param can move off 1.0)
     0.0418,
     0.2596,
     0.0798,

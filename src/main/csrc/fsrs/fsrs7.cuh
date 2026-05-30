@@ -50,20 +50,15 @@ struct fsrs_params_t {
     // 16..24: Short-term stability after review.
     fsrs_stability_after_review_params_t short_stability;
 
-    // 25: DEAD since iter-40 — the dual-trace memory replaced the elapsed-time
-    // transition blend, so this is unreferenced (confirmed grad~0 in iter-40
-    // diagnostics). Kept to preserve the 38-wide param layout; a candidate for
-    // removal/repurposing in a later iteration.
-    float transition_decay;
+    // NOTE (iter-43): the iter-40 dual-trace removed the elapsed-time transition
+    // blend, orphaning its two params (transition_decay, transition_scale). iter-41
+    // repurposed transition_scale into a learnable fast-init multiplier, but that
+    // per-user param did not earn its keep (the fast init is now hardcoded at a
+    // fixed fraction of the slow init in fsrs7_init). Both orphaned params are
+    // REMOVED here, simplifying the layout 38 -> 36 (this is the rule-compliant
+    // accounting for the dual-trace's +1 state variable: +1 state, -2 params).
 
-    // 26: Fast-trace initial-stability multiplier (iter-41, repurposed from the
-    // dead transition_scale). The fast trace inits to fast_init_mult *
-    // initial_stability so it can start SMALLER than the slow trace and capture
-    // sub-day forgetting (the dominant short_term residual). Default 1.0 == iter-40
-    // (s_fast init == slow init). Range [0.02, 3.0].
-    float fast_init_mult;
-
-    // 27..34: Forgetting curve.
+    // 25..32: Forgetting curve.
     float decay1;
     float decay2;
     float base1;

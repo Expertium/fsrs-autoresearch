@@ -157,13 +157,15 @@ fsrs_state_t fsrs7_init(
         static_cast<float>(first_rating)
     );
 
-    // The fast trace starts at fast_init_mult * initial_stability (iter-41) so it
-    // can begin smaller than the slow trace for sharper sub-day forgetting; their
-    // dynamics diverge from the first review onward (slow long-term, fast short-term).
+    // The fast trace starts at a fixed fraction of the slow init (iter-43; the
+    // iter-41 per-user multiplier was saturated and didn't earn its param, so it
+    // is hardcoded) — smaller than the slow trace for sharper sub-day forgetting.
+    // Their dynamics diverge from the first review onward (slow long, fast short).
+    constexpr float fast_init_frac = 0.8f;
     return fsrs7_clamp_state(
         initial_stability,
         initial_difficulty,
-        fsrs_params.fast_init_mult * initial_stability);
+        fast_init_frac * initial_stability);
 }
 
 __device__

@@ -91,19 +91,19 @@ FSRS7_BOUNDS_STATIC: list[tuple[float | str, float | str]] = [
     (0.0,            5.0),             # 22
     (0.0,            1.0),             # 23
     (1.0,            7.0),             # 24
-    (2.5,            15.0),            # 25 DEAD (transition blend removed iter-40)
-    (0.02,           3.0),             # 26 fast_init_mult (iter-41, repurposed)
-    (0.01,           0.25),            # 27 Forgetting curve, decay 1
-    ("w[27]",        0.95),            # 28 decay 2 (lower chained to w[27])
-    (0.5,            0.85),            # 29 base 1
-    ("w[29]",        0.99),            # 30 base 2 (lower chained to w[29])
-    (0.01,           1.0),             # 31 weight 1
-    (0.1,            1.0),             # 32 weight 2
-    (0.0,            0.9),             # 33 S weight power 1
-    (0.1,            1.1),             # 34 S weight power 2
-    (-0.5,           0.5),             # 35 d_weight (difficulty modulation)
-    (-0.3,           0.3),             # 36 d_decay (difficulty modulation of slow decay)
-    (-0.3,           0.3),             # 37 s_decay1 (stability modulation of fast decay)
+    # iter-43: removed the two dead transition-era params (old 25/26); curve
+    # block shifted down by 2 (old 27..37 -> 25..35).
+    (0.01,           0.25),            # 25 Forgetting curve, decay 1
+    ("w[25]",        0.95),            # 26 decay 2 (lower chained to w[25])
+    (0.5,            0.85),            # 27 base 1
+    ("w[27]",        0.99),            # 28 base 2 (lower chained to w[27])
+    (0.01,           1.0),             # 29 weight 1
+    (0.1,            1.0),             # 30 weight 2
+    (0.0,            0.9),             # 31 S weight power 1
+    (0.1,            1.1),             # 32 S weight power 2
+    (-0.5,           0.5),             # 33 d_weight (difficulty modulation)
+    (-0.3,           0.3),             # 34 d_decay (difficulty modulation of slow decay)
+    (-0.3,           0.3),             # 35 s_decay1 (stability modulation of fast decay)
 ]
 
 # Source of truth for the parameter count — derived from the bounds table so
@@ -159,25 +159,24 @@ def fsrs7_effective_bounds(
         16: (0.0, 4.0), 17: (0.0, 2.0), 18: (0.5, 6.0),
         19: (0.001, 1.5), 20: (0.001, 2.0), 21: (0.001, 1.0),
         22: (0.0, 5.0), 23: (0.0, 1.0), 24: (1.0, 7.0),
-        25: (2.5, 15.0), 26: (0.02, 3.0),
-        27: (0.01, 0.25),
-        29: (0.5, 0.85),
-        31: (0.01, 1.0), 32: (0.1, 1.0),
-        33: (0.0, 0.9), 34: (0.1, 1.1),
-        35: (-0.5, 0.5),
-        36: (-0.3, 0.3),
-        37: (-0.3, 0.3),
+        25: (0.01, 0.25),
+        27: (0.5, 0.85),
+        29: (0.01, 1.0), 30: (0.1, 1.0),
+        31: (0.0, 0.9), 32: (0.1, 1.1),
+        33: (-0.5, 0.5),
+        34: (-0.3, 0.3),
+        35: (-0.3, 0.3),
     }
     for idx, (lo, hi) in static_pairs.items():
         lower[:, idx] = lo
         upper[:, idx] = hi
 
-    # idx 28: lower chained to w[27]; upper 0.95
+    # idx 26: decay2 lower chained to w[25] (decay1); upper 0.95
+    lower[:, 26] = rows[:, 25]
+    upper[:, 26] = 0.95
+    # idx 28: base2 lower chained to w[27] (base1); upper 0.99
     lower[:, 28] = rows[:, 27]
-    upper[:, 28] = 0.95
-    # idx 30: lower chained to w[29]; upper 0.99
-    lower[:, 30] = rows[:, 29]
-    upper[:, 30] = 0.99
+    upper[:, 28] = 0.99
 
     return lower, upper
 
