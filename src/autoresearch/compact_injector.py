@@ -19,17 +19,20 @@ When it appears, this finds the ``claude.exe`` console and "types" the line in
 via the Windows console input buffer (AttachConsole + WriteConsoleInputW), then
 presses Enter. The request file is deleted so it fires exactly once.
 
-The injection mechanism is validated: WriteConsoleInput delivers characters and
-Enter to a raw-mode reader, and because a process tree shares one console,
-attaching to the top ``claude.exe`` PID reaches the TUI's input no matter which
-child actually reads it.
+Each injection runs in a short-lived child process: AttachConsole/FreeConsole
+are per-process, so isolating them keeps this watcher's own console (and its
+live --foreground log) intact.
+
+The mechanism is validated: WriteConsoleInput delivers characters and Enter to a
+raw-mode reader, and because a process tree shares one console, attaching to the
+top ``claude.exe`` PID reaches the TUI's input no matter which child reads it.
 
 RUN IT  (from the repo root, once per Claude session)
 -----------------------------------------------------
     python  src\\autoresearch\\compact_injector.py --foreground   # watch the log live
     pythonw src\\autoresearch\\compact_injector.py                # background, no window
 
-Stop it: close the foreground window, or ``Stop-Process`` the pythonw, or create
+Stop it: close the foreground window, ``Stop-Process`` the pythonw, or create
 the file ``result/.compact_injector.stop``.
 
 Windows only (uses the Win32 console API).
@@ -40,6 +43,7 @@ import argparse
 import ctypes
 import ctypes.wintypes as w
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -104,7 +108,9 @@ def inject(pid: int, text: str) -> int:
     """Type ``text`` into pid's console as one submitted line.
 
     Internal CR/LF are flattened to spaces so a multi-line focus can't submit
-    early; exactly one trailing CR is appended to submit.
+    early; exactly one trailing CR is appended to submit. NOTE: this calls
+    Free/AttachConsole on the *current* process -- run it in a throwaway child
+    (see ``_deliver``) so the watcher keeps its own console.
     """
     body = text.replace("\r", " ").replace("\n", " ").rstrip()
     seq = body + "\r"
@@ -131,6 +137,20 @@ def inject(pid: int, text: str) -> int:
         return total
     finally:
         k32.FreeConsole()
+
+
+def _deliver(pid: int, request: Path) -> str:
+    """Run one injection in a console-less child so our own console survives."""
+    try:
+        r = subprocess.run(
+            [sys.executable, os.path.abspath(__file__),
+             "--_inject-pid", str(pid), "--_inject-file", str(request)],
+            capture_output=True, text=True, timeout=20,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        return (r.stdout or "").strip() or (r.stderr or "").strip() or f"ERR rc={r.returncode}"
+    except Exception as ex:  # noqa: BLE001
+        return f"ERR {ex!r}"
 
 
 # ── process enumeration (Toolhelp32) ─────────────────────────────────────────
@@ -172,7 +192,7 @@ def _alive(pid: int) -> bool:
 
 
 def find_claude_pid() -> int | None:
-    """The top-level claude.exe (the console owner). Prefer the one parented to
+    """The top-level claude.exe (the console owner): prefer the one parented to
     explorer.exe; fall back to any claude.exe not parented to another claude."""
     procs = _procs()
     byid = {p[0]: p for p in procs}
@@ -205,9 +225,9 @@ def log(msg: str) -> None:
 def _read_stable(path: Path, settle: float = 0.2) -> str:
     """Read a file twice with a short gap; return its text only if unchanged
     (guards against reading while the agent is mid-write)."""
-    a = path.read_text(encoding="utf-8")
-    time.sleep(settle)
     try:
+        a = path.read_text(encoding="utf-8")
+        time.sleep(settle)
         b = path.read_text(encoding="utf-8")
     except OSError:
         return ""
@@ -221,7 +241,20 @@ def main() -> None:
     ap.add_argument("--interval", type=float, default=1.5, help="poll seconds (default 1.5)")
     ap.add_argument("--foreground", action="store_true", help="run in console, echo the log")
     ap.add_argument("--once", action="store_true", help="deliver one pending request, then exit")
+    ap.add_argument("--_inject-pid", dest="inject_pid", type=int, default=0, help=argparse.SUPPRESS)
+    ap.add_argument("--_inject-file", dest="inject_file", default="", help=argparse.SUPPRESS)
     a = ap.parse_args()
+
+    # internal one-shot injection child (keeps the parent watcher's console)
+    if a.inject_pid:
+        try:
+            text = Path(a.inject_file).read_text(encoding="utf-8")
+            n = inject(a.inject_pid, text)
+            sys.stdout.write(f"OK {n}")
+        except Exception as ex:  # noqa: BLE001
+            sys.stdout.write(f"ERR {ex!r}")
+        return
+
     FOREGROUND = a.foreground
     RESULT.mkdir(parents=True, exist_ok=True)
 
@@ -251,16 +284,17 @@ def main() -> None:
                     if not pid:
                         log("claude.exe console not found; will retry.")
                     else:
-                        try:
-                            n = inject(pid, text)
-                            log(f"delivered {n} chars to claude pid {pid}: {text.strip()[:70]!r}")
-                            REQUEST.unlink()
+                        res = _deliver(pid, REQUEST)
+                        if res.startswith("OK"):
+                            log(f"delivered to claude pid {pid} ({res}): {text.strip()[:70]!r}")
+                            try:
+                                REQUEST.unlink()
+                            except OSError:
+                                pass
                             if a.once:
                                 break
-                        except OSError as ex:
-                            log(f"inject failed (pid {pid}): {ex!r}; will retry next poll.")
-                elif REQUEST.exists() and not text:
-                    pass  # mid-write or empty; try again next poll
+                        else:
+                            log(f"inject failed (pid {pid}): {res}; will retry next poll.")
             time.sleep(a.interval)
     finally:
         try:
