@@ -215,6 +215,15 @@ Python-side FSRS code only:
   `src/main/csrc/` (`fsrs_extension.cpp`, `fsrs_extension.cu`,
   `fsrs_kernel/`) remain out of bounds.
 
+**Hands off `src/autoresearch/plot_history.py`.** That file is the *human's* —
+they edit it themselves to make the iteration-history plot prettier. If it
+shows as modified in `git status`, that's the user, not a stray change.
+**Never revert, `git checkout`, or commit it.** When rejecting an iteration,
+*explicitly list* the mutation files you changed plus `result/diagnostics.{json,md}`
+in the revert (never a blanket `git checkout -- .`), so `plot_history.py` is
+left untouched. It is not in the scored `mutation_files`, so it never affects
+the gate.
+
 **Sync note for clamps + init_w:** `fsrs_v7_constants.FSRS_MIN_VALUES` /
 `FSRS_MAX_VALUES` / `FSRS7_DEFAULT_35_VALUES` are used by the CUDA training
 path; `fsrs_v7.py`'s `FSRS7ParameterClipper` and `init_w` are used by the
