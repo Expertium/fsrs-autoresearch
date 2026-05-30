@@ -73,7 +73,7 @@ FSRS_MIN_VALUES = (
     1.0,
     0.01,
     0.01,
-    0.5,
+    0.2,  # 27 base1 min: lowered 0.5->0.2 (iter-50) for steeper sub-day fast-curve forgetting; factor1 clamped float-safe in fsrs7.cu
     0.5,
     0.01,
     0.1,
