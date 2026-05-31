@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 DEVICE = "cuda"  # not optional
@@ -24,7 +25,7 @@ WRITE_RESULT_FILE = "result/FSRS-7-dev.jsonl"
 HIDE_PROGRESS = True
 
 BATCH_SIZE = 1024  # Should be a multiple of 128, the block sized used by the cuda kernel
-N_EPOCHS = 8 # nonnegative integer, set to 0 for no optimization
+N_EPOCHS = int(os.environ.get("FSRS_N_EPOCHS", "8"))  # nonnegative integer, set to 0 for no optimization. Default 8 (unchanged for the autoresearch loop); the FSRS_N_EPOCHS env override lets the init_w meta-optimizer evaluate the user-facing default with no per-user SGD (FSRS_N_EPOCHS=0).
 
 # Invalidates the cache (slow)
 USER_START = 1
