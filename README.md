@@ -6,6 +6,6 @@ Below is a graph that shows how log loss (average across 3000 Anki users) change
 (graph.png)
 
 You can find more details in history.md and history.jsonl. Some notes:
-1) Not all propsoals came from Claude, for example, using 4 different values of learning rate was my idea. Though I discarded it later.
+1) Not all proposals came from Claude, for example, using 4 different values of learning rate was my idea. Though I discarded it later.
 2) What counts for the complexity score has been changed multiple times, so that number is mostly worthless.
 3) This repo also contains code that is used to find optimal default parameters for FSRS-7.
