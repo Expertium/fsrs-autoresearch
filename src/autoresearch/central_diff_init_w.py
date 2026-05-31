@@ -510,6 +510,14 @@ def main():
 
         results = {}
         for phase in PHASES:
+            # Recency is GATED behind a sentinel so the run SELF-PAUSES after the
+            # default phase — we do the step-2 training-recipe work (N_EPOCHS=10,
+            # single LR, recency/batch hp-tune) before tuning the SGD init. To run
+            # recency later: create result/init_w_metaopt/RUN_RECENCY and re-launch.
+            if phase["name"] == "recency" and not (OUTPUT_DIR / "RUN_RECENCY").exists():
+                print(f"\n[recency] GATED — default-only run. Create "
+                      f"{OUTPUT_DIR / 'RUN_RECENCY'} and re-launch to enable recency.")
+                continue
             best_params, best_loss = run_phase(phase, start_default.copy(), bounds)
             results[phase["name"]] = {"best_loss": best_loss, "best_params": best_params.tolist()}
             _atomic_write_json(OUTPUT_DIR / "summary.json", results)
