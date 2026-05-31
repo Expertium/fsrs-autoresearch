@@ -101,16 +101,16 @@ EVAL_RETRIES = 2   # retry a benchmark eval this many times on a transient failu
 
 # The two phases, run in order.  max_steps is a SOFT CAP: every meta-step is
 # checkpointed, so you can Ctrl-C and resume, or just stop when satisfied.
-#   default eval  ~15 s  -> ~18 min/step (73 evals) ->  50 steps ~ 15 h
-#   recency eval ~100 s  -> ~2 h/step   (73 evals) ->  30 steps ~ 61 h (~2.5 d)
-# => ~3.2 days total at these caps. 3000-user evals are far less noisy than the
-# 30-user mini-runs, so the Adam descent should be smooth — raise/lower freely.
+#   default eval  ~8 s (warm) -> ~9 min/step (73 evals) -> 100 steps ~ 15 h
+#   recency eval ~100 s        -> ~2 h/step   (73 evals) ->  30 steps ~ 61 h (~2.5 d)
+# 3000-user evals are far less noisy than the 30-user mini-runs, so the Adam
+# descent is smooth — raise/lower these caps freely (every step is checkpointed).
 PHASES = [
     dict(
         name="default",
         n_epochs=0,
-        max_steps=50,
-        approx_eval_secs=15,
+        max_steps=100,
+        approx_eval_secs=8,
         checkpoint=OUTPUT_DIR / "FSRS_7_central_diff_default_results.json",
         plot=OUTPUT_DIR / "loss_default.png",
         title="USER-FACING DEFAULT  (no per-user SGD, FSRS_N_EPOCHS=0)",
