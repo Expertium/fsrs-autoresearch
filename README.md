@@ -3,7 +3,7 @@ Improving FSRS-7 with Claude. This repo was inspired by AlphaEvolve and [Andrej 
 
 Below is a graph that shows how log loss (average across 3000 Anki users) changed as Claude kept working on it.
 
-<img width="1820" height="910" alt="history_plot" src="https://github.com/user-attachments/assets/26b81850-d9aa-47cc-86ee-d366d4dff9ab" />
+<img width="1820" height="910" alt="history_plot" src="result/history_plot.png" />
 
 You can find more details in history.md and history.jsonl. Some notes:
 1) Not all proposals came from Claude, for example, using 4 different values of learning rate was my idea. Though I discarded it later.

@@ -57,8 +57,11 @@ result/*.parquet
 # Local Docker Compose overrides
 compose.override.yaml
 docker-compose.override.yml
-result/history_plot.png
 result/hp_tune_last.json
+
+# result/history_plot.png is now TRACKED: it is regenerated after every
+# iteration (by plot_history.py) and committed so the README can show the
+# latest plot via a relative path.
 
 # init_w meta-optimizer artifacts (checkpoints, logs, plots) — local only
 result/init_w_metaopt/

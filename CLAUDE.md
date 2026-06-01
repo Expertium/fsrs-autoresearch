@@ -584,6 +584,13 @@ Each `bash src/main/run.sh` writes:
   (proposal evaluated against the prior champion). Source of truth.
 * `result/history.md` — regenerated from the JSONL each append. **Human
   view shown to Claude on the next iteration.** Never edit by hand.
+* `result/history_plot.png` — log-loss-vs-iteration plot (champions + rejected
+  variants), regenerated from the JSONL by `src/autoresearch/plot_history.py`
+  after **every** iteration and committed (the README shows it via a relative
+  path, so it auto-updates on GitHub). `hp_tune.py` refreshes it automatically
+  on its commits; when recording a *manual* iteration, do the same — run
+  `python src/autoresearch/plot_history.py`, then `git add result/history_plot.png`.
+  (`plot_history.py` is the human's — **run** it, never edit it.)
 
 The loop driver calls
 `src.autoresearch.history.append_iteration(record)` after each variant

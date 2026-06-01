@@ -255,6 +255,23 @@ def append_history(record: dict) -> None:
         raise RuntimeError(f"history append failed:\n{proc.stderr[-1500:]}")
 
 
+def refresh_plot() -> None:
+    """Regenerate result/history_plot.png from history via the human's
+    plot_history.py (run as a subprocess — never edited). Non-fatal: a plot
+    failure must not block recording/committing an iteration."""
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(REPO / "src" / "autoresearch" / "plot_history.py")],
+            cwd=str(REPO), capture_output=True, text=True)
+        if proc.returncode == 0:
+            print(f"[hp_tune] {proc.stdout.strip() or 'history plot refreshed'}", flush=True)
+        else:
+            print(f"[hp_tune] plot refresh skipped (rc={proc.returncode}): "
+                  f"{(proc.stderr or proc.stdout)[-400:]}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[hp_tune] plot refresh error (skipped): {e}", flush=True)
+
+
 # ── the search ───────────────────────────────────────────────────────────────
 def search(rounds: int, max_runs: int) -> dict:
     base_texts = read_texts()
@@ -406,9 +423,11 @@ def finalize(res: dict, threshold: float) -> None:
             "complexity_before": cx, "complexity_after": cx,
             "status": "accepted", "reason": reason,
         })
+        refresh_plot()
         git("add", *EDITED_PATHS,
             "result/diagnostics.json", "result/diagnostics.md",
-            "result/history.jsonl", "result/history.md")
+            "result/history.jsonl", "result/history.md",
+            "result/history_plot.png")
         msg = (f"iter {n} accepted: hyperparameter auto-tune ({cs})\n\n"
                f"Automated coordinate-descent pass over training hyperparameters "
                f"(LR, Adam betas, L2 strength, recency weighting, batch size).\n"
@@ -435,7 +454,9 @@ def finalize(res: dict, threshold: float) -> None:
             "complexity_before": cx, "complexity_after": cx,
             "status": "rejected", "reason": reason,
         })
-        git("add", "result/history.jsonl", "result/history.md")
+        refresh_plot()
+        git("add", "result/history.jsonl", "result/history.md",
+            "result/history_plot.png")
         msg = (f"iter {n} rejected: hyperparameter auto-tune (no improvement >= "
                f"{threshold})\n\nAutomated coordinate-descent pass over LR / Adam "
                f"betas / L2 strength / recency weighting / batch size. Best: {cs}, "
