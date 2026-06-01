@@ -316,6 +316,19 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
     `1 − (1−r₁)(1−r₂)` is concave near 0 then convex (an inflection), so it is
     forbidden even though each component `rᵢ` is individually convex.
 
+> **A constraint I should have stated but didn't — my oversight (noted 2026-06-01).**
+> *Don't do things that exploit the way the CUDA code jointly optimizes all 3000
+> users at once.* This harness trains every user **jointly**, but the production
+> optimizer (FSRS-rs) trains **one user at a time**, so a "win" that only exists
+> because of the joint / cross-user structure does **not** transfer to real users —
+> a change should improve **single-user** optimization, not just the joint
+> 3000-user fit. The one accepted change that violates this is the **empirical-Bayes
+> L2 (iter 24)**: it shrinks each `(user, split)` row toward the *live population
+> mean* (`anchor_p = flat_fsrs_params.mean(0)` in `run.py`), which for a single user
+> is a no-op (the mean is the user itself) and degrades to the pre-iter-24
+> fixed-default L2. Its effect is only ~0.0001 log loss and it reduces harmlessly to
+> per-user L2-to-default, so the FSRS-rs port simply keeps that fixed-default L2.
+
 ### Acceptance threshold
 
 A variant is accepted only if `old_logloss_by_user − new_logloss_by_user ≥ threshold`

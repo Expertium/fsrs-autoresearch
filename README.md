@@ -9,6 +9,7 @@ You can find more details in history.md and history.jsonl. Some notes:
 1) Not all proposals came from Claude, for example, using 4 different values of learning rate was my idea. Though I discarded it later.
 2) What counts for the complexity score has been changed multiple times, so that number is mostly worthless.
 3) This repo also contains code that is used to find [optimal default parameters for FSRS-7](https://github.com/Expertium/fsrs-autoresearch/blob/main/src/autoresearch/central_diff_init_w.py), both optimal user-facing default parameters and optimal "starting point for Adam" parameters (previously, the same parameters were used for both). It also contains an [automated hyperparameter tuner](https://github.com/Expertium/fsrs-autoresearch/blob/main/src/autoresearch/hp_tune.py).
+4) The CUDA code here optimizes all 3000 users *jointly*, but the real optimizer (FSRS-rs) optimizes one user at a time. It was my oversight not to make *"don't do things that exploit the way the CUDA code jointly optimizes all users"* an explicit constraint. The one accepted change that exploits it is the empirical-Bayes L2 (iter 24): it shrinks each user toward the live population mean, which does nothing for a single user (it degrades to the old default-anchored L2). It's worth only ~0.0001 log loss, so no real harm — but in hindsight it shouldn't have counted.
 
 ---
 
@@ -44,7 +45,9 @@ A change is accepted only if `champion_logloss − new_logloss ≥ threshold`:
 
 Adding a new state variable/parameter **AND** simultaneously removing old parameter(s) lowers the threshold by 0.0002 for each removed parameter, but not below 0.0002.
 
-Plus a **complexity gate**: `score = AST_nodes + 40·cyclomatic`, measured over the editable files (Python *and* the CUDA model); an accepted change may raise it by ≤ 5%. This stops the model from accreting clever-but-unjustified machinery. (As note 2 says, the complexity baseline has been redefined a few times.)
+Adding a new state variable/parameter **AND** simultaneously removing old parameter(s) lowers the threshold by 0.0002 for each removed parameter, but not below 0.0002.
+
+Plus a **complexity gate**: `score = AST_nodes + 40·cyclomatic`, measured over the editable files (Python *and* the CUDA model); an accepted change may raise it by ≤5%. This stops the model from accreting clever-but-unjustified machinery. (As note 2 says, the complexity baseline has been redefined a few times.)
 
 There are also **12 hard constraints** every variant must satisfy — the forgetting curve must stay monotonic / convex / pinned at `p(0)=1` and `p(∞)→0`; higher difficulty must not speed up memory; no eval→train leakage; everything stochastic seeded; etc. The full set, plus the exact threshold and complexity details, lives in **[`CLAUDE.md`](CLAUDE.md)** — that file is the actual design document and the source of truth for the rules.
 
