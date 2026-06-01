@@ -1,5 +1,7 @@
 # fsrs-autoresearch
-Improving FSRS-7 with Claude. This repo was inspired by AlphaEvolve and [Andrej Karpathy's "autoresearch" repo](https://github.com/karpathy/autoresearch). Huge thanks to [1DWalker](https://github.com/1DWalker), without [his code](https://github.com/open-spaced-repetition/fsrs-gpu-benchmark) this wouldn't be possible!
+Improving FSRS-7 with Claude. This repo was inspired by AlphaEvolve and [Andrej Karpathy's "autoresearch" repo](https://github.com/karpathy/autoresearch). Also check out [my other autoresearch repo](https://github.com/Expertium/fsrs-rs-speed-autoresearch). 
+
+Huge thanks to [1DWalker](https://github.com/1DWalker), without [his code](https://github.com/open-spaced-repetition/fsrs-gpu-benchmark) this wouldn't be possible!
 
 Below is a graph that shows how log loss (average across 3000 Anki users) changed as Claude kept working on it.
 
