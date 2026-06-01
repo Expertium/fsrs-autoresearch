@@ -62,3 +62,7 @@ result/hp_tune_last.json
 
 # init_w meta-optimizer artifacts (checkpoints, logs, plots) — local only
 result/init_w_metaopt/
+
+# Internal loop-state markers (machine-local, not meaningful in the repo)
+result/.last_compact_iter
+result/.last_hptune_iter
