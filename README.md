@@ -42,6 +42,8 @@ A change is accepted only if `champion_logloss − new_logloss ≥ threshold`:
 | Any other change (formula / training tweak) | +0.0001 (the floor) |
 | Pure simplification (only removing params) | 0.0000 (must merely not be worse) |
 
+Adding a new state variable/parameter **AND** simultaneously removing old parameter(s) lowers the threshold by 0.0002 for each removed parameter, but not below 0.0002.
+
 Plus a **complexity gate**: `score = AST_nodes + 40·cyclomatic`, measured over the editable files (Python *and* the CUDA model); an accepted change may raise it by ≤ 5%. This stops the model from accreting clever-but-unjustified machinery. (As note 2 says, the complexity baseline has been redefined a few times.)
 
 There are also **12 hard constraints** every variant must satisfy — the forgetting curve must stay monotonic / convex / pinned at `p(0)=1` and `p(∞)→0`; higher difficulty must not speed up memory; no eval→train leakage; everything stochastic seeded; etc. The full set, plus the exact threshold and complexity details, lives in **[`CLAUDE.md`](CLAUDE.md)** — that file is the actual design document and the source of truth for the rules.
