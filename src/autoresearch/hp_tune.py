@@ -3,31 +3,38 @@
 Automated hyperparameter tuner for the FSRS-7 autoresearch loop.
 
 The interesting part of the loop is the model-structure search; nudging numeric
-*training* hyperparameters (learning rate, Adam betas, L2 strength, and the
-per-group LR multipliers) up and down is mechanical and boring. This automates it.
+*training* hyperparameters (learning rate, Adam betas, L2 strength, recency
+weighting, and the training batch size) up and down is mechanical and boring.
+This automates it.
 
 What it does
 ------------
 A greedy **coordinate-descent** local search. For each hyperparameter it tries a
 step up and a step down (multiplicative for LR/L2, on the ``1 - beta`` scale for
-the Adam betas), keeps whichever lowers ``logloss_by_user``, and re-probes the
-improving ones in later rounds. Params that don't improve are frozen ("light"
-mode → typically ~10-16 benchmark runs/pass). Training is deterministic
-(``seed`` fixed), so every delta is real and reproducible — no averaging needed.
+the Adam betas, and a discrete x2 / /2 snapped to a multiple of 128 for the batch
+size), keeps whichever lowers ``logloss_by_user``, and re-probes the improving
+ones in later rounds. Params that don't improve are frozen ("light" mode →
+typically ~14-20 benchmark runs/pass). Training is deterministic (``seed`` fixed),
+so every delta is real and reproducible — no averaging needed.
 
-Each trial edits the numeric literal in ``fsrs_v7_constants.py`` *in place*.
-That never changes the AST node count, so the complexity score is unaffected —
-which is exactly why a hyperparameter tweak only has to clear the ``+0.0001``
-floor threshold, with no complexity gate to worry about.
+Most knobs live in ``fsrs_v7_constants.py``; **BATCH_SIZE lives in
+``src/main/config.py``**, so this tuner edits *two* files (see ``read_texts`` /
+``HParam.file``). Each trial edits a numeric literal *in place*. That never
+changes the AST node count, so the complexity score is unaffected — which is
+exactly why a hyperparameter tweak only has to clear the ``+0.0001`` floor
+threshold, with no complexity gate to worry about. (Changing BATCH_SIZE rebuilds
+only the cheap batch-size-dependent cache arrays — ``num_training_steps`` and the
+batch permutation — via their own cache manifests; the expensive tensor cache is
+reused. Verified to take effect, not silently masked.)
 
 Fully autonomous: when the best config found beats the champion by ≥ threshold
-it commits the new champion (constants + diagnostics + history) and tags it;
-otherwise it restores the champion and records a rejected pass. It owns one
+it commits the new champion (constants + config + diagnostics + history) and tags
+it; otherwise it restores the champion and records a rejected pass. It owns one
 iteration number per pass (read from ``history.jsonl``).
 
 Run it from the **host** (it shells out to ``docker compose`` for each
-benchmark and to ``git`` for commits). A pass is many ~70 s runs, so launch it
-in the background:
+benchmark and to ``git`` for commits). A pass is many ~70-150 s runs, so launch
+it in the background:
 
     python -m src.autoresearch.hp_tune              # full auto pass
     python src/autoresearch/hp_tune.py --dry-run    # validate file edits only
@@ -48,9 +55,19 @@ from typing import Callable
 
 REPO = Path(__file__).resolve().parents[2]
 CONSTANTS = REPO / "src" / "main" / "fsrs" / "fsrs_v7_constants.py"
+CONFIG = REPO / "src" / "main" / "config.py"
 DIAGNOSTICS = REPO / "result" / "diagnostics.json"
 HISTORY_JSONL = REPO / "result" / "history.jsonl"
 SUMMARY = REPO / "result" / "hp_tune_last.json"
+
+# The files this tuner may edit, keyed by the short name an HParam references in
+# its `file` field. Both are validated with ast.parse before any benchmark runs.
+FILES = {"constants": CONSTANTS, "config": CONFIG}
+
+# Tracked paths touched on accept (commit) / reject (revert). config.py is here
+# because the BATCH_SIZE knob edits it; including it when it's unchanged is a
+# harmless no-op for both `git add` and `git checkout`.
+EDITED_PATHS = ["src/main/fsrs/fsrs_v7_constants.py", "src/main/config.py"]
 
 BENCH_CMD = ["docker", "compose", "--progress", "quiet", "run", "--rm",
              "srs-benchmark", "bash", "src/main/run.sh"]
@@ -65,18 +82,23 @@ EPS = 1e-6  # minimum by_user decrease counted as a real improvement during sear
 _NUM = r"[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
 
 
-# ── editing the numeric literals in fsrs_v7_constants.py ─────────────────────
+# ── editing the numeric literals ─────────────────────────────────────────────
 def _fmt(v: float) -> str:
-    """Compact literal without float-repr noise (0.0300000000002 -> 0.03)."""
+    """Compact literal without float-repr noise (0.0300000000002 -> 0.03,
+    1024.0 -> 1024)."""
     return f"{float(v):.6g}"
 
 
-def read_constants() -> str:
-    return CONSTANTS.read_text(encoding="utf-8")
+def read_texts() -> dict[str, str]:
+    """Read every editable file's source, keyed by short name."""
+    return {name: path.read_text(encoding="utf-8") for name, path in FILES.items()}
 
 
-def write_constants(text: str) -> None:
-    CONSTANTS.write_text(text, encoding="utf-8")
+def write_texts(texts: dict[str, str]) -> None:
+    """Write every editable file back to disk (unchanged files are rewritten
+    identically, which git treats as a no-op)."""
+    for name, path in FILES.items():
+        path.write_text(texts[name], encoding="utf-8")
 
 
 def get_scalar(text: str, name: str) -> float:
@@ -111,42 +133,31 @@ def set_betas(text: str, b1: float, b2: float) -> str:
     return new
 
 
-def get_group_mult(text: str, i: int) -> float:
-    """Read element ``i`` of the LR_GROUP_MULT tuple (per-group LR multipliers)."""
-    m = re.search(r"^LR_GROUP_MULT\s*=\s*\(([^)]*)\)", text, re.MULTILINE)
-    if not m:
-        raise ValueError("could not read LR_GROUP_MULT")
-    parts = [p for p in (s.strip() for s in m.group(1).split(",")) if p]
-    return float(parts[i])
-
-
-def set_group_mult(text: str, i: int, value: float) -> str:
-    """Set element ``i`` of LR_GROUP_MULT in place, preserving the rest + comment."""
-    m = re.search(r"^LR_GROUP_MULT\s*=\s*\(([^)]*)\)", text, re.MULTILINE)
-    if not m:
-        raise ValueError("could not set LR_GROUP_MULT")
-    parts = [p for p in (s.strip() for s in m.group(1).split(",")) if p]
-    parts[i] = _fmt(value)
-    return text[:m.start(1)] + ", ".join(parts) + text[m.end(1):]
-
-
 # ── hyperparameter spec ──────────────────────────────────────────────────────
 @dataclass
 class HParam:
     name: str
-    get: Callable[[str], float]
-    put: Callable[[str, float], str]
-    kind: str        # "mul" perturbs v; "beta" perturbs (1 - v)
+    get: Callable[[dict[str, str]], float]
+    put: Callable[[dict[str, str], float], dict[str, str]]
+    kind: str        # "mul" perturbs v; "beta" perturbs (1 - v); "batch" is discrete
     step: float
     lo: float
     hi: float
     active: bool = True
+    file: str = "constants"  # which FILES entry this knob's ast.parse check targets
 
     def candidates(self, v: float) -> list[float]:
         if self.kind == "mul":
             raw = [v * self.step, v / self.step]
         elif self.kind == "beta":
             raw = [1.0 - (1.0 - v) * self.step, 1.0 - (1.0 - v) / self.step]
+        elif self.kind == "batch":
+            # Discrete: multiplicative step, snapped to a multiple of 128 (the CUDA
+            # kernel block size) and kept integer-valued. The lo/hi bounds keep it
+            # in the OOM-safe [512, 2048] range; from 1024 the neighbours are 512
+            # and 2048 (both already multiples of 128).
+            raw = [round(v * self.step / 128.0) * 128.0,
+                   round(v / self.step / 128.0) * 128.0]
         else:
             raise ValueError(self.kind)
         out = []
@@ -160,36 +171,43 @@ class HParam:
 def build_hparams() -> list[HParam]:
     hps = [
         HParam("LR",
-               lambda t: get_scalar(t, "LR"),
-               lambda t, v: set_scalar(t, "LR", v),
+               lambda ts: get_scalar(ts["constants"], "LR"),
+               lambda ts, v: {**ts, "constants": set_scalar(ts["constants"], "LR", v)},
                "mul", 1.5, 1e-3, 0.3),
         HParam("PENALTY_W_L2",
-               lambda t: get_scalar(t, "PENALTY_W_L2"),
-               lambda t, v: set_scalar(t, "PENALTY_W_L2", v),
+               lambda ts: get_scalar(ts["constants"], "PENALTY_W_L2"),
+               lambda ts, v: {**ts, "constants": set_scalar(ts["constants"], "PENALTY_W_L2", v)},
                "mul", 1.5, 0.02, 8.0),
         HParam("BETA1",
-               lambda t: get_betas(t)[0],
-               lambda t, v: set_betas(t, v, get_betas(t)[1]),
+               lambda ts: get_betas(ts["constants"])[0],
+               lambda ts, v: {**ts, "constants": set_betas(ts["constants"], v, get_betas(ts["constants"])[1])},
                "beta", 1.5, 0.4, 0.98),
         HParam("BETA2",
-               lambda t: get_betas(t)[1],
-               lambda t, v: set_betas(t, get_betas(t)[0], v),
+               lambda ts: get_betas(ts["constants"])[1],
+               lambda ts, v: {**ts, "constants": set_betas(ts["constants"], get_betas(ts["constants"])[0], v)},
                "beta", 1.5, 0.4, 0.999),
     ]
     # iter-65: recency-weighting knobs replaced the iter-52 per-group LR multipliers
     # (dropped for a single global LR). RECENCY_C0 = floor weight on the oldest
     # reviews; RECENCY_EXP = sharpness of the ramp toward the newest. gradient_weight
     # = C0 + (1-C0)*ord_frac^EXP, so the newest-review weight stays pinned at 1 for
-    # any C0 (no separate C1 knob). Both are scalars in constants.py -> set_scalar
-    # edits, complexity-neutral like the other knobs.
+    # any C0 (no separate C1 knob). Both are scalars in constants.py.
     hps.append(HParam("RECENCY_C0",
-                      lambda t: get_scalar(t, "RECENCY_C0"),
-                      lambda t, v: set_scalar(t, "RECENCY_C0", v),
+                      lambda ts: get_scalar(ts["constants"], "RECENCY_C0"),
+                      lambda ts, v: {**ts, "constants": set_scalar(ts["constants"], "RECENCY_C0", v)},
                       "mul", 1.5, 0.01, 0.5))
     hps.append(HParam("RECENCY_EXP",
-                      lambda t: get_scalar(t, "RECENCY_EXP"),
-                      lambda t, v: set_scalar(t, "RECENCY_EXP", v),
+                      lambda ts: get_scalar(ts["constants"], "RECENCY_EXP"),
+                      lambda ts, v: {**ts, "constants": set_scalar(ts["constants"], "RECENCY_EXP", v)},
                       "mul", 1.5, 1.0, 12.0))
+    # BATCH_SIZE lives in config.py (not constants.py) and is discrete. Kept LAST so
+    # that within a coordinate-descent round all the constants.py knobs run first at
+    # a fixed batch size (no cache rebuild between them); only the batch_size trials
+    # trigger a (cheap) num_training_steps / batch_perm rebuild.
+    hps.append(HParam("BATCH_SIZE",
+                      lambda ts: get_scalar(ts["config"], "BATCH_SIZE"),
+                      lambda ts, v: {**ts, "config": set_scalar(ts["config"], "BATCH_SIZE", v)},
+                      "batch", 2.0, 512, 2048, file="config"))
     return hps
 
 
@@ -239,10 +257,11 @@ def append_history(record: dict) -> None:
 
 # ── the search ───────────────────────────────────────────────────────────────
 def search(rounds: int, max_runs: int) -> dict:
-    base_text = read_constants()
-    ast.parse(base_text)  # sanity: file is valid before we touch it
+    base_texts = read_texts()
+    for name, text in base_texts.items():
+        ast.parse(text)  # sanity: every editable file is valid before we touch it
     hparams = build_hparams()
-    orig = {hp.name: hp.get(base_text) for hp in hparams}
+    orig = {hp.name: hp.get(base_texts) for hp in hparams}
 
     runs = 0
     print("[hp_tune] baseline run ...", flush=True)
@@ -251,7 +270,7 @@ def search(rounds: int, max_runs: int) -> dict:
     print(f"[hp_tune] baseline by_user={base_ll:.6f} complexity={base_cx} ({dt:.0f}s)",
           flush=True)
 
-    best_text, best_ll = base_text, base_ll
+    best_texts, best_ll = base_texts, base_ll
     trials: list[dict] = []
 
     for r in range(rounds):
@@ -259,21 +278,21 @@ def search(rounds: int, max_runs: int) -> dict:
         for hp in hparams:
             if not hp.active or runs >= max_runs:
                 continue
-            cur = hp.get(best_text)
-            results = []  # (ll, cand, text)
+            cur = hp.get(best_texts)
+            results = []  # (ll, cand, texts)
             for cand in hp.candidates(cur):
                 if runs >= max_runs:
                     break
-                trial_text = hp.put(best_text, cand)
+                trial_texts = hp.put(best_texts, cand)
                 try:
-                    ast.parse(trial_text)
-                    if abs(hp.get(trial_text) - cand) > 1e-9:
+                    ast.parse(trial_texts[hp.file])
+                    if abs(hp.get(trial_texts) - cand) > 1e-9:
                         raise ValueError("round-trip mismatch")
                 except Exception as e:  # noqa: BLE001
                     print(f"[hp_tune] skip {hp.name} -> {cand:g}: bad edit ({e})",
                           flush=True)
                     continue
-                write_constants(trial_text)
+                write_texts(trial_texts)
                 ll, _, dt = run_benchmark()
                 runs += 1
                 delta = base_ll - ll
@@ -284,14 +303,14 @@ def search(rounds: int, max_runs: int) -> dict:
                       f"by_user={ll:.6f}  d_vs_base={delta:+.6f}"
                       f"{'  <-- new best' if better else ''}  ({dt:.0f}s)",
                       flush=True)
-                results.append((ll, cand, trial_text))
+                results.append((ll, cand, trial_texts))
             if not results:
                 hp.active = False
                 continue
             results.sort(key=lambda x: x[0])
-            cand_ll, _, cand_text = results[0]
+            cand_ll, _, cand_texts = results[0]
             if cand_ll < best_ll - EPS:
-                best_ll, best_text = cand_ll, cand_text
+                best_ll, best_texts = cand_ll, cand_texts
                 improved = True
                 # keep hp active so a later round can step it further
             else:
@@ -300,14 +319,14 @@ def search(rounds: int, max_runs: int) -> dict:
             break
 
     # Leave the best config on disk and refresh diagnostics to match it.
-    write_constants(best_text)
+    write_texts(best_texts)
     print("[hp_tune] re-running best config to refresh diagnostics ...", flush=True)
     final_ll, final_cx, dt = run_benchmark()
     runs += 1
     if abs(final_ll - best_ll) > 1e-6:
         print(f"[hp_tune] WARNING: best re-check {final_ll:.6f} != {best_ll:.6f} "
               f"(non-determinism?)", flush=True)
-    final = {hp.name: hp.get(best_text) for hp in hparams}
+    final = {hp.name: hp.get(best_texts) for hp in hparams}
     changes = {n: [orig[n], final[n]] for n in orig if abs(orig[n] - final[n]) > 1e-12}
     return {
         "baseline_by_user": base_ll,
@@ -323,32 +342,34 @@ def search(rounds: int, max_runs: int) -> dict:
 
 # ── dry run: validate the regex editing without GPU/git ──────────────────────
 def dry_run() -> None:
-    original = read_constants()
+    base_texts = read_texts()
     ok = True
     try:
         for hp in build_hparams():
-            cur = hp.get(original)
+            cur = hp.get(base_texts)
             cands = hp.candidates(cur)
             details = []
             for c in cands:
-                trial = hp.put(original, c)
+                trial = hp.put(base_texts, c)
                 try:
-                    ast.parse(trial)
+                    ast.parse(trial[hp.file])
                     rt = hp.get(trial)
                     assert abs(rt - c) < 1e-9, f"round-trip {rt} != {c}"
                     details.append(f"{c:g} OK")
                 except Exception as e:  # noqa: BLE001
                     ok = False
                     details.append(f"{c:g} FAIL({e})")
-            print(f"[dry-run] {hp.name}: current={cur:g}  candidates=[{', '.join(details)}]")
+            print(f"[dry-run] {hp.name} ({hp.file}): current={cur:g}  "
+                  f"candidates=[{', '.join(details) or 'none'}]")
         # betas coupling sanity
-        b1, b2 = get_betas(original)
-        t = set_betas(original, 0.77, 0.93)
+        b1, b2 = get_betas(base_texts["constants"])
+        t = set_betas(base_texts["constants"], 0.77, 0.93)
         assert get_betas(t) == (0.77, 0.93)
         print(f"[dry-run] BETAS read=({b1:g}, {b2:g})  set/read round-trip OK")
     finally:
-        write_constants(original)
-        print(f"[dry-run] constants restored unchanged: {read_constants() == original}")
+        write_texts(base_texts)
+        restored = read_texts() == base_texts
+        print(f"[dry-run] editable files restored unchanged: {restored}")
     print(f"[dry-run] {'ALL EDITS VALID' if ok else 'SOME EDITS FAILED'}")
 
 
@@ -370,9 +391,10 @@ def finalize(res: dict, threshold: float) -> None:
     # cadence marker (committed below so the tree stays clean for the next run)
     (REPO / "result" / ".last_hptune_iter").write_text(str(n), encoding="utf-8")
 
+    knobs = "LR/betas/L2/recency C0+EXP/batch_size"
     if accept:
-        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): "
-                   f"{cs}. Numbers-only, complexity unchanged.")
+        summary = (f"AUTO hyperparameter tune (coordinate descent over training "
+                   f"hyperparameters ({knobs})): {cs}. Numbers-only, complexity unchanged.")
         reason = (f"Automated tuning pass. Improvement +{imp:.6f} >= threshold "
                   f"{threshold} over {res['n_runs']} runs. Changes: {cs}. "
                   f"logloss_by_user {base_ll:.6f} -> {best_ll:.6f}. Hyperparameter "
@@ -383,13 +405,13 @@ def finalize(res: dict, threshold: float) -> None:
             "complexity_before": cx, "complexity_after": cx,
             "status": "accepted", "reason": reason,
         })
-        git("add", "src/main/fsrs/fsrs_v7_constants.py",
+        git("add", *EDITED_PATHS,
             "result/diagnostics.json", "result/diagnostics.md",
             "result/history.jsonl", "result/history.md",
             "result/.last_hptune_iter")
         msg = (f"iter {n} accepted: hyperparameter auto-tune ({cs})\n\n"
                f"Automated coordinate-descent pass over training hyperparameters "
-               f"(LR, Adam betas, L2 strength, per-group LR multipliers).\n"
+               f"(LR, Adam betas, L2 strength, recency weighting, batch size).\n"
                f"LL_by_user {base_ll:.5f} -> {best_ll:.5f} (+{imp:.6f} >= {threshold} "
                f"thresh) over {res['n_runs']} runs. Numbers-only, complexity {cx} "
                f"unchanged. New champion.\n\n{TRAILER}")
@@ -397,11 +419,11 @@ def finalize(res: dict, threshold: float) -> None:
         git("tag", f"iter-{n}-hp-tune")
         print(f"[hp_tune] ACCEPTED as iter {n}: {cs}  (+{imp:.6f})", flush=True)
     else:
-        # restore champion (covers the near-miss case where constants changed)
-        git("checkout", "HEAD", "--", "src/main/fsrs/fsrs_v7_constants.py",
+        # restore champion (covers the near-miss case where the files changed)
+        git("checkout", "HEAD", "--", *EDITED_PATHS,
             "result/diagnostics.json", "result/diagnostics.md")
-        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): "
-                   f"best found {cs}, below threshold.")
+        summary = (f"AUTO hyperparameter tune (coordinate descent over training "
+                   f"hyperparameters ({knobs})): best found {cs}, below threshold.")
         reason = (f"Automated tuning pass over {res['n_runs']} runs found no config "
                   f"clearing threshold {threshold}. Best: {cs}, improvement "
                   f"+{imp:.6f}. logloss_by_user {base_ll:.6f} -> {best_ll:.6f}. "
@@ -417,9 +439,9 @@ def finalize(res: dict, threshold: float) -> None:
             "result/.last_hptune_iter")
         msg = (f"iter {n} rejected: hyperparameter auto-tune (no improvement >= "
                f"{threshold})\n\nAutomated coordinate-descent pass over LR / Adam "
-               f"betas / L2 strength. Best: {cs}, LL_by_user {base_ll:.5f} -> "
-               f"{best_ll:.5f} (+{imp:.6f} < {threshold} thresh). Reverted to "
-               f"champion.\n\n{TRAILER}")
+               f"betas / L2 strength / recency weighting / batch size. Best: {cs}, "
+               f"LL_by_user {base_ll:.5f} -> {best_ll:.5f} (+{imp:.6f} < {threshold} "
+               f"thresh). Reverted to champion.\n\n{TRAILER}")
         git("commit", "-m", msg)
         git("tag", f"iter-{n}-hp-tune-rejected")
         print(f"[hp_tune] REJECTED as iter {n}: best {cs} (+{imp:.6f} < {threshold})",
@@ -435,13 +457,14 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--rounds", type=int, default=3,
                     help="max coordinate-descent rounds (default 3)")
-    ap.add_argument("--max-runs", type=int, default=28,
-                    help="hard cap on benchmark runs per pass (default 28; sized "
-                         "for the 6-knob set: LR, L2, BETA1/2, RECENCY_C0, RECENCY_EXP)")
+    ap.add_argument("--max-runs", type=int, default=34,
+                    help="hard cap on benchmark runs per pass (default 34; sized "
+                         "for the 7-knob set: LR, L2, BETA1/2, RECENCY_C0, "
+                         "RECENCY_EXP, BATCH_SIZE)")
     ap.add_argument("--threshold", type=float, default=0.0001,
                     help="acceptance threshold on logloss_by_user (default 1e-4)")
     ap.add_argument("--dry-run", action="store_true",
-                    help="validate constants.py edits only; no benchmark/git")
+                    help="validate constants.py + config.py edits only; no benchmark/git")
     ap.add_argument("--no-commit", action="store_true",
                     help="run the search and leave the best config on disk, "
                          "but do not touch git/history")
@@ -473,7 +496,7 @@ def main() -> None:
 
         finalize(res, args.threshold)
     except BaseException as e:  # noqa: BLE001 — restore a clean tree on any failure
-        git("checkout", "HEAD", "--", "src/main/fsrs/fsrs_v7_constants.py",
+        git("checkout", "HEAD", "--", *EDITED_PATHS,
             "result/diagnostics.json", "result/diagnostics.md",
             "result/history.jsonl", "result/history.md", check=False)
         print(f"[hp_tune] ERROR ({type(e).__name__}): {e}", flush=True)
