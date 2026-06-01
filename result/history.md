@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_64 record(s). Generated from `history.jsonl` — do not edit by hand._
+_65 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -68,3 +68,4 @@ _64 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 62 | 2026-05-30T23:08:28 | 0.0000 | 0.32106 | 0.32121 | -0.00015 | 16,816 | 16,805 | -0.07% | rejected | Ablate base_weight2 (pure ablation surfaced by the covariance idea): the forgetting-curve mixture (w1*r1 + w2*r2)/(w1+w2) is scale-invariant in (base_weight1, base_weight2) -- only the ratio is identifiable -- and the two showed a -0.72 cross-user correlation (the empirical fingerprint of that degeneracy). Fixed base_weight2=1.0, removed it (36->35 params), widened base_weight1 max 1.0->2.0 to carry the full ratio. REJECTED (worse). |
 | 63 | 2026-05-30T23:42:40 | 0.0001 | 0.32106 | 0.32104 | +0.00003 | 16,816 | 16,816 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): best found BETA2 0.899999->0.955555, LRG_DIFF 1->1.5, below threshold. |
 | 64 | 2026-06-01T10:04:48 | 0.0001 | 0.32106 | 0.32101 | +0.00005 | 16,816 | 16,829 | +0.08% | rejected | N_EPOCHS 8->10 epochs (more SGD) |
+| 65 | 2026-06-01T10:53:04 | 0.0001 | 0.32106 | 0.32109 | -0.00002 | 16,829 | 16,754 | -0.45% | accepted | single global LR (drop 4 per-group mults) + recency retune RECENCY_EXP 5->7.5 |

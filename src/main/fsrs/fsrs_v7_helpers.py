@@ -60,4 +60,5 @@ def penalty_loss(parameters_kp, batch_size_k, training_set_size_k, anchor_p):
 def gradient_weight(review_ord_kb, training_set_size_k):
     # more recent reviews get a higher weight
     review_ord_lin = review_ord_kb / training_set_size_k.unsqueeze(-1)
-    return fsrs_v7_constants.RECENCY_C0 + fsrs_v7_constants.RECENCY_C1 * torch.pow(review_ord_lin, 5)
+    c0 = fsrs_v7_constants.RECENCY_C0
+    return c0 + (1.0 - c0) * torch.pow(review_ord_lin, fsrs_v7_constants.RECENCY_EXP)

@@ -176,18 +176,20 @@ def build_hparams() -> list[HParam]:
                lambda t, v: set_betas(t, get_betas(t)[0], v),
                "beta", 1.5, 0.4, 0.999),
     ]
-    # Per-group LR multipliers (iter-52: LR_GROUP_MULT scales the global LR per
-    # parameter group — init-S, difficulty, stability-update, forgetting-curve).
-    # One knob per group, so coordinate descent nudges each up AND down => a pass
-    # tries >= 8 group-modifier combinations (4 groups x 2 directions). Range
-    # [0.25, 4.0] (user-specified bounds); step 1.5 multiplicative like LR/L2.
-    # Editing the tuple literal is complexity-neutral, same as the other knobs.
-    for i, gname in enumerate(["LRG_INIT_S", "LRG_DIFF", "LRG_STAB", "LRG_CURVE"]):
-        hps.append(HParam(
-            gname,
-            (lambda ii: lambda t: get_group_mult(t, ii))(i),
-            (lambda ii: lambda t, v: set_group_mult(t, ii, v))(i),
-            "mul", 1.5, 0.25, 4.0))
+    # iter-65: recency-weighting knobs replaced the iter-52 per-group LR multipliers
+    # (dropped for a single global LR). RECENCY_C0 = floor weight on the oldest
+    # reviews; RECENCY_EXP = sharpness of the ramp toward the newest. gradient_weight
+    # = C0 + (1-C0)*ord_frac^EXP, so the newest-review weight stays pinned at 1 for
+    # any C0 (no separate C1 knob). Both are scalars in constants.py -> set_scalar
+    # edits, complexity-neutral like the other knobs.
+    hps.append(HParam("RECENCY_C0",
+                      lambda t: get_scalar(t, "RECENCY_C0"),
+                      lambda t, v: set_scalar(t, "RECENCY_C0", v),
+                      "mul", 1.5, 0.01, 0.5))
+    hps.append(HParam("RECENCY_EXP",
+                      lambda t: get_scalar(t, "RECENCY_EXP"),
+                      lambda t, v: set_scalar(t, "RECENCY_EXP", v),
+                      "mul", 1.5, 1.0, 12.0))
     return hps
 
 
@@ -369,7 +371,7 @@ def finalize(res: dict, threshold: float) -> None:
     (REPO / "result" / ".last_hptune_iter").write_text(str(n), encoding="utf-8")
 
     if accept:
-        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): "
+        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): "
                    f"{cs}. Numbers-only, complexity unchanged.")
         reason = (f"Automated tuning pass. Improvement +{imp:.6f} >= threshold "
                   f"{threshold} over {res['n_runs']} runs. Changes: {cs}. "
@@ -398,7 +400,7 @@ def finalize(res: dict, threshold: float) -> None:
         # restore champion (covers the near-miss case where constants changed)
         git("checkout", "HEAD", "--", "src/main/fsrs/fsrs_v7_constants.py",
             "result/diagnostics.json", "result/diagnostics.md")
-        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/per-group LR)): "
+        summary = (f"AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): "
                    f"best found {cs}, below threshold.")
         reason = (f"Automated tuning pass over {res['n_runs']} runs found no config "
                   f"clearing threshold {threshold}. Best: {cs}, improvement "
@@ -433,9 +435,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--rounds", type=int, default=3,
                     help="max coordinate-descent rounds (default 3)")
-    ap.add_argument("--max-runs", type=int, default=36,
-                    help="hard cap on benchmark runs per pass (default 36; sized "
-                         "for the 8-knob set incl. the 4 per-group LR multipliers)")
+    ap.add_argument("--max-runs", type=int, default=28,
+                    help="hard cap on benchmark runs per pass (default 28; sized "
+                         "for the 6-knob set: LR, L2, BETA1/2, RECENCY_C0, RECENCY_EXP)")
     ap.add_argument("--threshold", type=float, default=0.0001,
                     help="acceptance threshold on logloss_by_user (default 1e-4)")
     ap.add_argument("--dry-run", action="store_true",
