@@ -388,7 +388,8 @@ def finalize(res: dict, threshold: float) -> None:
     cs = _changes_str(changes)
     accept = imp >= threshold and bool(changes)
 
-    # cadence marker (committed below so the tree stays clean for the next run)
+    # cadence marker — machine-local and gitignored, so it is written for the
+    # next run's cadence check but NOT git-added (adding it would fail with exit 1).
     (REPO / "result" / ".last_hptune_iter").write_text(str(n), encoding="utf-8")
 
     knobs = "LR/betas/L2/recency C0+EXP/batch_size"
@@ -407,8 +408,7 @@ def finalize(res: dict, threshold: float) -> None:
         })
         git("add", *EDITED_PATHS,
             "result/diagnostics.json", "result/diagnostics.md",
-            "result/history.jsonl", "result/history.md",
-            "result/.last_hptune_iter")
+            "result/history.jsonl", "result/history.md")
         msg = (f"iter {n} accepted: hyperparameter auto-tune ({cs})\n\n"
                f"Automated coordinate-descent pass over training hyperparameters "
                f"(LR, Adam betas, L2 strength, recency weighting, batch size).\n"
@@ -435,8 +435,7 @@ def finalize(res: dict, threshold: float) -> None:
             "complexity_before": cx, "complexity_after": cx,
             "status": "rejected", "reason": reason,
         })
-        git("add", "result/history.jsonl", "result/history.md",
-            "result/.last_hptune_iter")
+        git("add", "result/history.jsonl", "result/history.md")
         msg = (f"iter {n} rejected: hyperparameter auto-tune (no improvement >= "
                f"{threshold})\n\nAutomated coordinate-descent pass over LR / Adam "
                f"betas / L2 strength / recency weighting / batch size. Best: {cs}, "
