@@ -8,7 +8,7 @@ Below is a graph that shows how log loss (average across 3000 Anki users) change
 You can find more details in history.md and history.jsonl. Some notes:
 1) Not all proposals came from Claude, for example, using 4 different values of learning rate was my idea. Though I discarded it later.
 2) What counts for the complexity score has been changed multiple times, so that number is mostly worthless.
-3) This repo also contains code that is used to find optimal default parameters for FSRS-7, both optimal user-facing default parameters and optimal "starting point for Adam" parameters (previously, the same parameters were used for both). It also contains an automated hyperparameter tuner.
+3) This repo also contains code that is used to find [optimal default parameters for FSRS-7](https://github.com/Expertium/fsrs-autoresearch/blob/main/src/autoresearch/central_diff_init_w.py), both optimal user-facing default parameters and optimal "starting point for Adam" parameters (previously, the same parameters were used for both). It also contains an [automated hyperparameter tuner](https://github.com/Expertium/fsrs-autoresearch/blob/main/src/autoresearch/hp_tune.py).
 
 ---
 
