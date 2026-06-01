@@ -123,6 +123,7 @@ PHASES = [
         checkpoint=OUTPUT_DIR / "FSRS_7_central_diff_recency_results.json",
         plot=OUTPUT_DIR / "loss_recency.png",
         title="BEST SGD STARTING POINT  (8-epoch recency SGD, FSRS_N_EPOCHS=8)",
+        ytick=1e-4,  # recency range is tiny (~1e-5); fixed 0.0001 y-ticks keep it readable
     ),
 ]
 
@@ -348,29 +349,43 @@ def _atomic_write_json(path: pathlib.Path, obj) -> None:
     os.replace(tmp, path)  # atomic on the same filesystem
 
 
-def _save_plot(history, plot_path, title):
+def _save_plot(history, plot_path, title, ytick=None):
     """Save a loss-vs-step PNG. Matplotlib is imported lazily and failures are
-    non-fatal, so a host without matplotlib still runs the optimization."""
+    non-fatal, so a host without matplotlib still runs the optimization. If
+    ``ytick`` is given, the y-axis uses that fixed tick spacing with absolute
+    (non-offset) labels, so the scale is readable no matter how small the data
+    range is (e.g. the recency phase, where the whole range is ~1e-5)."""
     if not history:
         return
     try:
+        import math
         import matplotlib
         matplotlib.use("Agg")  # headless: never open a window during a long run
         import matplotlib.pyplot as plt
+        import matplotlib.ticker as mticker
     except Exception as e:
         print(f"      (plot skipped: matplotlib unavailable: {e})")
         return
     steps = [e["step"] for e in history]
     losses = [e["loss"] for e in history]
-    plt.figure(figsize=(10, 6))
-    plt.plot(steps, losses, marker="o")
-    plt.xlabel("meta-step")
-    plt.ylabel("logloss_by_user")
-    plt.title(title)
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(plot_path, dpi=120)
-    plt.close()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(steps, losses, marker="o")
+    ax.set_xlabel("meta-step")
+    ax.set_ylabel("logloss_by_user")
+    ax.set_title(title)
+    ax.grid(True)
+    if ytick:
+        lo, hi = min(losses), max(losses)
+        y0 = math.floor(lo / ytick) * ytick
+        y1 = math.ceil(hi / ytick) * ytick
+        if y1 - y0 < ytick:  # always span at least one full increment
+            y1 = y0 + ytick
+        ax.set_ylim(y0, y1)
+        ax.yaxis.set_major_locator(mticker.MultipleLocator(ytick))
+        ax.ticklabel_format(axis="y", style="plain", useOffset=False)
+    fig.tight_layout()
+    fig.savefig(plot_path, dpi=120)
+    plt.close(fig)
 
 
 # ============================================================================
@@ -467,7 +482,7 @@ def run_phase(phase: dict, starting_params: np.ndarray, bounds: List[tuple]):
             "phase":           phase["name"],
             "n_epochs":        n_epochs,
         })
-        _save_plot(history, phase["plot"], f"{phase['name']}: logloss_by_user")
+        _save_plot(history, phase["plot"], f"{phase['name']}: logloss_by_user", ytick=phase.get("ytick"))
 
     print(f"\n[{phase['name']}] complete. best_loss={best_loss:.6f}")
     print(f"[{phase['name']}] best_params={[round(v, 5) for v in best_params.tolist()]}")
