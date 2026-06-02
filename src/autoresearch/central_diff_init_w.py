@@ -23,6 +23,11 @@ differences are the benchmark *command* and the *number of (meta) steps* — her
       minimizes post-training logloss_by_user.  (step-0 baseline ~0.3211, the
       current champion.)
 
+NOTE (2026-06-02): the "split" hypothesis was REJECTED — see the comment above
+PHASES.  The recency/SGD-init phase moved log loss only within the GPU-noise
+floor, so the user-facing 'default' phase is now the sole live workflow; the
+'recency' phase is kept only for reference and is gated off by default.
+
 Mechanics
 ---------
 * Each eval writes the candidate into FSRS7_DEFAULT_35_VALUES in
@@ -105,11 +110,23 @@ EVAL_RETRIES = 2   # retry a benchmark eval this many times on a transient failu
 #   recency eval ~100 s        -> ~2 h/step   (73 evals) ->  30 steps ~ 61 h (~2.5 d)
 # 3000-user evals are far less noisy than the 30-user mini-runs, so the Adam
 # descent is smooth — raise/lower these caps freely (every step is checkpointed).
+#
+# ---------------------------------------------------------------------------
+# 2026-06-02 — "SPLIT" HYPOTHESIS REJECTED.  The original premise was that the
+# best *SGD starting point* (the 'recency' phase) should be optimized SEPARATELY
+# from the user-facing default to squeeze out extra log loss.  In practice the
+# recency phase moved logloss_by_user only within the ~1e-5 GPU-noise floor over
+# ~12 meta-steps (essentially flat): post-8-epoch loss is insensitive to the SGD
+# starting point, so a separately-tuned init buys nothing.  We therefore abandon
+# the split — there is ONE default tuple, optimized by the 'default' (user-facing,
+# no-training) phase.  The 'recency' phase is KEPT for reference / future use but
+# stays gated off (its RUN_RECENCY sentinel) and is not part of the live workflow.
+# ---------------------------------------------------------------------------
 PHASES = [
     dict(
         name="default",
         n_epochs=0,
-        max_steps=100,
+        max_steps=200,   # 2026-06-02: 100 -> 200 (run 100 MORE user-facing-default steps)
         approx_eval_secs=8,
         checkpoint=OUTPUT_DIR / "FSRS_7_central_diff_default_results.json",
         plot=OUTPUT_DIR / "loss_default.png",
@@ -118,7 +135,7 @@ PHASES = [
     dict(
         name="recency",
         n_epochs=8,
-        max_steps=30,
+        max_steps=30,   # KEPT but gated off (RUN_RECENCY); split hypothesis rejected 2026-06-02 — see note above PHASES
         approx_eval_secs=100,
         checkpoint=OUTPUT_DIR / "FSRS_7_central_diff_recency_results.json",
         plot=OUTPUT_DIR / "loss_recency.png",
