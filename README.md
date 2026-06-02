@@ -47,8 +47,6 @@ A change is accepted only if `champion_logloss − new_logloss ≥ threshold`:
 
 Adding a new state variable/parameter **AND** simultaneously removing old parameter(s) lowers the threshold by 0.0002 for each removed parameter, but not below 0.0002.
 
-Adding a new state variable/parameter **AND** simultaneously removing old parameter(s) lowers the threshold by 0.0002 for each removed parameter, but not below 0.0002.
-
 Plus a **complexity gate**: `score = AST_nodes + 40·cyclomatic`, measured over the editable files (Python *and* the CUDA model); an accepted change may raise it by ≤5%. This stops the model from accreting clever-but-unjustified machinery. (As note 2 says, the complexity baseline has been redefined a few times.)
 
 There are also **12 hard constraints** every variant must satisfy — the forgetting curve must stay monotonic / convex / pinned at `p(0)=1` and `p(∞)→0`; higher difficulty must not speed up memory; no eval→train leakage; everything stochastic seeded; etc. The full set, plus the exact threshold and complexity details, lives in **[`CLAUDE.md`](CLAUDE.md)** — that file is the actual design document and the source of truth for the rules.
@@ -86,6 +84,8 @@ Prepare the dataset (one-time):
 docker compose --progress quiet run --rm srs-benchmark python -m src.prepare.prepare --processes 10
 ```
 (If you hit `concurrent.futures.process.BrokenProcessPool` on WSL, raise the memory cap in [`.wslconfig`](https://learn.microsoft.com/windows/wsl/wsl-config) or lower `--processes`.)
+
+> **About the dataset.** `anki-revlogs-3k` (the `--data` default) is just the **first 3,000 users** of the public 10k-user [`anki-revlogs-10k`](https://github.com/open-spaced-repetition/anki-revlogs-10k) dataset — equivalent to taking the full 10k set with **`--max-user-id 3000`**. Note that `--max-user-id` is a flag of the **`prepare`** step (`src/prepare/prepare_config.py`), i.e. Python-side preprocessing — the CUDA model itself never sees it; it just trains on whatever `prepare` wrote out.
 
 Train + evaluate one variant:
 ```sh
