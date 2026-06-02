@@ -154,7 +154,8 @@ class HParam:
         elif self.kind == "batch":
             # Discrete: multiplicative step, snapped to a multiple of 128 (the CUDA
             # kernel block size) and kept integer-valued. The lo/hi bounds keep it
-            # in the OOM-safe [512, 2048] range; from 1024 the neighbours are 512
+            # in the [128, 2048] range (2048 = the OOM-safe ceiling; smaller is
+            # always memory-safe); from 1024 the neighbours are 512
             # and 2048 (both already multiples of 128).
             raw = [round(v * self.step / 128.0) * 128.0,
                    round(v / self.step / 128.0) * 128.0]
@@ -207,7 +208,7 @@ def build_hparams() -> list[HParam]:
     hps.append(HParam("BATCH_SIZE",
                       lambda ts: get_scalar(ts["config"], "BATCH_SIZE"),
                       lambda ts, v: {**ts, "config": set_scalar(ts["config"], "BATCH_SIZE", v)},
-                      "batch", 2.0, 512, 2048, file="config"))
+                      "batch", 2.0, 128, 2048, file="config"))
     return hps
 
 
