@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_71 record(s). Generated from `history.jsonl` — do not edit by hand._
+_72 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -75,3 +75,4 @@ _71 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 69 | 2026-06-03T15:25:07 | 0.0002 | 0.32065 | 0.32063 | +0.00002 | 16,756 | 16,759 | +0.02% | rejected | STRUCTURAL: promote the hardcoded fast-trace init multiplier (0.8) to a per-user trainable param w[36]=fast_init_frac; s_fast init = fast_init_frac * initial_stability. Default 0.8, bounds [0.02, 2.0], L2 sigma 0.5. 36->37 params. Enzyme rebuild. |
 | 70 | 2026-06-03T15:34:12 | 0.0001 | 0.32065 | 0.32065 | -0.00000 | 16,756 | 16,756 | +0.00% | rejected | Nudge the hardcoded fast_init_frac constant in fsrs7_init (global, 0-param): probed 0.8 -> 0.65 and 0.8 -> 0.9. Enzyme rebuild. |
 | 71 | 2026-06-03T15:43:55 | 0.0001 | 0.32065 | 0.32034 | +0.00031 | 16,756 | 16,795 | +0.23% | accepted | Trace-specific fast learning: update the fast trace s_fast from the FAST forgetting component recall r1 (new fsrs7_fast_component_recall helper) instead of the mixed-curve retention; the slow trace s still updates from the mixed retention. Formula-only, 0 params. Enzyme rebuild. |
+| 72 | 2026-06-03T15:53:23 | 0.0001 | 0.32034 | 0.32103 | -0.00069 | 16,795 | 16,833 | +0.23% | rejected | Trace-specific slow learning (mirror of iter-71): update the slow trace s from the SLOW forgetting component recall r2 (new fsrs7_slow_component_recall helper) instead of the mixed-curve retention; the fast trace s_fast still uses r1. fsrs7_step no longer computes the mixed retention. Formula-only, 0 params. Enzyme rebuild. |
