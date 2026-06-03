@@ -1,4 +1,4 @@
-LR: float = 0.0133  # iter 20: was 2e-2; recency sharpening (iter 14, exp=5) cut gradient mass, raise LR to compensate
+LR: float = 0.0188  # iter 20: was 2e-2; recency sharpening (iter 14, exp=5) cut gradient mass, raise LR to compensate
 BETAS: tuple = (0.55, 0.9913)  # this is for Adam, default is (0.9, 0.999)
 
 RECENCY_C0 = 0.0667  # iter 4: was 0.25; shift relative grad weight toward most-recent reviews (test split is time-most-recent chunk). Rounded to 4 dp (was 0.0666667) to match the hp_tune <=4-dp resolution.
