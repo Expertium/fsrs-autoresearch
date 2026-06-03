@@ -69,3 +69,7 @@ result/init_w_metaopt/
 # Internal loop-state markers (machine-local, not meaningful in the repo)
 result/.last_compact_iter
 result/.last_hptune_iter
+
+# Claude Code scheduler runtime lock (machine-local, would trip hp_tune's
+# clean-tree guard if left untracked)
+.claude/scheduled_tasks.lock
