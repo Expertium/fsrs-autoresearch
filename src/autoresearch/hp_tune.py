@@ -4,8 +4,9 @@ Automated hyperparameter tuner for the FSRS-7 autoresearch loop.
 
 The interesting part of the loop is the model-structure search; nudging numeric
 *training* hyperparameters (learning rate, Adam betas, L2 strength, recency
-weighting, and the training batch size) up and down is mechanical and boring.
-This automates it.
+weighting) up and down is mechanical and boring. This automates it. The compute
+operating point (n_epoch, batch_size) is handled separately by the Pareto grid
+below — it is NOT part of the coordinate descent.
 
 What it does
 ------------
@@ -92,13 +93,15 @@ GRID_BATCHES = [128, 256, 512, 1024]
 SPEED_TOL = 0.03   # fractional compute-time noise band: within +/-3% counts as "same speed"
 LL_TOL = 1e-5      # log-loss tie band (training is deterministic; guards exact ties)
 
-# The files this tuner may edit, keyed by the short name an HParam references in
-# its `file` field. Both are validated with ast.parse before any benchmark runs.
+# The files this tuner may edit: constants.py holds the 6 fine knobs (regular
+# pass); config.py holds BATCH_SIZE / N_EPOCHS, edited ONLY by epoch_batch_grid().
+# Both are validated with ast.parse before any benchmark runs.
 FILES = {"constants": CONSTANTS, "config": CONFIG}
 
-# Tracked paths touched on accept (commit) / reject (revert). config.py is here
-# because the BATCH_SIZE knob edits it; including it when it's unchanged is a
-# harmless no-op for both `git add` and `git checkout`.
+# Tracked paths the REGULAR pass touches on accept (commit) / reject (revert). The
+# regular coordinate descent only edits constants.py now (batch_size moved to the
+# grid); config.py is kept here as a defensive no-op (unchanged by the regular pass,
+# so `git add` / `git checkout` on it do nothing). The grid does its own bookkeeping.
 EDITED_PATHS = ["src/main/fsrs/fsrs_v7_constants.py", "src/main/config.py"]
 
 BENCH_CMD = ["docker", "compose", "--progress", "quiet", "run", "--rm",
@@ -198,7 +201,7 @@ class HParam:
     name: str
     get: Callable[[dict[str, str]], float]
     put: Callable[[dict[str, str], float], dict[str, str]]
-    kind: str        # "mul" perturbs v; "beta" perturbs (1 - v); "batch" is discrete
+    kind: str        # "mul" perturbs v; "beta" perturbs (1 - v)
     step: float
     lo: float
     hi: float
@@ -206,18 +209,13 @@ class HParam:
     file: str = "constants"  # which FILES entry this knob's ast.parse check targets
 
     def candidates(self, v: float) -> list[float]:
+        # NOTE: only "mul" (LR/L2/recency) and "beta" (Adam betas) knobs exist here.
+        # batch_size used to be a discrete "batch" knob; it's no longer tuned in this
+        # coordinate descent — the epoch_batch_grid() Pareto search owns it.
         if self.kind == "mul":
             raw = [v * self.step, v / self.step]
         elif self.kind == "beta":
             raw = [1.0 - (1.0 - v) * self.step, 1.0 - (1.0 - v) / self.step]
-        elif self.kind == "batch":
-            # Discrete: multiplicative step, snapped to a multiple of 128 (the CUDA
-            # kernel block size) and kept integer-valued. The lo/hi bounds keep it
-            # in the [128, 2048] range (2048 = the OOM-safe ceiling; smaller is
-            # always memory-safe); from 1024 the neighbours are 512
-            # and 2048 (both already multiples of 128).
-            raw = [round(v * self.step / 128.0) * 128.0,
-                   round(v / self.step / 128.0) * 128.0]
         else:
             raise ValueError(self.kind)
         out = []
@@ -635,7 +633,7 @@ def finalize(res: dict, threshold: float) -> None:
     # next run's cadence check but NOT git-added (adding it would fail with exit 1).
     (REPO / "result" / ".last_hptune_iter").write_text(str(n), encoding="utf-8")
 
-    knobs = "LR/betas/L2/recency C0+EXP/batch_size"
+    knobs = "LR/betas/L2/recency C0+EXP"
     if accept:
         summary = (f"AUTO hyperparameter tune (coordinate descent over training "
                    f"hyperparameters ({knobs})): {cs}.")
@@ -657,7 +655,7 @@ def finalize(res: dict, threshold: float) -> None:
             "result/history_plot.png")
         msg = (f"iter {n} accepted: hyperparameter auto-tune ({cs})\n\n"
                f"Automated coordinate-descent pass over training hyperparameters "
-               f"(LR, Adam betas, L2 strength, recency weighting, batch size).\n"
+               f"(LR, Adam betas, L2 strength, recency weighting).\n"
                f"LL_by_user {base_ll:.5f} -> {best_ll:.5f} (+{imp:.6f} >= {threshold} "
                f"thresh) over {res['n_runs']} runs. Numbers-only, complexity {cx} "
                f"unchanged. New champion.\n\n{TRAILER}")
@@ -686,7 +684,7 @@ def finalize(res: dict, threshold: float) -> None:
             "result/history_plot.png")
         msg = (f"iter {n} rejected: hyperparameter auto-tune (no improvement >= "
                f"{threshold})\n\nAutomated coordinate-descent pass over LR / Adam "
-               f"betas / L2 strength / recency weighting / batch size. Best: {cs}, "
+               f"betas / L2 strength / recency weighting. Best: {cs}, "
                f"LL_by_user {base_ll:.5f} -> {best_ll:.5f} (+{imp:.6f} < {threshold} "
                f"thresh). Reverted to champion.\n\n{TRAILER}")
         git("commit", "-m", msg)
