@@ -85,23 +85,36 @@ src/
     fsrs_v7_interval_penalty.py
     model_factory.py        # MODEL_REGISTRY — register new variants here
   main/
-    config.py               # DEVICE, BATCH_SIZE=1024, N_EPOCHS=8, WRITE_RESULT
+    config.py               # DEVICE, BATCH_SIZE=512, N_EPOCHS=8 (FSRS_N_EPOCHS env override), WRITE_RESULT
     run.py                  # training + eval entry point
     run.sh                  # builds Enzyme ext then runs run.py
-    fsrs/                   # CUDA-accelerated kernel
+    fsrs/                   # FSRS-7 Python training helpers (NOT the CUDA kernel):
+      fsrs_v7_constants.py  #   LR, BETAS, RECENCY_C0/EXP, PENALTY_W_L2, FSRS7_DEFAULT_35_VALUES, MIN/MAX, L2_SIGMA
+      fsrs_v7_helpers.py    #   L2 penalty, recency weighting, parameter clipper
+      fsrs_v7_optimizer.py  #   Adam/AdamW update rule
+      fsrs_v7_scheduler.py  #   cosine LR schedule
     csrc/                   # C++/.cu sources (Enzyme extension)
       fsrs_extension.cpp
       fsrs_extension.cu
-      fsrs/, fsrs_kernel/
+      fsrs/                 # ★ the actual CUDA FSRS-7 model: fsrs7.cu / fsrs7.cuh
+      fsrs_kernel/
     srs_ops.py              # Python wrapper around the extension
     tensor_cache.py         # LMDB tensor cache
     tensor_lmdb.py
     tensors.py
     result_metrics.py
-  __init__.py
+  autoresearch/             # ★ autoresearch-loop tooling (host-side, outside Docker)
+    history.py              # append_iteration() -> result/history.{jsonl,md}
+    diagnostics.py          # per-iteration report (+ FSRS7_BOUNDS_STATIC mirror)
+    complexity.py           # complexity score (Python + CUDA)
+    hp_tune.py              # automated hyperparameter tuner
+    central_diff_init_w.py  # default-parameter meta-optimizer
+    plot_history.py         # history plot (the human's — run, never edit)
+result/                     # per-run artifacts: diagnostics.{json,md}, history.{jsonl,md}, history_plot.png
 compose.yaml                # bind mounts ../anki-revlogs-3k and current dir
 dockerfile                  # CUDA 11.8 + LLVM 18 + Enzyme + PyTorch 2.7.1
 pyproject.toml              # Python 3.12, fsrs-optimizer, torch, etc.
+uv.lock                     # uv dependency lockfile
 setup.py                    # custom EnzymeBuildExtension for the .cu file
 ```
 
