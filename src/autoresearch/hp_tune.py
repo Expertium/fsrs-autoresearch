@@ -333,71 +333,97 @@ def _grid_table(cells: list[dict], gold: dict | None) -> str:
 
 
 def epoch_batch_grid() -> None:
-    """Run the 20-combo (n_epoch x batch_size) grid, pick the Pareto operating point
-    vs the (8,512) gold standard, and leave the winner's (batch, n_epoch, scaled LR)
-    on disk for review. Does NOT commit or record history — re-anchoring the champion
-    is a deliberate step the caller finalises after the follow-up fine-tune."""
+    """Measure the (8,512) gold standard FIRST, then sweep the 19 OTHER (n_epoch x
+    batch_size) candidates (skipping (8,512) — no point comparing it to itself),
+    judging each against the gold reference. Picks the Pareto operating point and
+    leaves the winner's (batch, n_epoch, scaled LR) on disk for review. Does NOT
+    commit or record history — re-anchoring the champion is a deliberate step the
+    caller finalises after the follow-up fine-tune. Total runs = 1 gold + 19 = 20."""
     base_texts = read_texts()
     for text in base_texts.values():
         ast.parse(text)
     committed_lr = get_scalar(base_texts["constants"], "LR")
     committed_batch = get_scalar(base_texts["config"], "BATCH_SIZE")
     committed_epoch = get_n_epochs(base_texts["config"])
+    n_candidates = len(GRID_EPOCHS) * len(GRID_BATCHES) - 1
     print(f"[grid] committed operating point: epoch={committed_epoch} "
           f"batch={committed_batch:g} LR={committed_lr:g}", flush=True)
-    print(f"[grid] gold standard = (epoch {GOLD_EPOCH}, batch {GOLD_BATCH}); "
-          f"{len(GRID_EPOCHS) * len(GRID_BATCHES)} cells, sqrt LR-batch scaling.",
+    print(f"[grid] gold standard = (epoch {GOLD_EPOCH}, batch {GOLD_BATCH}); measured "
+          f"first, then {n_candidates} candidates judged against it (sqrt LR-batch scaling).",
           flush=True)
+
+    def run_cell(epoch: int, batch: int) -> dict:
+        """Edit batch + sqrt-scaled LR, run with FSRS_N_EPOCHS=epoch; return the cell."""
+        lr = _scaled_lr(committed_lr, committed_batch, batch)
+        trial = {**base_texts,
+                 "config": set_scalar(base_texts["config"], "BATCH_SIZE", batch)}
+        trial["constants"] = set_scalar(base_texts["constants"], "LR", lr)
+        ast.parse(trial["config"]); ast.parse(trial["constants"])
+        write_texts(trial)
+        t0 = time.time()
+        try:
+            ll, secs = run_benchmark_grid({"FSRS_N_EPOCHS": str(epoch)})
+        except Exception as e:  # noqa: BLE001 — one bad cell shouldn't kill the grid
+            print(f"[grid] epoch {epoch:>2} batch {batch:>4}: FAILED ({e})", flush=True)
+            return {"epoch": epoch, "batch": batch, "lr": lr,
+                    "by_user": None, "seconds": None, "error": str(e)}
+        print(f"[grid] epoch {epoch:>2} batch {batch:>4} (LR {lr:g}): "
+              f"by_user={ll:.6f}  compute={secs:.1f}s  ({time.time() - t0:.0f}s wall)",
+              flush=True)
+        return {"epoch": epoch, "batch": batch, "lr": lr, "by_user": ll, "seconds": secs}
 
     cells: list[dict] = []
     try:
+        # 1. GOLD STANDARD FIRST — the reference every candidate is judged against.
+        print(f"[grid] measuring gold standard (epoch {GOLD_EPOCH}, batch {GOLD_BATCH}) "
+              f"first ...", flush=True)
+        gold = run_cell(GOLD_EPOCH, GOLD_BATCH)
+        cells.append(gold)
+        if gold["by_user"] is None:
+            print("[grid] ABORT: gold-standard cell failed — no reference, no decision.",
+                  flush=True)
+            GRID_SUMMARY.write_text(json.dumps({"cells": cells, "gold": None}, indent=2),
+                                    encoding="utf-8")
+            return
+        g_ll, g_s = gold["by_user"], gold["seconds"]
+        print(f"[grid] GOLD: by_user={g_ll:.6f}  compute={g_s:.1f}s  "
+              f"(the {n_candidates} candidates are compared to this)\n", flush=True)
+
+        def dominates(c: dict) -> bool:
+            if c["by_user"] is None:
+                return False
+            not_worse = (c["by_user"] <= g_ll + LL_TOL) and (c["seconds"] <= g_s * (1 + SPEED_TOL))
+            strictly_better = (c["by_user"] < g_ll - LL_TOL) or (c["seconds"] < g_s * (1 - SPEED_TOL))
+            return not_worse and strictly_better
+
+        # 2. The candidates — every combo EXCEPT the gold standard itself.
         for epoch in GRID_EPOCHS:
             for batch in GRID_BATCHES:
-                lr = _scaled_lr(committed_lr, committed_batch, batch)
-                trial = {**base_texts,
-                         "config": set_scalar(base_texts["config"], "BATCH_SIZE", batch)}
-                trial["constants"] = set_scalar(base_texts["constants"], "LR", lr)
-                ast.parse(trial["config"]); ast.parse(trial["constants"])
-                write_texts(trial)
-                t0 = time.time()
-                try:
-                    ll, secs = run_benchmark_grid({"FSRS_N_EPOCHS": str(epoch)})
-                except Exception as e:  # noqa: BLE001 — one bad cell shouldn't kill the grid
-                    print(f"[grid] epoch {epoch:>2} batch {batch:>4}: FAILED ({e})",
+                if (epoch, batch) == (GOLD_EPOCH, GOLD_BATCH):
+                    continue  # no point comparing (8,512) to itself
+                c = run_cell(epoch, batch)
+                cells.append(c)
+                if c["by_user"] is not None:
+                    dl, ds = c["by_user"] - g_ll, 100 * (c["seconds"] - g_s) / g_s
+                    if dominates(c):
+                        tag = "DOMINATES gold"
+                    elif c["by_user"] > g_ll + LL_TOL and c["seconds"] > g_s * (1 + SPEED_TOL):
+                        tag = "worse on both"
+                    else:
+                        tag = "mixed (trade-off)"
+                    print(f"        vs gold: d_loss={dl:+.6f}  d_speed={ds:+.1f}%  -> {tag}",
                           flush=True)
-                    cells.append({"epoch": epoch, "batch": batch, "lr": lr,
-                                  "by_user": None, "seconds": None, "error": str(e)})
-                    continue
-                cells.append({"epoch": epoch, "batch": batch, "lr": lr,
-                              "by_user": ll, "seconds": secs})
-                print(f"[grid] epoch {epoch:>2} batch {batch:>4} (LR {lr:g}): "
-                      f"by_user={ll:.6f}  compute={secs:.1f}s  ({time.time() - t0:.0f}s wall)",
-                      flush=True)
     finally:
         write_texts(base_texts)  # restore committed config before deciding/persisting
 
     ok = [c for c in cells if c.get("by_user") is not None]
-    gold = next((c for c in ok if c["epoch"] == GOLD_EPOCH and c["batch"] == GOLD_BATCH), None)
     print("\n[grid] results (by_user / compute_seconds; * = gold standard):", flush=True)
     print(_grid_table(cells, gold), flush=True)
 
-    if gold is None:
-        print("[grid] ABORT: the gold-standard cell (8,512) failed to run — no decision.",
-              flush=True)
-        GRID_SUMMARY.write_text(json.dumps({"cells": cells, "gold": None}, indent=2),
-                                encoding="utf-8")
-        return
-
-    g_ll, g_s = gold["by_user"], gold["seconds"]
-
-    def dominates(c: dict) -> bool:
-        not_worse = (c["by_user"] <= g_ll + LL_TOL) and (c["seconds"] <= g_s * (1 + SPEED_TOL))
-        strictly_better = (c["by_user"] < g_ll - LL_TOL) or (c["seconds"] < g_s * (1 - SPEED_TOL))
-        return not_worse and strictly_better
-
     dominators = [c for c in ok if dominates(c)]
     # Pick the operating point: among cells NOT slower than gold, the lowest log loss
-    # (tiebreak: fastest). This captures "lower loss at <= gold speed" and, on a loss
+    # (tiebreak: fastest). Gold is in the pool, so if no candidate dominates it, gold
+    # wins and we stay put. This captures "lower loss at <= gold speed" and, on a loss
     # tie, "faster at the same loss" — exactly the user's at-least-one-axis rule.
     not_slower = [c for c in ok if c["seconds"] <= g_s * (1 + SPEED_TOL)]
     winner = min(not_slower, key=lambda c: (c["by_user"], c["seconds"]))
@@ -405,14 +431,14 @@ def epoch_batch_grid() -> None:
 
     print(f"\n[grid] gold (8,512): by_user={g_ll:.6f}  compute={g_s:.1f}s", flush=True)
     if dominators:
-        print(f"[grid] {len(dominators)} cell(s) Pareto-dominate gold:", flush=True)
+        print(f"[grid] {len(dominators)} candidate(s) Pareto-dominate gold:", flush=True)
         for c in sorted(dominators, key=lambda c: (c["by_user"], c["seconds"])):
             print(f"        epoch {c['epoch']:>2} batch {c['batch']:>4}: "
                   f"by_user={c['by_user']:.6f} ({c['by_user'] - g_ll:+.6f})  "
                   f"compute={c['seconds']:.1f}s ({100 * (c['seconds'] - g_s) / g_s:+.1f}%)",
                   flush=True)
     else:
-        print("[grid] no cell Pareto-dominates gold — operating point stays at (8,512).",
+        print("[grid] no candidate Pareto-dominates gold — operating point stays at (8,512).",
               flush=True)
 
     # Persist the winner's operating point (batch, n_epoch default, sqrt-scaled LR).
