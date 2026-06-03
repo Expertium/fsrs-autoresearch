@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_68 record(s). Generated from `history.jsonl` — do not edit by hand._
+_69 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -72,3 +72,4 @@ _68 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 66 | 2026-06-01T12:45:05 | 0.0001 | 0.32109 | 0.32094 | +0.00014 | 16,754 | 16,754 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): PENALTY_W_L2 0.75->0.5, BETA2 0.899999->0.955555, RECENCY_C0 0.1->0.0666667, RECENCY_EXP 7.5->11.25, BATCH_SIZE 1024->512. Numbers-only, complexity unchanged. |
 | 67 | 2026-06-03T13:27:00 | 0.0001 | 0.32094 | 0.32077 | +0.00018 | 16,754 | 16,756 | +0.01% | accepted | Meta-optimized the user-facing default parameters (FSRS7_DEFAULT_35_VALUES) via central-difference Adam (default phase, 200 steps, FSRS_N_EPOCHS=0 objective), rounded to <=4 decimals. |
 | 68 | 2026-06-03T14:13:11 | 0.0001 | 0.32077 | 0.32065 | +0.00012 | 16,756 | 16,756 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): LR 0.045->0.03, BETA2 0.955555->0.9704, BATCH_SIZE 512->256. Numbers-only, complexity unchanged. |
+| 69 | 2026-06-03T15:25:07 | 0.0002 | 0.32065 | 0.32063 | +0.00002 | 16,756 | 16,759 | +0.02% | rejected | STRUCTURAL: promote the hardcoded fast-trace init multiplier (0.8) to a per-user trainable param w[36]=fast_init_frac; s_fast init = fast_init_frac * initial_stability. Default 0.8, bounds [0.02, 2.0], L2 sigma 0.5. 36->37 params. Enzyme rebuild. |
