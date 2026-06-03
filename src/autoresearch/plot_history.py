@@ -114,7 +114,7 @@ def main() -> None:
     ax.set_ylim(min([r["ll_after"] for r in champs]) * 0.9975, max([r["ll_after"] for r in champs]) * 1.005)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(0.0005))
     ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
-    ax.set_xlim(xmin - 0.6, xmax + max(2.0, 0.08 * (xmax - xmin)))
+    ax.set_xlim(xmin - 0.6, xmax + max(6.0, 0.20 * (xmax - xmin)))  # wider right margin so the angled champion labels fit inside the axes (2026-06-03)
 
 
     fig.tight_layout()
