@@ -27,7 +27,7 @@ Schema of one record::
         "complexity_after":     int,         # this iteration's complexity score
         "complexity_pct_change": float|None, # 100 * (after − before) / before
         "status":               str,    # "accepted" | "rejected" (incl. the iter-0 baseline = "accepted")
-        "reason":               str,    # free text
+        "comment":              str,    # free text: the why (rationale) + the retrospective
     }
 
 Public API
@@ -55,7 +55,7 @@ _REQUIRED_FIELDS = (
     "ll_after",
     "complexity_after",
     "status",
-    "reason",
+    "comment",
 )
 # Status is binary: a variant either cleared its threshold ("accepted") or did
 # not ("rejected"). The iter-0 baseline is recorded as "accepted". There is no

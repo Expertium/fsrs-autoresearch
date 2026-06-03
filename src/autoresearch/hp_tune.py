@@ -419,16 +419,17 @@ def finalize(res: dict, threshold: float) -> None:
     knobs = "LR/betas/L2/recency C0+EXP/batch_size"
     if accept:
         summary = (f"AUTO hyperparameter tune (coordinate descent over training "
-                   f"hyperparameters ({knobs})): {cs}. Numbers-only, complexity unchanged.")
-        reason = (f"Automated tuning pass. Improvement +{imp:.6f} >= threshold "
-                  f"{threshold} over {res['n_runs']} runs. Changes: {cs}. "
-                  f"logloss_by_user {base_ll:.6f} -> {best_ll:.6f}. Hyperparameter "
-                  f"optima drift after structural changes; this recaptures it.")
+                   f"hyperparameters ({knobs})): {cs}.")
+        comment = (f"Automated tuning pass. Improvement +{imp:.6f} >= threshold "
+                   f"{threshold} over {res['n_runs']} runs. Changes: {cs}. "
+                   f"logloss_by_user {base_ll:.6f} -> {best_ll:.6f}. Numbers-only, "
+                   f"complexity unchanged. Hyperparameter optima drift after "
+                   f"structural changes; this recaptures it.")
         append_history({
             "iteration": n, "summary": summary, "threshold": threshold,
             "ll_before": base_ll, "ll_after": best_ll,
             "complexity_before": cx, "complexity_after": cx,
-            "status": "accepted", "reason": reason,
+            "status": "accepted", "comment": comment,
         })
         refresh_plot()
         git("add", *EDITED_PATHS,
@@ -449,17 +450,17 @@ def finalize(res: dict, threshold: float) -> None:
         git("checkout", "HEAD", "--", *EDITED_PATHS,
             "result/diagnostics.json", "result/diagnostics.md")
         summary = (f"AUTO hyperparameter tune (coordinate descent over training "
-                   f"hyperparameters ({knobs})): best found {cs}, below threshold.")
-        reason = (f"Automated tuning pass over {res['n_runs']} runs found no config "
-                  f"clearing threshold {threshold}. Best: {cs}, improvement "
-                  f"+{imp:.6f}. logloss_by_user {base_ll:.6f} -> {best_ll:.6f}. "
-                  f"Reverted to champion; the current hyperparameters are at/near "
-                  f"their optimum.")
+                   f"hyperparameters ({knobs})): best candidate {cs}.")
+        comment = (f"Automated tuning pass over {res['n_runs']} runs found no config "
+                   f"clearing threshold {threshold}. Best: {cs}, improvement "
+                   f"+{imp:.6f}. logloss_by_user {base_ll:.6f} -> {best_ll:.6f}. "
+                   f"Below threshold; reverted to champion (current hyperparameters "
+                   f"at/near their optimum).")
         append_history({
             "iteration": n, "summary": summary, "threshold": threshold,
             "ll_before": base_ll, "ll_after": best_ll,
             "complexity_before": cx, "complexity_after": cx,
-            "status": "rejected", "reason": reason,
+            "status": "rejected", "comment": comment,
         })
         refresh_plot()
         git("add", "result/history.jsonl", "result/history.md",

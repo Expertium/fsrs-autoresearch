@@ -240,7 +240,10 @@ Python-side FSRS code only:
 **Hands off `src/autoresearch/plot_history.py`.** That file is the *human's* —
 they edit it themselves to make the iteration-history plot prettier. If it
 shows as modified in `git status`, that's the user, not a stray change.
-**Never revert, `git checkout`, or commit it.** When rejecting an iteration,
+**Never edit, revert, `git checkout`, or commit it on your own initiative —
+UNLESS the user explicitly asks you to change it** (e.g. "fix the plot labels"),
+in which case make the minimal change they requested and nothing else, then
+regenerate the plot to verify. When rejecting an iteration,
 *explicitly list* the mutation files you changed plus `result/diagnostics.{json,md}`
 in the revert (never a blanket `git checkout -- .`), so `plot_history.py` is
 left untouched. It is not in the scored `mutation_files`, so it never affects
@@ -622,6 +625,16 @@ The loop driver calls
 `src.autoresearch.history.append_iteration(record)` after each variant
 runs; record schema is in the `history.py` docstring. The baseline is
 iteration 0 with `status="champion"`.
+
+**Pre-register the `summary`, comment after.** Write the record's `summary` —
+**just the change you made** (what was modified), with nothing about expected
+effect — **BEFORE running the benchmark**, as a pre-registration; never rewrite
+it afterward to fit the result. Everything else — *why* you expected it to help,
+and *how it actually went* (cleared or missed the threshold, why, what to try
+next) — goes in the `comment` field, written **AFTER** you see the result. So:
+`summary` = the factual change you committed to up front; `comment` = the
+rationale and the retrospective. This keeps the history honest — a pre-registered
+change-log, not post-hoc storytelling.
 
 ## Things to be careful about
 
