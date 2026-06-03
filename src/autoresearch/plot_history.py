@@ -102,7 +102,7 @@ def main() -> None:
                         ha="left", va="bottom", fontsize=7, color=GREEN_DARK)
 
     ax.set_xlabel("Iteration", fontsize=15)
-    ax.set_ylabel("Log Loss", fontsize=15)
+    ax.set_ylabel("Log Loss\nlower=better", fontsize=15)
     ax.set_title(f"FSRS-7 autoresearch — {len(champs)-1} accepted improvements, {len(rejects)} rejected variants",
                  fontsize=18)
     ax.grid(True, alpha=0.25)
