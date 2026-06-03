@@ -675,9 +675,9 @@ runs; record schema is in the `history.py` docstring. The baseline is
 iteration 0 with `status="champion"`.
 
 **Pre-register the `summary`, comment after.** Write the record's `summary` —
-**just the change you made** (what was modified), with nothing about expected
-effect — **BEFORE running the benchmark**, as a pre-registration; never rewrite
-it afterward to fit the result. Everything else — *why* you expected it to help,
+**just the change you made** (what was modified), **in ≤20 words**, with nothing
+about expected effect — **BEFORE running the benchmark**, as a pre-registration;
+never rewrite it afterward to fit the result. Everything else — *why* you expected it to help,
 and *how it actually went* (cleared or missed the threshold, why, what to try
 next) — goes in the `comment` field, written **AFTER** you see the result. So:
 `summary` = the factual change you committed to up front; `comment` = the
