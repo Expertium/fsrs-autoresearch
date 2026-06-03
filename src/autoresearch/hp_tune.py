@@ -477,6 +477,67 @@ def epoch_batch_grid() -> None:
           flush=True)
 
 
+def time_noise(n: int = 5) -> None:
+    """Measure the noise floor on the grid's SPEED axis. Runs the gold config
+    (GOLD_EPOCH, GOLD_BATCH, sqrt-scaled LR) n+1 times — 1 warm-up (discarded; it
+    pays the one-time batch_perm cache rebuild + GPU clock cold-start) then n measured
+    runs — and reports the compute_seconds spread. log loss is deterministic, so only
+    time carries noise; this spread is what SPEED_TOL must cover. Restores config after.
+    Does not commit or touch git."""
+    base_texts = read_texts()
+    for text in base_texts.values():
+        ast.parse(text)
+    committed_lr = get_scalar(base_texts["constants"], "LR")
+    committed_batch = get_scalar(base_texts["config"], "BATCH_SIZE")
+    lr = _scaled_lr(committed_lr, committed_batch, GOLD_BATCH)
+    trial = {**base_texts,
+             "config": set_scalar(base_texts["config"], "BATCH_SIZE", GOLD_BATCH)}
+    trial["constants"] = set_scalar(base_texts["constants"], "LR", lr)
+    ast.parse(trial["config"]); ast.parse(trial["constants"])
+    print(f"[noise] gold config: epoch={GOLD_EPOCH} batch={GOLD_BATCH} LR={lr:g}; "
+          f"1 warm-up + {n} measured runs.", flush=True)
+
+    secs: list[float] = []
+    lls: list[float] = []
+    try:
+        write_texts(trial)
+        for i in range(n + 1):
+            ll, s = run_benchmark_grid({"FSRS_N_EPOCHS": str(GOLD_EPOCH)})
+            label = "warm-up (discarded)" if i == 0 else f"run {i}/{n}"
+            print(f"[noise] {label:<20} compute={s:7.2f}s  by_user={ll:.7f}", flush=True)
+            if i > 0:
+                secs.append(s); lls.append(ll)
+    finally:
+        write_texts(base_texts)  # restore committed config
+
+    mean = sum(secs) / len(secs)
+    var = sum((x - mean) ** 2 for x in secs) / len(secs)
+    sd = var ** 0.5
+    lo, hi = min(secs), max(secs)
+    cv = sd / mean if mean else 0.0
+    rng_frac = (hi - lo) / mean if mean else 0.0
+    deterministic = len({f"{x:.9f}" for x in lls}) == 1
+    suggested = max(0.02, round(1.5 * rng_frac, 3))
+    print(f"\n[noise] compute_seconds over {n} runs:  mean={mean:.2f}s  std={sd:.3f}s  "
+          f"min={lo:.2f}s  max={hi:.2f}s", flush=True)
+    print(f"[noise] CV (std/mean) = {100 * cv:.2f}%   range/mean = {100 * rng_frac:.2f}%",
+          flush=True)
+    print(f"[noise] log loss identical across runs: {deterministic} (expected True — "
+          f"training is seeded/deterministic, only time is noisy)", flush=True)
+    print(f"[noise] current SPEED_TOL = {SPEED_TOL} ({100 * SPEED_TOL:.0f}%); suggested "
+          f">= {suggested} (~1.5x observed range/mean, floor 2%) so noise can't fake a "
+          f"speed win.", flush=True)
+    NOISE_SUMMARY = REPO / "result" / "time_noise_last.json"
+    NOISE_SUMMARY.write_text(json.dumps({
+        "epoch": GOLD_EPOCH, "batch": GOLD_BATCH, "lr": lr, "n": n,
+        "compute_seconds": secs, "by_user": lls,
+        "mean": mean, "std": sd, "min": lo, "max": hi, "cv": cv,
+        "range_frac": rng_frac, "deterministic_logloss": deterministic,
+        "current_speed_tol": SPEED_TOL, "suggested_speed_tol": suggested,
+    }, indent=2), encoding="utf-8")
+    print(f"[noise] wrote {NOISE_SUMMARY.relative_to(REPO)}.", flush=True)
+
+
 # ── git + history ────────────────────────────────────────────────────────────
 def git(*args: str, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(REPO), *args],
@@ -746,10 +807,19 @@ def main() -> None:
                          "operating point) INSTEAD of the LR/betas/L2 coordinate "
                          "descent; leaves the winning (batch, n_epoch, scaled LR) on "
                          "disk for review, does not commit.")
+    ap.add_argument("--time-noise", type=int, nargs="?", const=5, default=None,
+                    metavar="N",
+                    help="measure the compute_seconds noise floor: run the gold config "
+                         "(8,512) N times (default 5, + 1 warm-up) and report the spread "
+                         "+ a suggested SPEED_TOL. No commit, no model change.")
     args = ap.parse_args()
 
     if args.dry_run:
         dry_run()
+        return
+
+    if args.time_noise is not None:
+        time_noise(args.time_noise)
         return
 
     if args.epoch_batch_grid:

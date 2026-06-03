@@ -58,6 +58,8 @@ result/*.parquet
 compose.override.yaml
 docker-compose.override.yml
 result/hp_tune_last.json
+result/epoch_batch_grid.json
+result/time_noise_last.json
 
 # result/history_plot.png is now TRACKED: it is regenerated after every
 # iteration (by plot_history.py) and committed so the README can show the
