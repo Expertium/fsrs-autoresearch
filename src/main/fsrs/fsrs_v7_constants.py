@@ -163,6 +163,6 @@ FSRS7_L2_SIGMA_35_VALUES = (
     0.1407,
     0.1489,
     0.2,  # 35 d_weight sigma (weak L2 prior toward 0 so data can move it)
-    0.15,  # 36 d_decay sigma (weak prior; EB anchor lets population mean drift)
+    0.15,  # 36 d_decay sigma (weak prior toward the fixed default)
     0.15,  # 37 s_decay1 sigma (weak prior; mirrors d_decay)
 )

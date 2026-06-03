@@ -33,20 +33,26 @@ def apply_parameter_clipper(parameters_b):
     return clipped
 
 @torch.compile(fullgraph=True)
-def penalty_loss(parameters_kp, batch_size_k, training_set_size_k, anchor_p):
-    # iter 24: empirical-Bayes L2. Shrink each (user, split) row toward the
-    # live population mean (anchor_p, passed in detached) instead of the fixed
-    # FSRS7_DEFAULT. The population centroid is then free to drift to where the
-    # data collectively wants it, while individual outliers stay regularized.
-    # anchor_p == FSRS7_DEFAULT at init (all rows start there), so this smoothly
-    # generalizes the old fixed-anchor penalty.
+def penalty_loss(parameters_kp, batch_size_k, training_set_size_k):
+    # Per-user L2 shrinkage toward the FIXED default parameters. iter-75 REMOVED
+    # the iter-24 empirical-Bayes anchor (the live population mean over all 3000
+    # (user, split) rows): anchoring each user's prior to a cross-user statistic
+    # exploits the harness's joint optimization (it's a no-op for a single user,
+    # so the "win" doesn't transfer to FSRS-rs, which trains one user at a time)
+    # and violates the single-user-improvement rule. This is the standard
+    # fixed-default L2 that FSRS-rs actually uses.
     sigma = torch.tensor(
         fsrs_v7_constants.FSRS7_L2_SIGMA_35_VALUES,
         device=parameters_kp.device,
         dtype=parameters_kp.dtype,
     )
+    anchor = torch.tensor(
+        fsrs_v7_constants.FSRS7_DEFAULT_35_VALUES,
+        device=parameters_kp.device,
+        dtype=parameters_kp.dtype,
+    )
     l2_k = torch.sum(
-        torch.square(parameters_kp - anchor_p.unsqueeze(0))
+        torch.square(parameters_kp - anchor.unsqueeze(0))
         / torch.square(sigma.unsqueeze(0)),
         dim=-1,
     )

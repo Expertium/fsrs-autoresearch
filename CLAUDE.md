@@ -343,12 +343,14 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
 > optimizer (FSRS-rs) trains **one user at a time**, so a "win" that only exists
 > because of the joint / cross-user structure does **not** transfer to real users —
 > a change should improve **single-user** optimization, not just the joint
-> 3000-user fit. The one accepted change that violates this is the **empirical-Bayes
-> L2 (iter 24)**: it shrinks each `(user, split)` row toward the *live population
-> mean* (`anchor_p = flat_fsrs_params.mean(0)` in `run.py`), which for a single user
-> is a no-op (the mean is the user itself) and degrades to the pre-iter-24
-> fixed-default L2. Its effect is only ~0.0001 log loss and it reduces harmlessly to
-> per-user L2-to-default, so the FSRS-rs port simply keeps that fixed-default L2.
+> 3000-user fit. The one accepted change that ever violated this — the
+> **empirical-Bayes L2 (iter 24)**, which shrank each `(user, split)` row toward
+> the *live population mean* (`anchor_p = flat_fsrs_params.mean(0)` in `run.py`),
+> a no-op for a single user — was **removed in iter-75** (user directive
+> 2026-06-03). Its real cost turned out to be ~0.00029 log loss (≈3× the ~0.0001
+> originally estimated here), all of it an illegitimate cross-user gain; the L2
+> penalty now shrinks toward the fixed `FSRS7_DEFAULT`, exactly what the FSRS-rs
+> port uses. **There are now no known joint-optimization exploits in the model.**
 
 ### Acceptance threshold
 
@@ -437,12 +439,13 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,795** (iter-71). (History: C++ scoring
+**Current champion complexity baseline: 16,798** (iter-75). (History: C++ scoring
 was added at 16,766 — the 36-param dual-trace champion was 15,322 python-only,
 the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and wiring them
 into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes / parsimony
 edits since then drifted it to 16,756; iter-71's `fsrs7_fast_component_recall`
-helper added +39 → 16,795. The +5% gate is measured against this current
+helper added +39 → 16,795; iter-75 removed the empirical-Bayes anchor plumbing
+(+3 net → 16,798). The +5% gate is measured against this current
 baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
