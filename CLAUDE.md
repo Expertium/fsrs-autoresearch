@@ -620,6 +620,25 @@ otherwise) and owns one iteration number per pass. The multi-knob pass is one
 logical unit, not a "lumping" violation — per-knob deltas are in the trial log
 (`result/hp_tune_last.json`).
 
+### Compaction cadence
+
+`/compact` is human-typed (it is **not** a tool Claude can call), so the loop
+uses **smart-but-manual** compaction: when it comes due, surface a dense,
+ready-to-paste `/compact <focus>` block (see the `fsrs-autoresearch-compact-check`
+skill) and keep working — don't block on the paste.
+
+**Compaction is due every 8 iterations** (changed from 5 on 2026-06-04): when
+`latest_iter − last_compact_iter ≥ 8`. It is keyed to a raw iteration count, **not**
+slaved to the auto-tuner. Markers (both gitignored, machine-local):
+`result/.last_compact_iter` and `result/.last_hptune_iter`. After a compaction,
+set `echo <latest_iter> > result/.last_compact_iter`.
+
+**Auto-tune is a conditional pre-step, not a gate.** hp_tune keeps its own ~5-iter
+cadence (above). When a compaction comes due, if a tune is *also* due
+(`latest_iter − last_hptune_iter ≥ 5`) run it **first** so the compacted context
+captures the freshly-tuned champion; otherwise compact directly. The two cadences
+(compaction every 8, tuning every ~5) drift in and out of phase — that's expected.
+
 ### Iteration cost
 
 One full training run = **~102 seconds wall** on the RTX 4070 with 3000
