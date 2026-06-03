@@ -137,14 +137,19 @@ clipper, diagnostics table, and this section).
 | `w[25..32]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
 | `w[33..35]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
-**Champion = iter-43 (dual-trace memory), 36 params.** iter-40 added a 2nd
-stability state `s_fast` (fast trace) alongside `s` (slow trace); each drives
-its own forgetting-curve component and updates via the short-/long-term
-stability dynamics respectively. This **removed the old long/short transition
-blend** (its 2 params, formerly `w[25..26]`, were deleted in iter-43 — that's
-why the curve params shifted down by 2). The fast trace's initial stability is
-**hardcoded** at `0.8 * initial_stability` (a per-user multiplier didn't earn
-its param). State variables: **3** (`s`, `d`, `s_fast`).
+**Dual-trace memory (introduced iter-43), 36 params; current champion iter-71.**
+iter-40 added a 2nd stability state `s_fast` (fast trace) alongside `s` (slow
+trace); each drives its own forgetting-curve component and updates via the
+short-/long-term stability dynamics respectively. This **removed the old
+long/short transition blend** (its 2 params, formerly `w[25..26]`, were deleted
+in iter-43 — that's why the curve params shifted down by 2). The fast trace's
+initial stability is **hardcoded** at `0.8 * initial_stability` (a per-user
+multiplier didn't earn its param: iter-69 trainable near-miss, iter-70 confirmed
+0.8 is the by_user optimum). **iter-71 (trace-specific fast learning):** the fast
+trace now updates from the **fast component's own recall `r1`** (the
+`fsrs7_fast_component_recall` helper), not the mixed-curve retention; the slow
+trace still updates from the mixed retention. State variables: **3** (`s`, `d`,
+`s_fast`).
 
 Training: 8 epochs, batch 1024, Adam, lr 3e-2, betas (0.55, 0.85).
 Loss = log-loss(per-review) + sched_penalty_1 + sched_penalty_2 + L2-to-defaults.
@@ -432,11 +437,12 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,766.** (Re-baselined when C++ scoring
-was added: the 36-param dual-trace champion was 15,322 python-only; the two CUDA
-files add 1,436 — `fsrs7.cu` 1,230, `fsrs7.cuh` 206 — and wiring them into
-`mutation_files` added 8 to `run.py`, for 16,766. A measurement change, not a
-model change; log loss is unaffected. The +5% gate is measured against this
+**Current champion complexity baseline: 16,795** (iter-71). (History: C++ scoring
+was added at 16,766 — the 36-param dual-trace champion was 15,322 python-only,
+the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and wiring them
+into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes / parsimony
+edits since then drifted it to 16,756; iter-71's `fsrs7_fast_component_recall`
+helper added +39 → 16,795. The +5% gate is measured against this current
 baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)

@@ -53,6 +53,35 @@ float fsrs7_next_d(
 }
 
 __device__ __forceinline__
+float fsrs7_fast_component_recall(
+    const fsrs_params_t &fsrs_params,
+    const float elapsed_time,
+    const float s_fast
+) {
+    // FAST forgetting component r1, driven by the fast trace s_fast. Its decay is
+    // S-modulated (s_decay1), keyed to the fast trace. s_decay1=0 recovers -decay1
+    // exactly (decay1 in [0.01,0.25]). base1<1 => factor1>0, so r1 is convex,
+    // monotone, with r1(0)=1, r1(inf)=0. base1's lower bound was lowered 0.5 -> 0.2
+    // (iter-50): factor1 = base1^(1/decay1) - 1 grows fast as base1 drops, giving
+    // STEEP sub-day forgetting (at t/s_fast~0.002 a 10-min review goes from r1~0.77
+    // at base1=0.5 to r1~0.31 at base1=0.2) -- that's where the short_term-bucket
+    // loss lives. factor1 is computed in LOG-SPACE so the exponent is clamped
+    // BEFORE exp(): base1<~0.42 makes base1^(1/decay1) overflow float at small
+    // decay1, and clamping the *result* is not enough -- Enzyme differentiates the
+    // pre-clamp powf, whose derivative also overflows, and inf*(clamp'=0) = NaN
+    // poisons the backward pass. Clamping the exponent keeps BOTH value and
+    // gradient finite (exp(60) ~1e26 caps factor1; in the capped region the
+    // derivative is exp(60)*0 = 0).
+    const float decay1_mag = fsrs7_clamp(
+        fsrs_params.decay1 * powf(s_fast, fsrs_params.s_decay1),
+        0.01f, 0.95f);
+    const float decay1 = -decay1_mag;
+    const float factor1 = expf(
+        fminf((1.0f / decay1) * logf(fsrs_params.base1), 60.0f)) - 1.0f;
+    return powf(1.0f + factor1 * (elapsed_time / s_fast), decay1);
+}
+
+__device__ __forceinline__
 float fsrs7_forgetting_curve(
     const fsrs_params_t &fsrs_params,
     const float elapsed_time,
@@ -62,32 +91,8 @@ float fsrs7_forgetting_curve(
     // the fast trace s_fast; the SLOW component (r2) by the slow trace s. Each
     // component "reads" its own memory store, so the curve is a true two-store
     // mixture rather than two analytic components sharing a single stability.
-    const float t_over_s_fast = elapsed_time / state.s_fast;
+    const float r1 = fsrs7_fast_component_recall(fsrs_params, elapsed_time, state.s_fast);
     const float t_over_s_slow = elapsed_time / state.s;
-
-    // FAST component. Its decay can still be S-modulated (s_decay1), now keyed
-    // to the fast trace it belongs to. s_decay1=0 recovers -decay1 exactly
-    // (decay1 in [0.01,0.25]). base1<1 => factor1>0, so r1 stays monotone with
-    // r1(0)=1, r1(inf)=0. base1's lower bound was lowered 0.5 -> 0.2 (iter-50):
-    // factor1 = base1^(1/decay1) - 1 grows fast as base1 drops, so a small base1
-    // produces STEEP sub-day forgetting (at t/s_fast~0.002 a 10-min review goes
-    // from r1~0.77 at base1=0.5 to r1~0.31 at base1=0.2) -- that's where the
-    // short_term-bucket loss lives, and the 0.5 floor was blocking it. factor1 is
-    // computed in LOG-SPACE so the exponent is clamped BEFORE exp(): base1<~0.42
-    // makes base1^(1/decay1) overflow float at small decay1, and clamping the
-    // *result* is not enough -- Enzyme differentiates the pre-clamp powf, whose
-    // derivative also overflows, and inf*(clamp'=0) = NaN poisons the backward
-    // pass. Clamping the exponent keeps BOTH value and gradient finite (exp(60)
-    // ~1e26 caps factor1; in the capped region the derivative is exp(60)*0 = 0).
-    // base1<1 => (1/decay1)*log(base1) > 0 => factor1 > 0, so r1 stays convex,
-    // monotone, with r1(0)=1 and r1(inf)=0.
-    const float decay1_mag = fsrs7_clamp(
-        fsrs_params.decay1 * powf(state.s_fast, fsrs_params.s_decay1),
-        0.01f, 0.95f);
-    const float decay1 = -decay1_mag;
-    const float factor1 = expf(
-        fminf((1.0f / decay1) * logf(fsrs_params.base1), 60.0f)) - 1.0f;
-    const float r1 = powf(1.0f + factor1 * t_over_s_fast, decay1);
 
     // SLOW component. Difficulty modulation of its DECAY (curve shape). d_decay>0
     // => hard cards (D>5) get a steeper slow tail. Clamp to [0.01, 0.95] keeps
@@ -210,10 +215,19 @@ fsrs_state_t fsrs7_step(
     );
 
     // Read the fast trace as the stability input (difficulty is shared).
+    // TRACE-SPECIFIC FAST LEARNING (iter-71): drive the fast trace's update with
+    // the FAST component's own recall r1 (keyed to s_fast), not the mixed-curve
+    // retention. Each store should learn from its own retrieval signal; the mixed
+    // R is slow-dominated at longer intervals, so feeding it to the fast update is
+    // a mismatch. The slow trace still uses the mixed retention (below stays as
+    // new_s_slow). r1 in (0,1] so (1-r1) is well-behaved; r1 has no D-dependence,
+    // but the fast update's D-monotonicity comes from its explicit (11-d)/d^-exp
+    // factors, so constraint 4 still holds.
     const fsrs_state_t fast_state{fsrs_state.s_fast, fsrs_state.d, fsrs_state.s_fast};
+    const float r1 = fsrs7_fast_component_recall(fsrs_params, elapsed_time, fsrs_state.s_fast);
     const float new_s_fast = fsrs7_stability_after_review_one_term(
         fast_state,
-        retention,
+        r1,
         rating,
         fsrs_params.short_stability
     );

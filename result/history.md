@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_70 record(s). Generated from `history.jsonl` — do not edit by hand._
+_71 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -74,3 +74,4 @@ _70 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 68 | 2026-06-03T14:13:11 | 0.0001 | 0.32077 | 0.32065 | +0.00012 | 16,756 | 16,756 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): LR 0.045->0.03, BETA2 0.955555->0.9704, BATCH_SIZE 512->256. Numbers-only, complexity unchanged. |
 | 69 | 2026-06-03T15:25:07 | 0.0002 | 0.32065 | 0.32063 | +0.00002 | 16,756 | 16,759 | +0.02% | rejected | STRUCTURAL: promote the hardcoded fast-trace init multiplier (0.8) to a per-user trainable param w[36]=fast_init_frac; s_fast init = fast_init_frac * initial_stability. Default 0.8, bounds [0.02, 2.0], L2 sigma 0.5. 36->37 params. Enzyme rebuild. |
 | 70 | 2026-06-03T15:34:12 | 0.0001 | 0.32065 | 0.32065 | -0.00000 | 16,756 | 16,756 | +0.00% | rejected | Nudge the hardcoded fast_init_frac constant in fsrs7_init (global, 0-param): probed 0.8 -> 0.65 and 0.8 -> 0.9. Enzyme rebuild. |
+| 71 | 2026-06-03T15:43:55 | 0.0001 | 0.32065 | 0.32034 | +0.00031 | 16,756 | 16,795 | +0.23% | accepted | Trace-specific fast learning: update the fast trace s_fast from the FAST forgetting component recall r1 (new fsrs7_fast_component_recall helper) instead of the mixed-curve retention; the slow trace s still updates from the mixed retention. Formula-only, 0 params. Enzyme rebuild. |
