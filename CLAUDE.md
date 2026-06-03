@@ -35,6 +35,26 @@ injection is needed for anything else: **STOP and ask the user.** Self-injection
 removes the human from the loop, which is exactly what the permission system
 guards against; the user accepts it ONLY for this narrow keep-alive/compaction use.
 
+### Running the loop autonomously (bypass mode)
+
+When `C:\Users\Andrew\claude-automation\loop_active.txt` exists, the loop is in
+unattended mode and the `ClaudeLoopController` Task Scheduler job is live
+(23:00–12:00). Per-turn discipline:
+- **Beat the heartbeat** each turn: run (or bake into your loop commands)
+  `& C:\Users\Andrew\claude-automation\beat.ps1;` so the controller knows you're
+  active, not stalled.
+- **Keep-alive:** launch each `run.sh` training run as a **background** job; its
+  completion re-invokes you. Always yield with a job pending — this is the primary
+  keep-alive; the controller is only the failsafe (injects `continue` if you stall:
+  no container + stale heartbeat).
+- **Compaction (every 8 iters):** at a clean boundary (no container running),
+  create `C:\Users\Andrew\claude-automation\pending_compact.txt` and yield idle —
+  the controller injects `/compact` then a `continue`. Bare `/compact` is fine
+  (continuity is on disk). After compacting, set `.last_compact_iter` as usual.
+- The controller ONLY injects `/compact` or `continue` (strict-limit rule above).
+  Full details + how to stop the loop: `C:\Users\Andrew\claude-automation\README.md`.
+  **The automation is already built — do not rebuild it; just run the research.**
+
 ## Host machine assumptions
 
 - Windows 10 Pro 22H2 (build 19045), 64 GB RAM, 473+ GB free on C:
