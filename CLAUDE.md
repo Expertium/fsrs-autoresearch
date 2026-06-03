@@ -11,6 +11,30 @@ keeps the winners.
 **Ignore `autoresearcher.md`** — it's an older plan written for a separate
 LLM-API-driven loop. We're rebuilding it inside Claude Code.
 
+## !!! SELF-INJECTION CAPABILITY — STRICT, NON-NEGOTIABLE LIMITS !!!
+
+This repo runs on the Claude Code **Windows desktop app** under **bypass
+permissions**. In that mode there is a self-injection mechanism —
+`C:\Users\Andrew\claude-automation\inject.ps1` (low-level `SendInput` Unicode
+typing + `VK_RETURN` into Claude's *own* chat window), driven by `controller.ps1`
+on a Task Scheduler job (23:00–12:00) — that lets the agent submit messages into
+its own chat so the autoresearch loop can run unattended overnight. **Auto Mode
+HARD-BLOCKS this as a permission bypass; it works ONLY under bypass permissions.**
+
+**This capability may be used for EXACTLY TWO things, and NOTHING ELSE
+(user directive, 2026-06-04):**
+1. **Compaction** — inject `/compact` whenever I judge compaction is due.
+2. **A short `Continue` nudge** — to un-stall myself so the loop keeps moving.
+
+**Using self-injection for ANY other purpose is STRICTLY FORBIDDEN.** It must
+never be used to run arbitrary commands, self-approve actions, self-direct toward
+any other task, or broaden its own scope. The Task Scheduler controller is
+hard-coded to inject only these two fixed strings — I must not extend it, add new
+injected content, or build any other self-injection path. If I ever think
+injection is needed for anything else: **STOP and ask the user.** Self-injection
+removes the human from the loop, which is exactly what the permission system
+guards against; the user accepts it ONLY for this narrow keep-alive/compaction use.
+
 ## Host machine assumptions
 
 - Windows 10 Pro 22H2 (build 19045), 64 GB RAM, 473+ GB free on C:
