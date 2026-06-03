@@ -91,7 +91,8 @@ GOLD_EPOCH, GOLD_BATCH = 8, 512
 GRID_EPOCHS = [5, 8, 12, 16, 30]
 GRID_BATCHES = [128, 256, 512, 1024]
 SPEED_TOL = 0.03   # fractional compute-time noise band: within +/-3% counts as "same speed"
-LL_TOL = 1e-5      # log-loss tie band (training is deterministic; guards exact ties)
+LL_TOL = 1e-5      # log-loss tie band: sits above the measured ~4e-6 by_user GPU-noise
+                   # floor (training is NOT bit-exact — float reduction non-associativity)
 
 # The files this tuner may edit: constants.py holds the 6 fine knobs (regular
 # pass); config.py holds BATCH_SIZE / N_EPOCHS, edited ONLY by epoch_batch_grid().
