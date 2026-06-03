@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_80 record(s). Generated from `history.jsonl` — do not edit by hand._
+_81 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -84,3 +84,4 @@ _80 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 78 | 2026-06-03T21:09:31 | — | 0.32051 | 0.32056 | -0.00005 | 16,827 | 16,827 | +0.00% | accepted | Re-anchor the compute operating point from (n_epoch=8, batch_size=128) to (8, 256) via the epoch x batch Pareto grid, and fine-tune LR/betas/L2/recency at the new operating point. |
 | 79 | 2026-06-03T21:27:49 | 0.0001 | 0.32056 | 0.32093 | -0.00037 | 16,827 | 16,828 | +0.01% | rejected | Changed the success-path stability-increase surprise response from convex (exp(c*(1-R))-1) to concave-saturating (1-exp(-c*(1-R))) in fsrs7_stability_after_review_one_term (applies to both traces; 0 new params). |
 | 80 | 2026-06-03T21:37:27 | 0.0001 | 0.32056 | 0.32066 | -0.00010 | 16,827 | 16,829 | +0.01% | rejected | Lowered w[8] (long sinc_s_exp) clamp lower bound 0.0 to -0.3, allowing s_inc to accelerate with stability. |
+| 81 | 2026-06-03T21:48:18 | 0.0001 | 0.32056 | 0.32060 | -0.00004 | 16,827 | 16,828 | +0.01% | rejected | Replaced fail-path surprise amplification exp((1-R)*fail_r_mult) with linear 1+(1-R)*fail_r_mult in new_s_fail (both traces); 0 params. |
