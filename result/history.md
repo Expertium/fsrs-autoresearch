@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_75 record(s). Generated from `history.jsonl` — do not edit by hand._
+_76 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -79,3 +79,4 @@ _75 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 73 | 2026-06-03T16:28:43 | 0.0001 | 0.32034 | 0.32032 | +0.00002 | 16,795 | 16,795 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): best candidate LR 0.03->0.02. |
 | 74 | 2026-06-03T16:49:10 | 0.0002 | 0.32034 | 0.32020 | +0.00014 | 16,795 | 16,817 | +0.13% | rejected | Add w[36]=d_sinc_pow: replace the linear difficulty-damping factor (11 - d) in the stability-increase formula s_inc with (11 - d)^d_sinc_pow, shared across the slow and fast trace updates. +1 param (36->37); default 1.0, clamp [0.2, 3.0], L2 sigma 0.3. |
 | 75 | 2026-06-03T17:08:20 | — | 0.32034 | 0.32063 | -0.00029 | 16,795 | 16,798 | +0.02% | accepted | Remove the iter-24 empirical-Bayes L2: the per-(user,split) L2 penalty anchor reverts from the live population mean (flat_fsrs_params.mean(0)) back to the fixed FSRS7_DEFAULT. No param/state change; the anchor_p plumbing (run.py masked_penalty/train_iter + helpers.penalty_loss) is dropped. |
+| 76 | 2026-06-03T18:13:39 | 0.0001 | 0.32063 | 0.32051 | +0.00013 | 16,798 | 16,798 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): LR 0.03->0.0133, PENALTY_W_L2 0.5->0.3333, BETA2 0.9704->0.9913, BATCH_SIZE 256->128. |

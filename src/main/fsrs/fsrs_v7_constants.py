@@ -1,10 +1,10 @@
-LR: float = 0.03  # iter 20: was 2e-2; recency sharpening (iter 14, exp=5) cut gradient mass, raise LR to compensate
-BETAS: tuple = (0.55, 0.9704)  # this is for Adam, default is (0.9, 0.999)
+LR: float = 0.0133  # iter 20: was 2e-2; recency sharpening (iter 14, exp=5) cut gradient mass, raise LR to compensate
+BETAS: tuple = (0.55, 0.9913)  # this is for Adam, default is (0.9, 0.999)
 
 RECENCY_C0 = 0.0667  # iter 4: was 0.25; shift relative grad weight toward most-recent reviews (test split is time-most-recent chunk). Rounded to 4 dp (was 0.0666667) to match the hp_tune <=4-dp resolution.
 RECENCY_EXP = 11.25  # iter-65: recency-ramp exponent, promoted from a hardcoded 5 in gradient_weight so hp_tune can search it. weight = C0 + (1-C0)*ord_frac^EXP (C1 dropped — newest-review weight is pinned at 1 by construction).
 
-PENALTY_W_L2 = 0.5
+PENALTY_W_L2 = 0.3333
 
 # iter-65: the iter-52 per-group LR multipliers (LR_GROUP_MULT / LR_GROUP_PER_PARAM)
 # were removed — a single global LR is used again. Their gain was too small to
