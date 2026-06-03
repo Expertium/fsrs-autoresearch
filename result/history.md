@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_67 record(s). Generated from `history.jsonl` — do not edit by hand._
+_68 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -71,3 +71,4 @@ _67 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 65 | 2026-06-01T10:53:04 | 0.0001 | 0.32106 | 0.32109 | -0.00002 | 16,829 | 16,754 | -0.45% | accepted | single global LR (drop 4 per-group mults) + recency retune RECENCY_EXP 5->7.5 |
 | 66 | 2026-06-01T12:45:05 | 0.0001 | 0.32109 | 0.32094 | +0.00014 | 16,754 | 16,754 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): PENALTY_W_L2 0.75->0.5, BETA2 0.899999->0.955555, RECENCY_C0 0.1->0.0666667, RECENCY_EXP 7.5->11.25, BATCH_SIZE 1024->512. Numbers-only, complexity unchanged. |
 | 67 | 2026-06-03T13:27:00 | 0.0001 | 0.32094 | 0.32077 | +0.00018 | 16,754 | 16,756 | +0.01% | accepted | Meta-optimized the user-facing default parameters (FSRS7_DEFAULT_35_VALUES) via central-difference Adam (default phase, 200 steps, FSRS_N_EPOCHS=0 objective), rounded to <=4 decimals; the better init / L2-anchor lowers 8-epoch logloss_by_user. |
+| 68 | 2026-06-03T14:13:11 | 0.0001 | 0.32077 | 0.32065 | +0.00012 | 16,756 | 16,756 | +0.00% | accepted | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): LR 0.045->0.03, BETA2 0.955555->0.9704, BATCH_SIZE 512->256. Numbers-only, complexity unchanged. |
