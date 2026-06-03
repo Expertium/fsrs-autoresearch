@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_81 record(s). Generated from `history.jsonl` — do not edit by hand._
+_82 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -85,3 +85,4 @@ _81 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 79 | 2026-06-03T21:27:49 | 0.0001 | 0.32056 | 0.32093 | -0.00037 | 16,827 | 16,828 | +0.01% | rejected | Changed the success-path stability-increase surprise response from convex (exp(c*(1-R))-1) to concave-saturating (1-exp(-c*(1-R))) in fsrs7_stability_after_review_one_term (applies to both traces; 0 new params). |
 | 80 | 2026-06-03T21:37:27 | 0.0001 | 0.32056 | 0.32066 | -0.00010 | 16,827 | 16,829 | +0.01% | rejected | Lowered w[8] (long sinc_s_exp) clamp lower bound 0.0 to -0.3, allowing s_inc to accelerate with stability. |
 | 81 | 2026-06-03T21:48:18 | 0.0001 | 0.32056 | 0.32060 | -0.00004 | 16,827 | 16,828 | +0.01% | rejected | Replaced fail-path surprise amplification exp((1-R)*fail_r_mult) with linear 1+(1-R)*fail_r_mult in new_s_fail (both traces); 0 params. |
+| 82 | 2026-06-03T21:55:11 | 0.0001 | 0.32056 | 0.32057 | -0.00002 | 16,827 | 16,874 | +0.28% | rejected | Replaced L2 penalty with Huber (L2 within 2-sigma, linear beyond) toward FSRS7_DEFAULT in penalty_loss; fixed delta=2, 0 params. |
