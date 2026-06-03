@@ -84,9 +84,15 @@ _NUM = r"[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?"
 
 # ── editing the numeric literals ─────────────────────────────────────────────
 def _fmt(v: float) -> str:
-    """Compact literal without float-repr noise (0.0300000000002 -> 0.03,
-    1024.0 -> 1024)."""
-    return f"{float(v):.6g}"
+    """Compact literal capped at 4 decimal places (user constraint 2026-06-03:
+    every committed non-integer hyperparameter has <=4 digits after the decimal
+    point). Integers stay integer-formatted (1024.0 -> '1024'); rounding also
+    strips float-repr noise (0.0300000000002 -> '0.03'). Candidates are rounded
+    too (search granularity = 1e-4), which is ample for LR/L2/betas/recency."""
+    v = round(float(v), 4)
+    if v == int(v):
+        return str(int(v))
+    return f"{v:.4f}".rstrip("0")  # guaranteed <=4 dp, no trailing zeros
 
 
 def read_texts() -> dict[str, str]:
