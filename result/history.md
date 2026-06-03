@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_73 record(s). Generated from `history.jsonl` — do not edit by hand._
+_74 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -77,3 +77,4 @@ _73 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 71 | 2026-06-03T15:43:55 | 0.0001 | 0.32065 | 0.32034 | +0.00031 | 16,756 | 16,795 | +0.23% | accepted | Trace-specific fast learning: update the fast trace s_fast from the FAST forgetting component recall r1 (new fsrs7_fast_component_recall helper) instead of the mixed-curve retention; the slow trace s still updates from the mixed retention. Formula-only, 0 params. Enzyme rebuild. |
 | 72 | 2026-06-03T15:53:23 | 0.0001 | 0.32034 | 0.32103 | -0.00069 | 16,795 | 16,833 | +0.23% | rejected | Trace-specific slow learning (mirror of iter-71): update the slow trace s from the SLOW forgetting component recall r2 (new fsrs7_slow_component_recall helper) instead of the mixed-curve retention; the fast trace s_fast still uses r1. fsrs7_step no longer computes the mixed retention. Formula-only, 0 params. Enzyme rebuild. |
 | 73 | 2026-06-03T16:28:43 | 0.0001 | 0.32034 | 0.32032 | +0.00002 | 16,795 | 16,795 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP/batch_size)): best candidate LR 0.03->0.02. |
+| 74 | 2026-06-03T16:49:10 | 0.0002 | 0.32034 | 0.32020 | +0.00014 | 16,795 | 16,817 | +0.13% | rejected | Add w[36]=d_sinc_pow: replace the linear difficulty-damping factor (11 - d) in the stability-increase formula s_inc with (11 - d)^d_sinc_pow, shared across the slow and fast trace updates. +1 param (36->37); default 1.0, clamp [0.2, 3.0], L2 sigma 0.3. |
