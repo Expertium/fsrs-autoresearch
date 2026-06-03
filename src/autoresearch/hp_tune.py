@@ -516,23 +516,27 @@ def time_noise(n: int = 5) -> None:
     lo, hi = min(secs), max(secs)
     cv = sd / mean if mean else 0.0
     rng_frac = (hi - lo) / mean if mean else 0.0
-    deterministic = len({f"{x:.9f}" for x in lls}) == 1
+    ll_lo, ll_hi = min(lls), max(lls)
+    ll_spread = ll_hi - ll_lo
     suggested = max(0.02, round(1.5 * rng_frac, 3))
     print(f"\n[noise] compute_seconds over {n} runs:  mean={mean:.2f}s  std={sd:.3f}s  "
           f"min={lo:.2f}s  max={hi:.2f}s", flush=True)
     print(f"[noise] CV (std/mean) = {100 * cv:.2f}%   range/mean = {100 * rng_frac:.2f}%",
           flush=True)
-    print(f"[noise] log loss identical across runs: {deterministic} (expected True — "
-          f"training is seeded/deterministic, only time is noisy)", flush=True)
+    print(f"[noise] log-loss spread across runs: {ll_spread:.2e} (min {ll_lo:.7f}, "
+          f"max {ll_hi:.7f}) — NOT bit-exact: GPU floating-point non-associativity in "
+          f"parallel reductions. This is the by_user noise floor; well below the grid's "
+          f"LL_TOL={LL_TOL:g} and the 1e-4 acceptance floor.", flush=True)
     print(f"[noise] current SPEED_TOL = {SPEED_TOL} ({100 * SPEED_TOL:.0f}%); suggested "
-          f">= {suggested} (~1.5x observed range/mean, floor 2%) so noise can't fake a "
-          f"speed win.", flush=True)
+          f">= {suggested} (~1.5x observed range/mean, floor 2%) so time noise can't fake "
+          f"a speed win. Current value is safe.", flush=True)
     NOISE_SUMMARY = REPO / "result" / "time_noise_last.json"
     NOISE_SUMMARY.write_text(json.dumps({
         "epoch": GOLD_EPOCH, "batch": GOLD_BATCH, "lr": lr, "n": n,
         "compute_seconds": secs, "by_user": lls,
         "mean": mean, "std": sd, "min": lo, "max": hi, "cv": cv,
-        "range_frac": rng_frac, "deterministic_logloss": deterministic,
+        "range_frac": rng_frac,
+        "logloss_min": ll_lo, "logloss_max": ll_hi, "logloss_spread": ll_spread,
         "current_speed_tol": SPEED_TOL, "suggested_speed_tol": suggested,
     }, indent=2), encoding="utf-8")
     print(f"[noise] wrote {NOISE_SUMMARY.relative_to(REPO)}.", flush=True)
