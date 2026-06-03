@@ -9,23 +9,36 @@ This automates it.
 
 What it does
 ------------
-A greedy **coordinate-descent** local search. For each hyperparameter it tries a
-step up and a step down (multiplicative for LR/L2, on the ``1 - beta`` scale for
-the Adam betas, and a discrete x2 / /2 snapped to a multiple of 128 for the batch
-size), keeps whichever lowers ``logloss_by_user``, and re-probes the improving
-ones in later rounds. Params that don't improve are frozen ("light" mode →
-typically ~14-20 benchmark runs/pass). Training is deterministic (``seed`` fixed),
-so every delta is real and reproducible — no averaging needed.
+A greedy **coordinate-descent** local search over the *fine* training HPs (LR,
+Adam betas, L2 strength, recency weighting). For each it tries a step up and a
+step down (multiplicative for LR/L2, on the ``1 - beta`` scale for the betas),
+keeps whichever lowers ``logloss_by_user``, and re-probes the improving ones in
+later rounds. Params that don't improve are frozen ("light" mode → typically
+~14-20 benchmark runs/pass). Training is deterministic (``seed`` fixed), so every
+delta is real and reproducible — no averaging needed.
 
-Most knobs live in ``fsrs_v7_constants.py``; **BATCH_SIZE lives in
+**The compute operating point — ``n_epoch`` and ``batch_size`` — is NOT tuned
+here.** Those are a speed/log-loss trade-off, not a pure-loss knob (a loss-only
+search always pushes batch down, ignoring the speed cost), so they live in a
+separate, rarely-run **epoch x batch Pareto grid** (``--epoch-batch-grid``). The
+gold standard is ``(n_epoch=8, batch_size=512)``; the grid sweeps the 20 combos of
+``n_epoch in {5,8,12,16,30}`` x ``batch_size in {128,256,512,1024}`` and re-anchors
+to any cell that Pareto-dominates the gold standard (no worse on log loss OR
+compute time, strictly better on >=1). Each cell is measured with an Adam
+sqrt LR-batch-scaled learning rate for fairness; the winner is then fine-tuned by
+the regular pass. n_epoch is driven per-cell via the ``FSRS_N_EPOCHS`` env var and
+persisted by editing config.py's env-default; ``compute_seconds`` (train+eval wall
+time) comes from diagnostics.json (emitted by run.py).
+
+Most fine knobs live in ``fsrs_v7_constants.py``; **BATCH_SIZE / N_EPOCHS live in
 ``src/main/config.py``**, so this tuner edits *two* files (see ``read_texts`` /
 ``HParam.file``). Each trial edits a numeric literal *in place*. That never
 changes the AST node count, so the complexity score is unaffected — which is
 exactly why a hyperparameter tweak only has to clear the ``+0.0001`` floor
-threshold, with no complexity gate to worry about. (Changing BATCH_SIZE rebuilds
-only the cheap batch-size-dependent cache arrays — ``num_training_steps`` and the
-batch permutation — via their own cache manifests; the expensive tensor cache is
-reused. Verified to take effect, not silently masked.)
+threshold, with no complexity gate to worry about. (Changing BATCH_SIZE / N_EPOCHS
+rebuilds only the cheap batch-size-dependent cache arrays — ``num_training_steps``
+and the batch permutation — via their own cache manifests; the expensive tensor
+cache is reused. Verified to take effect, not silently masked.)
 
 Fully autonomous: when the best config found beats the champion by ≥ threshold
 it commits the new champion (constants + config + diagnostics + history) and tags
@@ -36,15 +49,17 @@ Run it from the **host** (it shells out to ``docker compose`` for each
 benchmark and to ``git`` for commits). A pass is many ~70-150 s runs, so launch
 it in the background:
 
-    python -m src.autoresearch.hp_tune              # full auto pass
-    python src/autoresearch/hp_tune.py --dry-run    # validate file edits only
-    python src/autoresearch/hp_tune.py --no-commit  # search, leave best, no git
+    python -m src.autoresearch.hp_tune                   # full auto pass (fine HPs)
+    python -m src.autoresearch.hp_tune --epoch-batch-grid  # re-anchor n_epoch x batch
+    python src/autoresearch/hp_tune.py --dry-run         # validate file edits only
+    python src/autoresearch/hp_tune.py --no-commit       # search, leave best, no git
 """
 from __future__ import annotations
 
 import argparse
 import ast
 import json
+import math
 import re
 import subprocess
 import sys
@@ -59,6 +74,23 @@ CONFIG = REPO / "src" / "main" / "config.py"
 DIAGNOSTICS = REPO / "result" / "diagnostics.json"
 HISTORY_JSONL = REPO / "result" / "history.jsonl"
 SUMMARY = REPO / "result" / "hp_tune_last.json"
+GRID_SUMMARY = REPO / "result" / "epoch_batch_grid.json"
+
+# ── epoch × batch_size Pareto grid (the "gold standard" re-anchor, run rarely) ──
+# A speed-aware OUTER search over the compute operating point, distinct from the
+# per-5-iter LR/betas/L2 coordinate descent. The gold standard is (n_epoch=8,
+# batch_size=512); a cell replaces it only if it Pareto-dominates it — no worse on
+# either axis (log loss, train+eval compute time) and strictly better on >=1. The
+# fine HPs are conditional on (epoch, batch), so this runs FIRST and the regular
+# tuner re-tunes LR/betas/L2 on the winner afterward; for fairness each cell is
+# measured with an Adam sqrt LR-batch-scaled learning rate (the winner is then
+# fine-tuned precisely). batch_size is OWNED here and was removed from the regular
+# coordinate descent so the loss-only pass can't move it for log loss at a speed cost.
+GOLD_EPOCH, GOLD_BATCH = 8, 512
+GRID_EPOCHS = [5, 8, 12, 16, 30]
+GRID_BATCHES = [128, 256, 512, 1024]
+SPEED_TOL = 0.03   # fractional compute-time noise band: within +/-3% counts as "same speed"
+LL_TOL = 1e-5      # log-loss tie band (training is deterministic; guards exact ties)
 
 # The files this tuner may edit, keyed by the short name an HParam references in
 # its `file` field. Both are validated with ast.parse before any benchmark runs.
@@ -139,6 +171,27 @@ def set_betas(text: str, b1: float, b2: float) -> str:
     return new
 
 
+# N_EPOCHS lives in config.py as `int(os.environ.get("FSRS_N_EPOCHS", "8"))`. The
+# grid persists the winning epoch count by editing the *default* literal "8" (the
+# sweep itself drives it via the FSRS_N_EPOCHS env var, no file edit). Only this
+# integer-in-the-env-default is touched — the env-override mechanism is preserved.
+_NEPOCH_RE = re.compile(r'(FSRS_N_EPOCHS["\']\s*,\s*["\'])(\d+)(["\'])')
+
+
+def get_n_epochs(config_text: str) -> int:
+    m = _NEPOCH_RE.search(config_text)
+    if not m:
+        raise ValueError("could not read N_EPOCHS default from config.py")
+    return int(m.group(2))
+
+
+def set_n_epochs(config_text: str, n: int) -> str:
+    new, k = _NEPOCH_RE.subn(rf"\g<1>{int(n)}\g<3>", config_text, count=1)
+    if k != 1:
+        raise ValueError(f"could not set N_EPOCHS default (matched {k}x)")
+    return new
+
+
 # ── hyperparameter spec ──────────────────────────────────────────────────────
 @dataclass
 class HParam:
@@ -207,14 +260,12 @@ def build_hparams() -> list[HParam]:
                       lambda ts: get_scalar(ts["constants"], "RECENCY_EXP"),
                       lambda ts, v: {**ts, "constants": set_scalar(ts["constants"], "RECENCY_EXP", v)},
                       "mul", 1.5, 1.0, 12.0))
-    # BATCH_SIZE lives in config.py (not constants.py) and is discrete. Kept LAST so
-    # that within a coordinate-descent round all the constants.py knobs run first at
-    # a fixed batch size (no cache rebuild between them); only the batch_size trials
-    # trigger a (cheap) num_training_steps / batch_perm rebuild.
-    hps.append(HParam("BATCH_SIZE",
-                      lambda ts: get_scalar(ts["config"], "BATCH_SIZE"),
-                      lambda ts, v: {**ts, "config": set_scalar(ts["config"], "BATCH_SIZE", v)},
-                      "batch", 2.0, 128, 2048, file="config"))
+    # NOTE: BATCH_SIZE used to be tuned here, but it's a speed/log-loss trade-off,
+    # not a pure log-loss knob — the loss-only coordinate descent would always push
+    # it down (smaller batch = lower loss) while ignoring the speed cost. It now
+    # belongs to the epoch_batch_grid() Pareto search (run --epoch-batch-grid), which
+    # owns the (n_epoch, batch_size) compute operating point. This regular pass tunes
+    # the fine HPs (LR/betas/L2/recency) at that fixed operating point.
     return hps
 
 
@@ -232,6 +283,174 @@ def run_benchmark() -> tuple[float, int, float]:
     by_user = float(diag["logloss"]["by_user"])
     complexity = int(sum(f["score"] for f in diag["complexity"]["files"]))
     return by_user, complexity, time.time() - t0
+
+
+def run_benchmark_grid(extra_env: dict[str, str] | None = None) -> tuple[float, float]:
+    """One benchmark for the epoch/batch grid; returns (by_user, compute_seconds).
+
+    ``extra_env`` (e.g. ``{"FSRS_N_EPOCHS": "12"}``) is injected into the container
+    via ``docker compose run -e``. compute_seconds is the train+eval wall time
+    emitted by run.py into diagnostics.json — the grid's speed axis."""
+    cmd = ["docker", "compose", "--progress", "quiet", "run", "--rm"]
+    for k, v in (extra_env or {}).items():
+        cmd += ["-e", f"{k}={v}"]
+    cmd += ["srs-benchmark", "bash", "src/main/run.sh"]
+    proc = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"benchmark exited {proc.returncode}\n"
+            f"--- stdout ---\n{proc.stdout[-1500:]}\n"
+            f"--- stderr ---\n{proc.stderr[-1500:]}"
+        )
+    diag = json.loads(DIAGNOSTICS.read_text(encoding="utf-8"))
+    by_user = float(diag["logloss"]["by_user"])
+    secs = float(diag.get("compute_seconds") or 0.0)
+    return by_user, secs
+
+
+# ── epoch × batch_size Pareto grid ───────────────────────────────────────────
+def _scaled_lr(committed_lr: float, committed_batch: float, batch: float) -> float:
+    """Adam sqrt LR-batch scaling, anchored at the committed (LR, batch). Gives each
+    grid cell a roughly-right LR for a fair comparison; the winner is fine-tuned after."""
+    return round(committed_lr * math.sqrt(batch / committed_batch), 4)
+
+
+def _grid_table(cells: list[dict], gold: dict | None) -> str:
+    """ASCII table of the grid: rows = n_epoch, cols = batch_size, each cell
+    'by_user / seconds'. The gold standard cell is marked with '*'."""
+    head = "epoch\\batch | " + " | ".join(f"{b:>16}" for b in GRID_BATCHES)
+    out = [head, "-" * len(head)]
+    by_key = {(c["epoch"], c["batch"]): c for c in cells}
+    for e in GRID_EPOCHS:
+        parts = []
+        for b in GRID_BATCHES:
+            c = by_key.get((e, b))
+            if c is None or c.get("by_user") is None:
+                parts.append(f"{'FAIL':>16}")
+            else:
+                star = "*" if (gold and e == GOLD_EPOCH and b == GOLD_BATCH) else " "
+                parts.append(f"{c['by_user']:.5f}/{c['seconds']:>5.0f}s{star}")
+        out.append(f"{e:>11} | " + " | ".join(parts))
+    return "\n".join(out)
+
+
+def epoch_batch_grid() -> None:
+    """Run the 20-combo (n_epoch x batch_size) grid, pick the Pareto operating point
+    vs the (8,512) gold standard, and leave the winner's (batch, n_epoch, scaled LR)
+    on disk for review. Does NOT commit or record history — re-anchoring the champion
+    is a deliberate step the caller finalises after the follow-up fine-tune."""
+    base_texts = read_texts()
+    for text in base_texts.values():
+        ast.parse(text)
+    committed_lr = get_scalar(base_texts["constants"], "LR")
+    committed_batch = get_scalar(base_texts["config"], "BATCH_SIZE")
+    committed_epoch = get_n_epochs(base_texts["config"])
+    print(f"[grid] committed operating point: epoch={committed_epoch} "
+          f"batch={committed_batch:g} LR={committed_lr:g}", flush=True)
+    print(f"[grid] gold standard = (epoch {GOLD_EPOCH}, batch {GOLD_BATCH}); "
+          f"{len(GRID_EPOCHS) * len(GRID_BATCHES)} cells, sqrt LR-batch scaling.",
+          flush=True)
+
+    cells: list[dict] = []
+    try:
+        for epoch in GRID_EPOCHS:
+            for batch in GRID_BATCHES:
+                lr = _scaled_lr(committed_lr, committed_batch, batch)
+                trial = {**base_texts,
+                         "config": set_scalar(base_texts["config"], "BATCH_SIZE", batch)}
+                trial["constants"] = set_scalar(base_texts["constants"], "LR", lr)
+                ast.parse(trial["config"]); ast.parse(trial["constants"])
+                write_texts(trial)
+                t0 = time.time()
+                try:
+                    ll, secs = run_benchmark_grid({"FSRS_N_EPOCHS": str(epoch)})
+                except Exception as e:  # noqa: BLE001 — one bad cell shouldn't kill the grid
+                    print(f"[grid] epoch {epoch:>2} batch {batch:>4}: FAILED ({e})",
+                          flush=True)
+                    cells.append({"epoch": epoch, "batch": batch, "lr": lr,
+                                  "by_user": None, "seconds": None, "error": str(e)})
+                    continue
+                cells.append({"epoch": epoch, "batch": batch, "lr": lr,
+                              "by_user": ll, "seconds": secs})
+                print(f"[grid] epoch {epoch:>2} batch {batch:>4} (LR {lr:g}): "
+                      f"by_user={ll:.6f}  compute={secs:.1f}s  ({time.time() - t0:.0f}s wall)",
+                      flush=True)
+    finally:
+        write_texts(base_texts)  # restore committed config before deciding/persisting
+
+    ok = [c for c in cells if c.get("by_user") is not None]
+    gold = next((c for c in ok if c["epoch"] == GOLD_EPOCH and c["batch"] == GOLD_BATCH), None)
+    print("\n[grid] results (by_user / compute_seconds; * = gold standard):", flush=True)
+    print(_grid_table(cells, gold), flush=True)
+
+    if gold is None:
+        print("[grid] ABORT: the gold-standard cell (8,512) failed to run — no decision.",
+              flush=True)
+        GRID_SUMMARY.write_text(json.dumps({"cells": cells, "gold": None}, indent=2),
+                                encoding="utf-8")
+        return
+
+    g_ll, g_s = gold["by_user"], gold["seconds"]
+
+    def dominates(c: dict) -> bool:
+        not_worse = (c["by_user"] <= g_ll + LL_TOL) and (c["seconds"] <= g_s * (1 + SPEED_TOL))
+        strictly_better = (c["by_user"] < g_ll - LL_TOL) or (c["seconds"] < g_s * (1 - SPEED_TOL))
+        return not_worse and strictly_better
+
+    dominators = [c for c in ok if dominates(c)]
+    # Pick the operating point: among cells NOT slower than gold, the lowest log loss
+    # (tiebreak: fastest). This captures "lower loss at <= gold speed" and, on a loss
+    # tie, "faster at the same loss" — exactly the user's at-least-one-axis rule.
+    not_slower = [c for c in ok if c["seconds"] <= g_s * (1 + SPEED_TOL)]
+    winner = min(not_slower, key=lambda c: (c["by_user"], c["seconds"]))
+    improved = (winner["epoch"], winner["batch"]) != (GOLD_EPOCH, GOLD_BATCH) and dominates(winner)
+
+    print(f"\n[grid] gold (8,512): by_user={g_ll:.6f}  compute={g_s:.1f}s", flush=True)
+    if dominators:
+        print(f"[grid] {len(dominators)} cell(s) Pareto-dominate gold:", flush=True)
+        for c in sorted(dominators, key=lambda c: (c["by_user"], c["seconds"])):
+            print(f"        epoch {c['epoch']:>2} batch {c['batch']:>4}: "
+                  f"by_user={c['by_user']:.6f} ({c['by_user'] - g_ll:+.6f})  "
+                  f"compute={c['seconds']:.1f}s ({100 * (c['seconds'] - g_s) / g_s:+.1f}%)",
+                  flush=True)
+    else:
+        print("[grid] no cell Pareto-dominates gold — operating point stays at (8,512).",
+              flush=True)
+
+    # Persist the winner's operating point (batch, n_epoch default, sqrt-scaled LR).
+    new_cfg = set_scalar(base_texts["config"], "BATCH_SIZE", winner["batch"])
+    new_cfg = set_n_epochs(new_cfg, winner["epoch"])
+    new_const = set_scalar(base_texts["constants"], "LR", winner["lr"])
+    final = {"config": new_cfg, "constants": new_const}
+    ast.parse(final["config"]); ast.parse(final["constants"])
+    write_texts(final)
+    print(f"\n[grid] new operating point: epoch={winner['epoch']} batch={winner['batch']} "
+          f"LR={winner['lr']:g}  (by_user={winner['by_user']:.6f}, compute={winner['seconds']:.1f}s)"
+          f"{'  [Pareto win over gold]' if improved else '  [= gold standard]'}", flush=True)
+
+    # Refresh diagnostics.json to match the persisted operating point (the grid loop
+    # left it pointing at the last cell). Uses the committed N_EPOCHS default now.
+    print("[grid] re-running winner to refresh diagnostics ...", flush=True)
+    ll2, secs2 = run_benchmark_grid()
+    if abs(ll2 - winner["by_user"]) > 1e-6:
+        print(f"[grid] WARNING: winner re-check by_user {ll2:.6f} != {winner['by_user']:.6f}",
+              flush=True)
+
+    GRID_SUMMARY.write_text(json.dumps({
+        "gold": {"epoch": GOLD_EPOCH, "batch": GOLD_BATCH,
+                 "by_user": g_ll, "seconds": g_s},
+        "committed_before": {"epoch": committed_epoch, "batch": committed_batch,
+                             "lr": committed_lr},
+        "winner": winner, "improved_over_gold": improved,
+        "dominators": dominators, "cells": cells,
+        "speed_tol": SPEED_TOL, "ll_tol": LL_TOL,
+    }, indent=2), encoding="utf-8")
+
+    print(f"\n[grid] wrote {GRID_SUMMARY.relative_to(REPO)}. Operating point left on disk "
+          f"(uncommitted).", flush=True)
+    print("[grid] NEXT: review, then run the regular pass to fine-tune LR/betas/L2 at "
+          "this operating point, and record the combined re-anchor as one iteration.",
+          flush=True)
 
 
 # ── git + history ────────────────────────────────────────────────────────────
@@ -487,8 +706,9 @@ def main() -> None:
                     help="max coordinate-descent rounds (default 3)")
     ap.add_argument("--max-runs", type=int, default=34,
                     help="hard cap on benchmark runs per pass (default 34; sized "
-                         "for the 7-knob set: LR, L2, BETA1/2, RECENCY_C0, "
-                         "RECENCY_EXP, BATCH_SIZE)")
+                         "for the 6 fine knobs: LR, L2, BETA1/2, RECENCY_C0, "
+                         "RECENCY_EXP — batch_size/n_epoch are tuned by "
+                         "--epoch-batch-grid, not here)")
     ap.add_argument("--threshold", type=float, default=0.0001,
                     help="acceptance threshold on logloss_by_user (default 1e-4)")
     ap.add_argument("--dry-run", action="store_true",
@@ -496,10 +716,23 @@ def main() -> None:
     ap.add_argument("--no-commit", action="store_true",
                     help="run the search and leave the best config on disk, "
                          "but do not touch git/history")
+    ap.add_argument("--epoch-batch-grid", action="store_true",
+                    help="run the 20-combo n_epoch x batch_size Pareto grid (the "
+                         "speed-aware gold-standard re-anchor over the compute "
+                         "operating point) INSTEAD of the LR/betas/L2 coordinate "
+                         "descent; leaves the winning (batch, n_epoch, scaled LR) on "
+                         "disk for review, does not commit.")
     args = ap.parse_args()
 
     if args.dry_run:
         dry_run()
+        return
+
+    if args.epoch_batch_grid:
+        if not tree_clean():
+            sys.exit("[hp_tune] ABORT: git working tree is not clean — the grid leaves "
+                     "the new operating point on disk for review; commit or stash first.")
+        epoch_batch_grid()
         return
 
     if not args.no_commit and not tree_clean():

@@ -236,7 +236,9 @@ Python-side FSRS code only:
   weighting (`gradient_weight`), parameter clipper (`apply_parameter_clipper`)
 - `src/main/fsrs/fsrs_v7_optimizer.py` — the Adam/AdamW/NAdam update rule
 - `src/main/fsrs/fsrs_v7_scheduler.py` — LR schedule (cosine decay)
-- `src/main/config.py` — only `BATCH_SIZE`, never `N_EPOCHS`
+- `src/main/config.py` — only `BATCH_SIZE`, never `N_EPOCHS` (in a model
+  variant; the `--epoch-batch-grid` tuner is the sole sanctioned exception that
+  may move both — see constraint #5 and the hp-tune section)
 - `src/main/csrc/fsrs/*` — CUDA forward/backward source. In bounds, but
   touching it triggers a multi-minute Enzyme rebuild. Other paths under
   `src/main/csrc/` (`fsrs_extension.cpp`, `fsrs_extension.cu`,
@@ -268,7 +270,9 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
    stability, `d` = difficulty, `s_fast` = fast memory stability [dual-trace,
    iter-43]).
 3. Modify the training loop: learning rate, betas, lr scheduler, optimizer
-   choice (Adam → AdamW/SGD/etc.), recency weighting — **except `n_epoch`**.
+   choice (Adam → AdamW/SGD/etc.), recency weighting — **except `n_epoch`**
+   (which only `hp_tune.py --epoch-batch-grid` may re-anchor, under the
+   Pareto/at-least-one-axis rule; see constraint #5).
 
 ### Hard constraints (every variant MUST satisfy all)
 
@@ -284,8 +288,17 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
    stability rise either. In the failure formula `new_s_fail ∝ d^(-fail_d_exp)`,
    this means `fail_d_exp >= 0` is a hard structural requirement
    (`w[11]`, `w[20]`).
-5. **Do not change `N_EPOCHS`** (`src/main/config.py:27`). Don't rename it
-   either. We're chasing architectural wins, not brute-force epochs.
+5. **Do not change `N_EPOCHS` in a model variant** (`src/main/config.py:28`).
+   Don't rename it either. We're chasing architectural wins, not brute-force
+   epochs. **Exception (2026-06-03): the `hp_tune.py --epoch-batch-grid` Pareto
+   search may re-anchor `N_EPOCHS` *and* `batch_size`** as the compute *operating
+   point* — but only via the at-least-one-axis rule: a config replaces the gold
+   standard `(n_epoch=8, batch_size=512)` only if it is **no worse on BOTH** log
+   loss and train+eval compute time (strictly better on ≥1). Because more epochs
+   at a fixed batch is strictly slower, brute-force epochs can never win on the
+   speed axis; `n_epoch` can rise only when a *larger* batch buys the speed back
+   (a genuine free lunch). So the anti-brute-force intent holds. A normal model
+   iteration still must not touch `N_EPOCHS` — only the grid may.
 6. Do not skip users, change time-series splits, or change review-preprocessing
    filters. **Guarded by hard asserts** at the end of `run.py::main()`
    against `EXPECTED_N_USERS` / `EXPECTED_N_REVIEWS` in `src/main/config.py`.
@@ -439,13 +452,15 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,798** (iter-75). (History: C++ scoring
-was added at 16,766 — the 36-param dual-trace champion was 15,322 python-only,
-the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and wiring them
-into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes / parsimony
-edits since then drifted it to 16,756; iter-71's `fsrs7_fast_component_recall`
-helper added +39 → 16,795; iter-75 removed the empirical-Bayes anchor plumbing
-(+3 net → 16,798). The +5% gate is measured against this current
+**Current champion complexity baseline: 16,827** (iter-76 + compute-timer). (History:
+C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
+python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
+wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
+parsimony edits since then drifted it to 16,756; iter-71's
+`fsrs7_fast_component_recall` helper added +39 → 16,795; iter-75 removed the
+empirical-Bayes anchor plumbing (+3 net → 16,798); the 2026-06-03 `compute_seconds`
+train+eval timer in `run.py::main()` — the speed axis for the epoch×batch grid —
+added +29 → 16,798 → **16,827**. The +5% gate is measured against this current
 baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
@@ -553,24 +568,48 @@ two proposals. Each iteration tests **one** change against the threshold
 
 ### Automated hyperparameter tuning
 
-Tuning numeric *training* hyperparameters (LR, Adam betas, L2 strength) by hand
-is mechanical, so it's automated in `src/autoresearch/hp_tune.py`. It runs a
-greedy **coordinate-descent** search — steps each knob up/down (multiplicative
-for LR/L2, on the `1−β` scale for betas), keeps improvements, freezes knobs that
-don't help — and is **fully autonomous**: when the best config beats the champion
-by ≥ 0.0001 it commits the new champion (constants + diagnostics + history) and
-tags `iter-N-hp-tune`; otherwise it restores the champion and records a rejected
-pass. Editing numeric literals in place never changes the AST node count, so
-these tweaks are complexity-neutral — only the 0.0001 floor applies, no
-complexity gate. Training is deterministic (`seed` fixed) so every delta is real.
+Tuning numeric *training* hyperparameters (LR, Adam betas, L2 strength, recency
+weighting) by hand is mechanical, so it's automated in
+`src/autoresearch/hp_tune.py`. It runs a greedy **coordinate-descent** search —
+steps each of the 6 *fine* knobs (LR, PENALTY_W_L2, BETA1, BETA2, RECENCY_C0,
+RECENCY_EXP) up/down (multiplicative for LR/L2, on the `1−β` scale for betas),
+keeps improvements, freezes knobs that don't help — and is **fully autonomous**:
+when the best config beats the champion by ≥ 0.0001 it commits the new champion
+(constants + diagnostics + history) and tags `iter-N-hp-tune`; otherwise it
+restores the champion and records a rejected pass. Editing numeric literals in
+place never changes the AST node count, so these tweaks are complexity-neutral —
+only the 0.0001 floor applies, no complexity gate. Training is deterministic
+(`seed` fixed) so every delta is real.
+
+**The compute operating point (`n_epoch`, `batch_size`) is NOT in that pass** —
+it's a speed/log-loss trade-off, not a pure-loss knob (a loss-only search always
+drives batch *down*, ignoring the speed cost), so `batch_size` was pulled out of
+the coordinate descent and both live in a separate **epoch×batch Pareto grid**
+(`--epoch-batch-grid`, added 2026-06-03). The grid sweeps the 20 combos of
+`n_epoch ∈ {5,8,12,16,30}` × `batch_size ∈ {128,256,512,1024}`, measuring each
+with an Adam **√ LR-batch-scaled** learning rate (fairness — the winner is
+fine-tuned precisely afterward), and re-anchors to any cell that **Pareto-
+dominates the gold standard `(8,512)`**: no worse on log loss OR on `compute_seconds`
+(the train+eval wall time `run.py` now emits into diagnostics.json), strictly
+better on ≥1. Pick rule: lowest log loss among cells **not slower** than gold
+(tiebreak: fastest). It leaves the winner's `(batch, n_epoch, scaled-LR)` on disk
+**uncommitted** for review and writes `result/epoch_batch_grid.json` — re-anchoring
+the champion is a deliberate step you finalise (run the regular pass to fine-tune
+LR/betas/L2 at the new point, then record the combined re-anchor as one iteration).
+This is an **outer / rare** recalibration — run it once to set the operating point,
+then again only after a major architectural change; it is **not** part of the
+every-5-iter cadence. Because n_epoch is driven per-cell via the `FSRS_N_EPOCHS`
+env var, this is the sanctioned exception to hard-constraint #5.
 
 Run it from the **host** (it shells out to `docker compose` per trial and to
-`git`); a pass is ~10–16 ~70 s runs (~15–20 min), so launch it in the background:
+`git`); a fine pass is ~10–16 ~70 s runs (~15–20 min), the grid is ~20 runs
+(~30–50 min, the high-epoch cells are slow), so launch it in the background:
 
 ```pwsh
-python -m src.autoresearch.hp_tune             # full auto pass (search + commit)
-python src/autoresearch/hp_tune.py --dry-run   # validate edits only, no GPU/git
-python src/autoresearch/hp_tune.py --no-commit # search only, leave best on disk
+python -m src.autoresearch.hp_tune                    # full auto pass (6 fine knobs)
+python -m src.autoresearch.hp_tune --epoch-batch-grid # re-anchor n_epoch × batch (no commit)
+python src/autoresearch/hp_tune.py --dry-run          # validate edits only, no GPU/git
+python src/autoresearch/hp_tune.py --no-commit        # search only, leave best on disk
 ```
 
 **Cadence:** run it every ~5 iterations. It self-maintains

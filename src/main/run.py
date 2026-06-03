@@ -674,6 +674,10 @@ def main() -> None:
     # user_splits = [users]  # overwrite
     cache_env = load_or_rebuild_tensor_cache(env, user_splits)
 
+    # Wall-clock of the train+eval compute (excludes one-time cache load), emitted
+    # into diagnostics as compute_seconds — the speed axis the hp_tune epoch/batch
+    # grid optimises alongside log loss. perf_counter: monotonic, no system-clock drift.
+    t_compute0 = time.perf_counter()
     eval_aggregate = EvaluationAggregate()
     grad_tracker = GradTracker()
     try:
@@ -690,6 +694,7 @@ def main() -> None:
     finally:
         cache_env.close()
     env.close()
+    compute_seconds = time.perf_counter() - t_compute0
 
     print(f"Users: {eval_aggregate.user_count}")
     print(f"n reviews: {eval_aggregate.review_count}")
@@ -726,10 +731,10 @@ def main() -> None:
     if WRITE_RESULT:
         write_evaluation_results(eval_aggregate)
 
-    _write_diagnostics(eval_aggregate, grad_tracker.summarise())
+    _write_diagnostics(eval_aggregate, grad_tracker.summarise(), compute_seconds)
 
 
-def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict | None = None) -> None:
+def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict | None = None, compute_seconds: float = 0.0) -> None:
     """Produce result/diagnostics.{json,md} for the autoresearch loop."""
     def _flatten(bucket_dict: dict[str, dict[str, float]], names: tuple[str, ...]) -> dict:
         out: dict[str, float | int] = {}
@@ -777,6 +782,7 @@ def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict |
         loss_by_delta_t=flat_loss_by_delta_t,
         grad_summary=grad_summary,
         complexity_score=complexity_score,
+        compute_seconds=compute_seconds,
     )
 
     result_dir = Path("result")

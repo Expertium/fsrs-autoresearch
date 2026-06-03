@@ -467,6 +467,7 @@ def build_diagnostics_dict(
     loss_by_delta_t: dict,
     grad_summary: Optional[dict[str, list[float]]] = None,
     complexity_score: Optional[dict] = None,
+    compute_seconds: float = 0.0,
     s_min: float = 0.0001,
     init_s_max: float = 100.0,
 ) -> dict:
@@ -519,6 +520,7 @@ def build_diagnostics_dict(
             for ps in per_param
         ],
         "complexity": complexity_score,
+        "compute_seconds": compute_seconds,
         "config": {
             "s_min": s_min,
             "init_s_max": init_s_max,
@@ -535,7 +537,11 @@ def format_markdown_report(diag: dict) -> str:
 
     ll = diag["logloss"]
     lines.append(f"**Log loss, per-user (primary):** `{ll['by_user']:.5f}`")
-    lines.append(f"**Log loss, per-review (sanity):** `{ll['by_review']:.5f}`\n")
+    lines.append(f"**Log loss, per-review (sanity):** `{ll['by_review']:.5f}`")
+    cs = diag.get("compute_seconds")
+    if cs:
+        lines.append(f"**Train+eval compute time:** `{cs:.1f}s`")
+    lines.append("")
 
     if diag.get("complexity"):
         c = diag["complexity"]
