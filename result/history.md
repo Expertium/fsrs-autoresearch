@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_101 record(s). Generated from `history.jsonl` — do not edit by hand._
+_102 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -105,3 +105,4 @@ _101 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 99 | 2026-06-04T04:02:40 | 0.0001 | 0.32037 | 0.32034 | +0.00003 | 16,865 | 16,865 | +0.00% | rejected | Lowered post-lapse fast-trace cap fraction 0.8->0.5 (relearning treated as more fragile than fresh learning). |
 | 100 | 2026-06-04T04:23:29 | 0.0001 | 0.32037 | 0.32090 | -0.00053 | 16,865 | 16,871 | +0.04% | rejected | Cap post-success fast-trace stability at slow stability (fast<=slow invariant), extending iter-97 lapse-only cap to successes. |
 | 101 | 2026-06-04T04:50:36 | 0.0001 | 0.32037 | 0.32020 | +0.00018 | 16,865 | 16,930 | +0.39% | accepted | On a lapse, scale the difficulty increment delta_d by (1+0.5*(retention-0.9)) so high-R (unexpected) lapses raise D more. |
+| 102 | 2026-06-04T05:00:18 | 0.0001 | 0.32020 | 0.32021 | -0.00001 | 16,930 | 16,945 | +0.09% | rejected | On a successful review (rating>1), scale delta_d by (1+0.5*(0.9-retention)) so low-R (surprising) successes change D more. |
