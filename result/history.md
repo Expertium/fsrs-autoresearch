@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_117 record(s). Generated from `history.jsonl` — do not edit by hand._
+_118 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -121,3 +121,4 @@ _117 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 115 | 2026-06-04T08:28:13 | 0.0002 | 0.32008 | 0.32009 | -0.00001 | 16,930 | 16,964 | +0.20% | rejected | Add trainable param d_decay_fast (w[34]) modulating the fast forgetting-curve decay by exp(d_decay_fast*(D-5)). |
 | 116 | 2026-06-04T08:37:34 | 0.0001 | 0.32008 | 0.32017 | -0.00009 | 16,930 | 16,993 | +0.37% | rejected | On a lapse, floor the post-lapse SLOW stability at 0.3x the pre-lapse slow stability (relearning savings). |
 | 117 | 2026-06-04T08:46:41 | 0.0001 | 0.32008 | 0.32004 | +0.00003 | 16,930 | 16,956 | +0.15% | rejected | Make the fast-trace init/reset fraction difficulty-dependent: 0.8*exp(-0.05*(D-5)) instead of flat 0.8 (harder cards relearn less). |
+| 118 | 2026-06-04T08:51:23 | 0.0001 | 0.32008 | 0.32004 | +0.00004 | 16,930 | 16,961 | +0.18% | rejected | Strengthen the D-dependent fast-init fraction to min(0.99, 0.8*exp(-0.12*(D-5))) (larger k=0.12, capped easy side). |
