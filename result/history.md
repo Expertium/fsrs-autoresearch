@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_112 record(s). Generated from `history.jsonl` — do not edit by hand._
+_113 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -116,3 +116,4 @@ _112 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 110 | 2026-06-04T07:11:39 | 0.0001 | 0.32008 | 0.32008 | +0.00000 | 16,930 | 16,946 | +0.09% | rejected | On a successful review (rating>1) subtract 1.0*max(0.9-retention,0) from delta_d, so overdue (low-R) recalls lower difficulty (additive, affects Good). |
 | 111 | 2026-06-04T07:20:39 | 0.0001 | 0.32008 | 0.32023 | -0.00015 | 16,930 | 17,088 | +0.93% | rejected | On a same-day (elapsed_time<1d) successful review, amplify the slow-trace growth increment by 1.5x (the inverse of iter-107 freeze). |
 | 112 | 2026-06-04T07:38:40 | 0.0010 | 0.32008 | 0.32051 | -0.00044 | 16,930 | 17,028 | +0.58% | rejected | Add a 4th state variable lapse_recency (set 1 on a lapse, halved each review) that steepens the fast forgetting-curve component during relearning. |
+| 113 | 2026-06-04T07:47:52 | 0.0010 | 0.32008 | 0.32010 | -0.00003 | 16,930 | 17,029 | +0.58% | rejected | Add a 4th state lapse_count (permanent, +1 per lapse, capped 10) that raises the effective curve-difficulty by 0.3*count for chronic-leech discrimination. |
