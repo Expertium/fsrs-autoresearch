@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_128 record(s). Generated from `history.jsonl` — do not edit by hand._
+_129 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -132,3 +132,4 @@ _128 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 126 | 2026-06-04T10:11:04 | 0.0001 | 0.32008 | 0.33130 | -0.01122 | 16,930 | 16,930 | +0.00% | rejected | Clamp the training-loss gradient \|dloss_dp\| to <=10 (robust/pseudo-Huber loss down-weighting confident-wrong outliers). |
 | 127 | 2026-06-04T10:15:39 | 0.0001 | 0.32008 | 0.35043 | -0.03035 | 16,930 | 16,930 | +0.00% | rejected | Replace BCE training-loss gradient with focal-loss gradient (gamma=1): down-weight confident-correct, up-weight hard/confident-wrong. |
 | 128 | 2026-06-04T10:36:03 | 0.0001 | 0.32008 | 0.32022 | -0.00014 | 16,930 | 16,930 | +0.00% | rejected | Add a label-smoothing term to the BCE training loss (eps=0.01): smoothed targets 0.99/0.01. |
+| 129 | 2026-06-04T10:39:39 | 0.0001 | 0.32008 | 0.32080 | -0.00072 | 16,930 | 16,930 | +0.00% | rejected | Add a small entropy-penalty (confidence-sharpening) term to BCE: dloss_dp -= 0.05*logit(p). |
