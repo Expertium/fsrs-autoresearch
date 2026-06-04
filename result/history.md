@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_99 record(s). Generated from `history.jsonl` — do not edit by hand._
+_100 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -103,3 +103,4 @@ _99 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 97 | 2026-06-04T03:23:44 | 0.0001 | 0.32054 | 0.32037 | +0.00017 | 16,804 | 16,865 | +0.36% | accepted | On a lapse, cap the fast-trace post-lapse stability at 0.8*post-lapse slow stability (restoring fast<slow invariant, relearn-from-scratch). |
 | 98 | 2026-06-04T03:56:42 | 0.0001 | 0.32038 | 0.32037 | +0.00000 | 16,865 | 16,865 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate PENALTY_W_L2 0.3333->0.2222. |
 | 99 | 2026-06-04T04:02:40 | 0.0001 | 0.32037 | 0.32034 | +0.00003 | 16,865 | 16,865 | +0.00% | rejected | Lowered post-lapse fast-trace cap fraction 0.8->0.5 (relearning treated as more fragile than fresh learning). |
+| 100 | 2026-06-04T04:23:29 | 0.0001 | 0.32037 | 0.32090 | -0.00053 | 16,865 | 16,871 | +0.04% | rejected | Cap post-success fast-trace stability at slow stability (fast<=slow invariant), extending iter-97 lapse-only cap to successes. |
