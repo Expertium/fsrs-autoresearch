@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_114 record(s). Generated from `history.jsonl` — do not edit by hand._
+_115 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -118,3 +118,4 @@ _114 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 112 | 2026-06-04T07:38:40 | 0.0010 | 0.32008 | 0.32051 | -0.00044 | 16,930 | 17,028 | +0.58% | rejected | Add a 4th state variable lapse_recency (set 1 on a lapse, halved each review) that steepens the fast forgetting-curve component during relearning. |
 | 113 | 2026-06-04T07:47:52 | 0.0010 | 0.32008 | 0.32010 | -0.00003 | 16,930 | 17,029 | +0.58% | rejected | Add a 4th state lapse_count (permanent, +1 per lapse, capped 10) that raises the effective curve-difficulty by 0.3*count for chronic-leech discrimination. |
 | 114 | 2026-06-04T07:57:08 | 0.0001 | 0.32008 | 0.32025 | -0.00017 | 16,930 | 16,998 | +0.40% | rejected | Change the iter-101 lapse-surprise reference from the mixed retention to the slow-component recall r2 (long-term memory expectation). |
+| 115 | 2026-06-04T08:28:13 | 0.0002 | 0.32008 | 0.32009 | -0.00001 | 16,930 | 16,964 | +0.20% | rejected | Add trainable param d_decay_fast (w[34]) modulating the fast forgetting-curve decay by exp(d_decay_fast*(D-5)). |
