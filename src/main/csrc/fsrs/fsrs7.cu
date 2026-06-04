@@ -45,9 +45,24 @@ __device__ __forceinline__
 float fsrs7_next_d(
     const fsrs_params_t &fsrs_params,
     const fsrs_state_t fsrs_state,
-    const int8_t rating
+    const int8_t rating,
+    const float retention
 ) {
-    const float delta_d = -fsrs_params.next_d_mult * (static_cast<float>(rating) - 3.0f);
+    float delta_d = -fsrs_params.next_d_mult * (static_cast<float>(rating) - 3.0f);
+    // iter-101: SURPRISE-WEIGHTED lapse difficulty. A lapse on a card the model
+    // expected to recall (high retention) is far more diagnostic of intrinsic
+    // difficulty than a lapse on an overdue card (low retention, the failure was
+    // expected). The flat update over-attributes difficulty to overdue lapses;
+    // scale the lapse increment by (1 + 0.5*(retention - 0.9)) so high-R lapses
+    // raise D more and low-R (overdue) lapses raise it less. For R in [0,1] the
+    // factor is in [0.55, 1.05] -- always positive (lapse still raises D, so the
+    // rating ordering of the D-update is preserved: lapse delta_d >= Hard's). This
+    // only reshapes the D-UPDATE (which D the next review sees); the D->S map is
+    // untouched, so constraint 4 (higher D -> S non-increasing) still holds. The
+    // current review's stability used the OLD D, so constraints 2/3 are unaffected.
+    if (rating == 1) {
+        delta_d *= 1.0f + 0.5f * (retention - 0.9f);
+    }
     const float new_d = fsrs_state.d + fsrs7_linear_damping(delta_d, fsrs_state.d);
     return fsrs7_mean_reversion(fsrs7_initial_difficulty(fsrs_params, 4.0f), new_d);
 }
@@ -233,7 +248,7 @@ fsrs_state_t fsrs7_step(
         fsrs_params.short_stability
     );
 
-    const float new_d = fsrs7_next_d(fsrs_params, fsrs_state, rating);
+    const float new_d = fsrs7_next_d(fsrs_params, fsrs_state, rating, retention);
 
     // iter-97: post-lapse fast-trace reset. On a lapse (rating==1) the short-term
     // store should relearn from scratch, so cap the post-lapse fast stability at
