@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_113 record(s). Generated from `history.jsonl` — do not edit by hand._
+_114 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -117,3 +117,4 @@ _113 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 111 | 2026-06-04T07:20:39 | 0.0001 | 0.32008 | 0.32023 | -0.00015 | 16,930 | 17,088 | +0.93% | rejected | On a same-day (elapsed_time<1d) successful review, amplify the slow-trace growth increment by 1.5x (the inverse of iter-107 freeze). |
 | 112 | 2026-06-04T07:38:40 | 0.0010 | 0.32008 | 0.32051 | -0.00044 | 16,930 | 17,028 | +0.58% | rejected | Add a 4th state variable lapse_recency (set 1 on a lapse, halved each review) that steepens the fast forgetting-curve component during relearning. |
 | 113 | 2026-06-04T07:47:52 | 0.0010 | 0.32008 | 0.32010 | -0.00003 | 16,930 | 17,029 | +0.58% | rejected | Add a 4th state lapse_count (permanent, +1 per lapse, capped 10) that raises the effective curve-difficulty by 0.3*count for chronic-leech discrimination. |
+| 114 | 2026-06-04T07:57:08 | 0.0001 | 0.32008 | 0.32025 | -0.00017 | 16,930 | 16,998 | +0.40% | rejected | Change the iter-101 lapse-surprise reference from the mixed retention to the slow-component recall r2 (long-term memory expectation). |
