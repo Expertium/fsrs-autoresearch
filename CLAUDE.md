@@ -120,16 +120,22 @@ src/
   prepare/
     prepare.py              # one-time dataset preprocessing
     prepare_config.py       # ModelName literal + CLI args + Config class
-  features/                 # feature engineers (DASH, FSRS-eng, etc.)
+  features/                 # feature engineers (DASH, FSRS-eng)
+    base.py
+    create_features.py
+    dash_engineer.py
+    fsrs_engineer.py
+    factory.py              # FEATURE_ENGINEER_REGISTRY
   models/                   # ★ where new variants go
     base.py
     trainable.py
     fsrs.py                 # FSRS shared base
-    fsrs_v1.py … fsrs_v7.py
+    fsrs_v1.py … fsrs_v7.py # incl. fsrs_v4dot5.py, fsrs_v6_one_step.py
+    fsrs_rs.py              # FSRS-rs port (leftover in the inheritance chain; not in MODEL_REGISTRY)
     fsrs_v7_interval_penalty.py
     model_factory.py        # MODEL_REGISTRY — register new variants here
   main/
-    config.py               # DEVICE, BATCH_SIZE=512, N_EPOCHS=8 (FSRS_N_EPOCHS env override), WRITE_RESULT
+    config.py               # DEVICE, BATCH_SIZE=256, N_EPOCHS=8 (FSRS_N_EPOCHS env override), WRITE_RESULT
     run.py                  # training + eval entry point
     run.sh                  # builds Enzyme ext then runs run.py
     fsrs/                   # FSRS-7 Python training helpers (NOT the CUDA kernel):
@@ -141,7 +147,7 @@ src/
       fsrs_extension.cpp
       fsrs_extension.cu
       fsrs/                 # ★ the actual CUDA FSRS-7 model: fsrs7.cu / fsrs7.cuh
-      fsrs_kernel/
+      fsrs_kernel/          # off-limits infra: fsrs_train.{cu,cuh} (holds dloss_dp), fsrs_test.{cu,cuh}
     srs_ops.py              # Python wrapper around the extension
     tensor_cache.py         # LMDB tensor cache
     tensor_lmdb.py
@@ -243,8 +249,10 @@ floor line-searched (0.93→+1.355e-4, 0.91→+1.476e-4, **0.85→+1.629e-4 peak
 sub-day reviews at the default parameterization, and a fixed, population-wide curve-shape
 correction is a real by_user lever.**
 
-Training: 8 epochs, batch 1024, Adam, lr 3e-2, betas (0.55, 0.85).
-Loss = log-loss(per-review) + sched_penalty_1 + sched_penalty_2 + L2-to-defaults.
+Training: 8 epochs, batch 256, Adam, lr 0.0188, betas (0.55, 0.9913), recency-weighted
+gradient. Loss = log-loss(per-review) + L2-to-defaults (the sched penalties in
+`fsrs_v7_interval_penalty.py` are dead code — `run.py` never calls them). The live values
+are in `src/main/fsrs/fsrs_v7_constants.py` (source of truth; this line is a snapshot).
 
 Metrics produced by `run.py`:
 - `logloss_by_user` — **primary**, and the only one that decides accept/reject.
