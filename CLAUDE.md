@@ -176,12 +176,12 @@ clipper, diagnostics table, and this section).
 |---|---|
 | `w[0..3]` | Initial stability per rating (Again/Hard/Good/Easy) |
 | `w[4..6]` | Difficulty |
-| `w[7..15]` | Long-term stability update — drives the **slow** trace `s` |
-| `w[16..24]` | Short-term stability update — drives the **fast** trace `s_fast` |
-| `w[25..32]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
-| `w[33..35]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
+| `w[7..14]` | Long-term stability update (8 params) — drives the **slow** trace `s` |
+| `w[15..22]` | Short-term stability update (8 params) — drives the **fast** trace `s_fast` |
+| `w[23..30]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
+| `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
-**Dual-trace memory (introduced iter-43), 36 params; current champion iter-71.**
+**Dual-trace memory (introduced iter-43), 34 params; current champion iter-85.**
 iter-40 added a 2nd stability state `s_fast` (fast trace) alongside `s` (slow
 trace); each drives its own forgetting-curve component and updates via the
 short-/long-term stability dynamics respectively. This **removed the old
@@ -193,7 +193,12 @@ multiplier didn't earn its param: iter-69 trainable near-miss, iter-70 confirmed
 trace now updates from the **fast component's own recall `r1`** (the
 `fsrs7_fast_component_recall` helper), not the mixed-curve retention; the slow
 trace still updates from the mixed retention. State variables: **3** (`s`, `d`,
-`s_fast`).
+`s_fast`). **iter-85 (ablation):** removed the failure-path difficulty exponent
+`fail_d_exp` — a single field in the *shared* stability sub-struct, so it was the
+long `w[11]` **and** short `w[20]` at once. Post-lapse stability (`new_s_fail`) is
+now **difficulty-independent** (the exponent was the most inert param in the model,
+median ~0.005, a quarter of users pinned at its `>=0` floor). 36→34 params; the two
+stability-update blocks are now **8 params each**.
 
 Training: 8 epochs, batch 1024, Adam, lr 3e-2, betas (0.55, 0.85).
 Loss = log-loss(per-review) + sched_penalty_1 + sched_penalty_2 + L2-to-defaults.
@@ -329,9 +334,12 @@ update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
 4. Higher `D` ⇒ post-review `S` is non-increasing in `D`. This applies to
    **both** post-success and post-lapse stability: difficulty must not let
    memory grow faster after a successful review, and it must not let post-lapse
-   stability rise either. In the failure formula `new_s_fail ∝ d^(-fail_d_exp)`,
-   this means `fail_d_exp >= 0` is a hard structural requirement
-   (`w[11]`, `w[20]`).
+   stability rise either. As of **iter-85** the post-lapse formula `new_s_fail`
+   is **difficulty-independent** (the old `d^(-fail_d_exp)` factor was ablated —
+   the exponent was inert and fought its `>= 0` floor), which satisfies this
+   constraint trivially (constant in `D` ⇒ non-increasing). If a future variant
+   re-introduces a `d^(-k)` post-lapse factor, `k >= 0` becomes a hard structural
+   requirement again.
 5. **Do not change `N_EPOCHS` in a model variant** (`src/main/config.py:28`).
    Don't rename it either. We're chasing architectural wins, not brute-force
    epochs. **Exception (2026-06-03): the `hp_tune.py --epoch-batch-grid` Pareto
@@ -496,7 +504,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,827** (iter-76 + compute-timer). (History:
+**Current champion complexity baseline: 16,804** (iter-85). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -504,8 +512,9 @@ parsimony edits since then drifted it to 16,756; iter-71's
 `fsrs7_fast_component_recall` helper added +39 → 16,795; iter-75 removed the
 empirical-Bayes anchor plumbing (+3 net → 16,798); the 2026-06-03 `compute_seconds`
 train+eval timer in `run.py::main()` — the speed axis for the epoch×batch grid —
-added +29 → 16,798 → **16,827**. The +5% gate is measured against this current
-baseline.)
+added +29 → 16,798 → 16,827; iter-85 ablated the two `fail_d_exp` params (removed
+the `d^(-fail_d_exp)` factor + struct field + 8 constant-tuple literals) → **16,804**.
+The +5% gate is measured against this current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 

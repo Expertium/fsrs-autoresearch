@@ -73,37 +73,35 @@ FSRS7_BOUNDS_STATIC: list[tuple[float | str, float | str]] = [
     (1.0,            10.0),            # 4  Difficulty
     (0.001,          4.0),             # 5  Difficulty
     (0.1,            4.0),             # 6  Difficulty
-    (0.0,            4.0),             # 7  Long-term stability
-    (0.0,            1.2),             # 8
-    (0.3,            3.0),             # 9
-    (0.01,           1.5),             # 10
-    (0.001,          0.9),             # 11
-    (0.1,            1.0),             # 12
-    (0.0,            3.5),             # 13
-    (0.0,            1.0),             # 14
-    (1.0,            7.0),             # 15
-    (0.0,            4.0),             # 16 Short-term stability
-    (0.0,            2.0),             # 17
-    (0.5,            6.0),             # 18
-    (0.001,          1.5),             # 19
-    (0.001,          2.0),             # 20
-    (0.001,          1.0),             # 21
-    (0.0,            5.0),             # 22
-    (0.0,            1.0),             # 23
-    (1.0,            7.0),             # 24
-    # iter-43: removed the two dead transition-era params (old 25/26); curve
-    # block shifted down by 2 (old 27..37 -> 25..35).
-    (0.01,           0.25),            # 25 Forgetting curve, decay 1
-    (0.01,           0.95),            # 26 decay 2 (iter-54: unchained from w[25])
-    (0.2,            0.85),            # 27 base 1
-    ("w[27]",        0.99),            # 28 base 2 (lower chained to w[27])
-    (0.01,           1.0),             # 29 weight 1
-    (0.1,            1.0),             # 30 weight 2
-    (0.0,            0.9),             # 31 S weight power 1
-    (0.1,            1.1),             # 32 S weight power 2
-    (-0.5,           0.5),             # 33 d_weight (difficulty modulation)
-    (-0.3,           0.3),             # 34 d_decay (difficulty modulation of slow decay)
-    (-0.3,           0.3),             # 35 s_decay1 (stability modulation of fast decay)
+    (0.0,            4.0),             # 7  Long-term stability: sinc_base
+    (0.0,            1.2),             # 8  sinc_s_exp
+    (0.3,            3.0),             # 9  sinc_r_mult
+    (0.01,           1.5),             # 10 fail_mult
+    # iter-85: removed the long/short fail_d_exp params (old idx 11/20); the
+    # post-lapse stability is now difficulty-independent. Everything below shifted.
+    (0.1,            1.0),             # 11 fail_s_exp
+    (0.0,            3.5),             # 12 fail_r_mult
+    (0.0,            1.0),             # 13 hard_penalty
+    (1.0,            7.0),             # 14 easy_bonus
+    (0.0,            4.0),             # 15 Short-term stability: sinc_base
+    (0.0,            2.0),             # 16 sinc_s_exp
+    (0.5,            6.0),             # 17 sinc_r_mult
+    (0.001,          1.5),             # 18 fail_mult
+    (0.001,          1.0),             # 19 fail_s_exp
+    (0.0,            5.0),             # 20 fail_r_mult
+    (0.0,            1.0),             # 21 hard_penalty
+    (1.0,            7.0),             # 22 easy_bonus
+    (0.01,           0.25),            # 23 Forgetting curve, decay 1
+    (0.01,           0.95),            # 24 decay 2 (iter-54: unchained from decay1)
+    (0.2,            0.85),            # 25 base 1
+    ("w[25]",        0.99),            # 26 base 2 (lower chained to w[25] = base1)
+    (0.01,           1.0),             # 27 weight 1
+    (0.1,            1.0),             # 28 weight 2
+    (0.0,            0.9),             # 29 S weight power 1
+    (0.1,            1.1),             # 30 S weight power 2
+    (-0.5,           0.5),             # 31 d_weight (difficulty modulation)
+    (-0.3,           0.3),             # 32 d_decay (difficulty modulation of slow decay)
+    (-0.3,           0.3),             # 33 s_decay1 (stability modulation of fast decay)
 ]
 
 # Source of truth for the parameter count — derived from the bounds table so
@@ -138,10 +136,13 @@ def fsrs7_effective_bounds(
     lower = torch.empty(n, N_PARAMS, dtype=dtype, device=device)
     upper = torch.empty(n, N_PARAMS, dtype=dtype, device=device)
 
-    # idx 0: (s_min, init_s_max/2)
+    # idx 0..3 depend on the run's s_min / init_s_max config, so they stay
+    # explicit. idx 4.. are derived from the single source of truth
+    # FSRS7_BOUNDS_STATIC, resolving any chained "w[j]" bound to that param's
+    # per-row value. (Refactored iter-85: a duplicate static_pairs dict used to
+    # need hand-reindexing on every add/remove; now only FSRS7_BOUNDS_STATIC does.)
     lower[:, 0] = s_min
     upper[:, 0] = init_s_max / 2.0
-    # idx 1..3: chained lower
     lower[:, 1] = rows[:, 0]
     lower[:, 2] = rows[:, 1]
     lower[:, 3] = rows[:, 2]
@@ -149,34 +150,16 @@ def fsrs7_effective_bounds(
     upper[:, 2] = init_s_max
     upper[:, 3] = init_s_max
 
-    static_pairs = {
-        4: (1.0, 10.0),
-        5: (0.001, 4.0),
-        6: (0.1, 4.0),
-        7: (0.0, 4.0), 8: (0.0, 1.2), 9: (0.3, 3.0),
-        10: (0.01, 1.5), 11: (0.001, 0.9), 12: (0.1, 1.0),
-        13: (0.0, 3.5), 14: (0.0, 1.0), 15: (1.0, 7.0),
-        16: (0.0, 4.0), 17: (0.0, 2.0), 18: (0.5, 6.0),
-        19: (0.001, 1.5), 20: (0.001, 2.0), 21: (0.001, 1.0),
-        22: (0.0, 5.0), 23: (0.0, 1.0), 24: (1.0, 7.0),
-        25: (0.01, 0.25),
-        27: (0.2, 0.85),
-        29: (0.01, 1.0), 30: (0.1, 1.0),
-        31: (0.0, 0.9), 32: (0.1, 1.1),
-        33: (-0.5, 0.5),
-        34: (-0.3, 0.3),
-        35: (-0.3, 0.3),
-    }
-    for idx, (lo, hi) in static_pairs.items():
-        lower[:, idx] = lo
-        upper[:, idx] = hi
+    def _resolve(spec):
+        if isinstance(spec, str):  # chained bound like "w[25]"
+            j = int(spec[spec.index("[") + 1 : spec.index("]")])
+            return rows[:, j]
+        return float(spec)
 
-    # idx 26: decay2 — iter-54 unchained from w[25] (decay1); static [0.01, 0.95]
-    lower[:, 26] = 0.01
-    upper[:, 26] = 0.95
-    # idx 28: base2 lower chained to w[27] (base1); upper 0.99
-    lower[:, 28] = rows[:, 27]
-    upper[:, 28] = 0.99
+    for idx in range(4, N_PARAMS):
+        lo, hi = FSRS7_BOUNDS_STATIC[idx]
+        lower[:, idx] = _resolve(lo)
+        upper[:, idx] = _resolve(hi)
 
     return lower, upper
 

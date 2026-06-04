@@ -128,9 +128,10 @@ float fsrs7_stability_after_review_one_term(
     const float hard_penalty = rating == 2 ? params.hard_penalty : 1.0f;
     const float easy_bonus = rating == 4 ? params.easy_bonus : 1.0f;
 
+    // iter-85: post-lapse stability no longer carries a d^(-fail_d_exp) factor
+    // (ablated; see fsrs7.cuh). new_s_fail is now independent of difficulty.
     const float new_s_fail =
         params.fail_mult
-        * powf(fsrs_state.d, -params.fail_d_exp)
         * (powf(fsrs_state.s + 1.0f, params.fail_s_exp) - 1.0f)
         * expf((1.0f - retention) * params.fail_r_mult);
     const float pls = fminf(fsrs_state.s, new_s_fail);

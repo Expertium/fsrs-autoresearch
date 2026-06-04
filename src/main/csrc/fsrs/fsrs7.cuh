@@ -25,7 +25,14 @@ struct fsrs_stability_after_review_params_t {
     float sinc_s_exp;
     float sinc_r_mult;
     float fail_mult;
-    float fail_d_exp;
+    // iter-85 ABLATION: removed fail_d_exp (the d^(-fail_d_exp) factor on the
+    // post-lapse stability). Diagnostics flagged it as the most inert param in
+    // the model (long range_frac 0.14 / short 0.067, median ~0.005, 24%/20% of
+    // users pinned at the >=0 floor that constraint 4 enforces). The factor
+    // changed new_s_fail by <=1.2% even for the hardest cards. Post-lapse
+    // stability is now D-INDEPENDENT (constant in D => still non-increasing, so
+    // constraint 4 holds trivially). This drops one field from BOTH the long and
+    // short sub-struct instances: 36 -> 34 params.
     float fail_s_exp;
     float fail_r_mult;
     float hard_penalty;
