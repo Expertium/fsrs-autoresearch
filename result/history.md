@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_106 record(s). Generated from `history.jsonl` — do not edit by hand._
+_107 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -110,3 +110,4 @@ _106 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 104 | 2026-06-04T05:40:22 | 0.0001 | 0.32020 | 0.32023 | -0.00003 | 16,930 | 16,981 | +0.30% | rejected | Skip the difficulty mean-reversion on a lapse (rating==1); successes keep normal reversion. |
 | 105 | 2026-06-04T05:47:00 | 0.0001 | 0.32020 | 0.32008 | +0.00012 | 16,930 | 16,930 | +0.00% | accepted | Increase the iter-101 lapse-surprise coefficient from 0.5 to 1.0 (stronger R-modulation of the lapse difficulty increment). |
 | 106 | 2026-06-04T05:52:49 | 0.0001 | 0.32008 | 0.32006 | +0.00002 | 16,930 | 16,931 | +0.01% | rejected | Replace the linear lapse-surprise factor (1+1.0*(R-0.9)) with exponential exp(2.0*(R-0.9)) (always-positive, stronger spread). |
+| 107 | 2026-06-04T06:27:52 | 0.0001 | 0.32008 | 0.32430 | -0.00422 | 16,930 | 16,986 | +0.33% | rejected | On a same-day review (elapsed_time < 1 day) freeze the slow trace at its pre-review value; fast trace and difficulty still update. |
