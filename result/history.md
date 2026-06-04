@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_95 record(s). Generated from `history.jsonl` — do not edit by hand._
+_96 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -99,3 +99,4 @@ _95 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 93 | 2026-06-04T02:44:32 | 0.0001 | 0.32054 | 0.32083 | -0.00029 | 16,804 | 16,860 | +0.33% | rejected | Symmetric difficulty damping: decreases damped by (d-1)/9 toward d=1 floor, increases by (10-d)/9 toward ceiling (was (10-d)/9 both). |
 | 94 | 2026-06-04T02:50:56 | 0.0001 | 0.32054 | 0.32056 | -0.00002 | 16,804 | 16,804 | +0.00% | rejected | Reduced difficulty mean-reversion rate 0.01->0.005 (halved per-review toward-easy decay of difficulty). |
 | 95 | 2026-06-04T03:01:24 | 0.0010 | 0.32054 | 0.32052 | +0.00003 | 16,804 | 16,871 | +0.40% | rejected | Added 4th state variable: cumulative card age (days since first review); modulates slow decay by age_factor=(1+age/100)^-0.2 to flatten old-card tails. |
+| 96 | 2026-06-04T03:17:30 | 0.0001 | 0.32054 | 0.32084 | -0.00030 | 16,804 | 16,815 | +0.07% | rejected | Steepened D->S coupling curvature in s_inc: (11-d) -> 5*((11-d)/5)^1.3 (level-neutral at d=6, sharpens hard/easy tails). |
