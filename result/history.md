@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_88 record(s). Generated from `history.jsonl` — do not edit by hand._
+_89 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -92,3 +92,4 @@ _88 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 86 | 2026-06-04T01:00:43 | 0.0001 | 0.32055 | 0.32054 | +0.00001 | 16,804 | 16,804 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA2 0.9913->0.9942. |
 | 87 | 2026-06-04T01:13:41 | 0.0001 | 0.32055 | 0.32227 | -0.00172 | 16,804 | 16,891 | +0.52% | rejected | Slow trace updates from its own d-unmodulated slow-component recall r2 (new helper) instead of mixed retention. 0 params. |
 | 88 | 2026-06-04T01:23:35 | — | 0.32055 | 0.32054 | +0.00001 | 16,804 | 16,804 | +0.00% | accepted | BUGFIX (not a research proposal): corrected apply_parameter_clipper base2>=base1 chain index 28/27 -> 26/25, missed in iter-85 ablation reindex. |
+| 89 | 2026-06-04T01:31:41 | 0.0001 | 0.32054 | 0.32051 | +0.00004 | 16,804 | 16,804 | +0.00% | rejected | Raised base2 upper clamp 0.99->0.997 (slow-curve base; 10.5% of users were pinned at ceiling). 0 params. |
