@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_130 record(s). Generated from `history.jsonl` — do not edit by hand._
+_131 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -134,3 +134,4 @@ _130 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 128 | 2026-06-04T10:36:03 | 0.0001 | 0.32008 | 0.32022 | -0.00014 | 16,930 | 16,930 | +0.00% | rejected | Add a label-smoothing term to the BCE training loss (eps=0.01): smoothed targets 0.99/0.01. |
 | 129 | 2026-06-04T10:39:39 | 0.0001 | 0.32008 | 0.32080 | -0.00072 | 16,930 | 16,930 | +0.00% | rejected | Add a small entropy-penalty (confidence-sharpening) term to BCE: dloss_dp -= 0.05*logit(p). |
 | 130 | 2026-06-04T11:00:14 | 0.0001 | 0.32008 | 0.32594 | -0.00587 | 16,930 | 16,903 | -0.16% | rejected | Curve-family test: replace the slow forgetting-curve power-law with an exponential exp(-decay2_mag*t/s); base2 orphaned. |
+| 131 | 2026-06-04T11:49:32 | 0.0001 | 0.32008 | 0.32008 | -0.00000 | 16,930 | 16,930 | +0.00% | rejected | Lower the iter-97 post-lapse fast-reset cap fraction from 0.8 to 0.7 (line-search between 0.8 and iter-119 0.6). |
