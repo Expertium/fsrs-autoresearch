@@ -132,7 +132,21 @@ float fsrs7_forgetting_curve(
     const float weight1 = fsrs_params.base_weight1 * powf(state.s_fast, -fsrs_params.s_weight_power1);
     const float weight2 = fsrs_params.base_weight2 * powf(state.s, fsrs_params.s_weight_power2)
         * expf(fsrs_params.d_weight * (state.d - 5.0f));
-    const float retention = (weight1 * r1 + weight2 * r2) / (weight1 + weight2);
+
+    // iter-133: sanctioned t->0+ JUMP for sub-day forgetting. Constraint 12 EXPLICITLY
+    // permits the curve to approach a limit < 1 as delta_t -> 0+ while we define
+    // p(0):=1 ("this lets a curve drop sharply right after a review ... helpful for
+    // sub-day forgetting"). The current curve doesn't use it -- r1 ramps smoothly from
+    // 1. Discount the FAST component r1 by a fixed 0.9 in the CURVE ONLY (the fast-trace
+    // UPDATE in fsrs7_step keeps the un-discounted r1, so this is purely a prediction
+    // reshape, not a dynamics change). weight1 dominates at small s_fast (freshly
+    // reviewed cards), so the jump self-localizes to the sub-day regime where the
+    // short_term-bucket loss lives; at long t, r1 -> 0 so the discount vanishes.
+    // Convexity/monotonicity preserved (positive-constant scaling of a convex
+    // decreasing component); endpoints p(0):=1, p(inf)->0 and p in [0,1] all hold.
+    // 0 new params. Tests whether the model is OVER-confident on sub-day reviews.
+    constexpr float subday_jump = 0.93f;
+    const float retention = (weight1 * subday_jump * r1 + weight2 * r2) / (weight1 + weight2);
 
     return 1e-5f + (1.0f - 2e-5f) * retention;
 }

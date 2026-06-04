@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_132 record(s). Generated from `history.jsonl` — do not edit by hand._
+_135 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -136,3 +136,6 @@ _132 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 130 | 2026-06-04T11:00:14 | 0.0001 | 0.32008 | 0.32594 | -0.00587 | 16,930 | 16,903 | -0.16% | rejected | Curve-family test: replace the slow forgetting-curve power-law with an exponential exp(-decay2_mag*t/s); base2 orphaned. |
 | 131 | 2026-06-04T11:49:32 | 0.0001 | 0.32008 | 0.32008 | -0.00000 | 16,930 | 16,930 | +0.00% | rejected | Lower the iter-97 post-lapse fast-reset cap fraction from 0.8 to 0.7 (line-search between 0.8 and iter-119 0.6). |
 | 132 | 2026-06-04T12:21:22 | 0.0001 | 0.32008 | 0.32006 | +0.00001 | 16,930 | 16,943 | +0.08% | rejected | Add a success-side surprise term to the difficulty update: delta_d -= 0.5*(1-retention) for recalls (rating>1). |
+| 133 | 2026-06-04T12:34:42 | 0.0001 | 0.32008 | 0.32000 | +0.00008 | 16,930 | 16,938 | +0.05% | rejected | Multiply the fast curve component r1 by a fixed 0.9 in the forgetting curve only (sanctioned t->0+ jump for sub-day forgetting). |
+| 134 | 2026-06-04T12:38:26 | 0.0001 | 0.32008 | 0.32019 | -0.00011 | 16,930 | 16,938 | +0.05% | rejected | Line-search the sub-day jump: set the fast-component discount to a fixed 0.8 (was 0.9 in iter-133). |
+| 135 | 2026-06-04T12:47:41 | 0.0001 | 0.32008 | 0.31997 | +0.00011 | 16,930 | 16,938 | +0.05% | accepted | Sub-day jump: multiply the fast curve component r1 by a fixed 0.93 in the forgetting curve only (line-searched optimum). |
