@@ -181,7 +181,7 @@ clipper, diagnostics table, and this section).
 | `w[23..30]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
-**Dual-trace memory (introduced iter-43), 34 params; current champion iter-85.**
+**Dual-trace memory (introduced iter-43), 34 params; current champion iter-97.**
 iter-40 added a 2nd stability state `s_fast` (fast trace) alongside `s` (slow
 trace); each drives its own forgetting-curve component and updates via the
 short-/long-term stability dynamics respectively. This **removed the old
@@ -198,7 +198,14 @@ trace still updates from the mixed retention. State variables: **3** (`s`, `d`,
 long `w[11]` **and** short `w[20]` at once. Post-lapse stability (`new_s_fail`) is
 now **difficulty-independent** (the exponent was the most inert param in the model,
 median ~0.005, a quarter of users pinned at its `>=0` floor). 36→34 params; the two
-stability-update blocks are now **8 params each**.
+stability-update blocks are now **8 params each**. **iter-97 (post-lapse relearning,
+current champion):** on a lapse (`rating==1`) the fast trace is capped at
+`0.8 * post-lapse-slow-stability` (the same 0.8 init fraction) in `fsrs7_step` —
+modeling relearning-from-scratch and restoring the `fast <= 0.8*slow` invariant that
+`fsrs7_init` sets but that the short-term `fail` dynamics had let drift above. 0 new
+params; D-independent (constraint 4) and the `min` only lowers the lapse value
+(constraint 3). Improved by_user +1.70e-4 (short_term bucket −0.00048, Again −0.00062,
+all classes better): a systematic, population-wide post-lapse over-retention fix.
 
 Training: 8 epochs, batch 1024, Adam, lr 3e-2, betas (0.55, 0.85).
 Loss = log-loss(per-review) + sched_penalty_1 + sched_penalty_2 + L2-to-defaults.
@@ -504,7 +511,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,804** (iter-85). (History:
+**Current champion complexity baseline: 16,865** (iter-97). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -513,8 +520,10 @@ parsimony edits since then drifted it to 16,756; iter-71's
 empirical-Bayes anchor plumbing (+3 net → 16,798); the 2026-06-03 `compute_seconds`
 train+eval timer in `run.py::main()` — the speed axis for the epoch×batch grid —
 added +29 → 16,798 → 16,827; iter-85 ablated the two `fail_d_exp` params (removed
-the `d^(-fail_d_exp)` factor + struct field + 8 constant-tuple literals) → **16,804**.
-The +5% gate is measured against this current baseline.)
+the `d^(-fail_d_exp)` factor + struct field + 8 constant-tuple literals) → **16,804**;
+iter-97 added the post-lapse fast-trace reset in `fsrs7_step` (a `rating==1` ternary
++1 cyclomatic·40 + `fminf` tokens) → **16,865**. The +5% gate is measured against this
+current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 

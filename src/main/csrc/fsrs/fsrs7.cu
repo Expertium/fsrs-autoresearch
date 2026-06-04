@@ -235,5 +235,17 @@ fsrs_state_t fsrs7_step(
 
     const float new_d = fsrs7_next_d(fsrs_params, fsrs_state, rating);
 
-    return fsrs7_clamp_state(new_s_slow, new_d, new_s_fast);
+    // iter-97: post-lapse fast-trace reset. On a lapse (rating==1) the short-term
+    // store should relearn from scratch, so cap the post-lapse fast stability at
+    // the init fraction (0.8) of the *post-lapse slow* stability -- restoring the
+    // fast<=0.8*slow invariant that fsrs7_init establishes and that diverges across
+    // reviews. The min only LOWERS s_fast on a lapse, so the lapse value stays <=
+    // the success values (constraint 3 holds); both pls are D-independent post
+    // iter-85, so it is D-independent (constraint 4 holds). 0 new params. Targets
+    // the relearning sub-day reviews right after a lapse (short_term bucket).
+    const float new_s_fast_relearn = (rating == 1)
+        ? fminf(new_s_fast, 0.8f * new_s_slow)
+        : new_s_fast;
+
+    return fsrs7_clamp_state(new_s_slow, new_d, new_s_fast_relearn);
 }
