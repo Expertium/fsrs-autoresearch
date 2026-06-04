@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_93 record(s). Generated from `history.jsonl` — do not edit by hand._
+_94 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -97,3 +97,4 @@ _93 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 91 | 2026-06-04T01:48:44 | 0.0001 | 0.32054 | 0.32051 | +0.00004 | 16,804 | 16,804 | +0.00% | rejected | Lowered base1 (fast-curve base) floor 0.2->0.1 for steeper sub-day forgetting (short_term bucket). 0 params. |
 | 92 | 2026-06-04T02:32:06 | 0.0001 | 0.32055 | 0.32054 | +0.00001 | 16,804 | 16,804 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA2 0.9913->0.9942. |
 | 93 | 2026-06-04T02:44:32 | 0.0001 | 0.32054 | 0.32083 | -0.00029 | 16,804 | 16,860 | +0.33% | rejected | Symmetric difficulty damping: decreases damped by (d-1)/9 toward d=1 floor, increases by (10-d)/9 toward ceiling (was (10-d)/9 both). |
+| 94 | 2026-06-04T02:50:56 | 0.0001 | 0.32054 | 0.32056 | -0.00002 | 16,804 | 16,804 | +0.00% | rejected | Reduced difficulty mean-reversion rate 0.01->0.005 (halved per-review toward-easy decay of difficulty). |
