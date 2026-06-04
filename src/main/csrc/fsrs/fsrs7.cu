@@ -61,7 +61,11 @@ float fsrs7_next_d(
     // untouched, so constraint 4 (higher D -> S non-increasing) still holds. The
     // current review's stability used the OLD D, so constraints 2/3 are unaffected.
     if (rating == 1) {
-        delta_d *= 1.0f + 0.5f * (retention - 0.9f);
+        // iter-105: probe a STRONGER surprise spread (coef 0.5 -> 1.0). iter-101's
+        // 0.5 was an arbitrary guess; if the lapse-surprise lever has more by_user
+        // juice, more R-spread (factor in [0.1,1.1]) should beat 0.5. Still positive
+        // (lapse raises D), ordering preserved.
+        delta_d *= 1.0f + 1.0f * (retention - 0.9f);
     }
     const float new_d = fsrs_state.d + fsrs7_linear_damping(delta_d, fsrs_state.d);
     return fsrs7_mean_reversion(fsrs7_initial_difficulty(fsrs_params, 4.0f), new_d);

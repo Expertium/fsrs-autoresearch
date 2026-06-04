@@ -181,7 +181,7 @@ clipper, diagnostics table, and this section).
 | `w[23..30]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
-**Dual-trace memory (introduced iter-43), 34 params; current champion iter-101.**
+**Dual-trace memory (introduced iter-43), 34 params; current champion iter-105.**
 iter-40 added a 2nd stability state `s_fast` (fast trace) alongside `s` (slow
 trace); each drives its own forgetting-curve component and updates via the
 short-/long-term stability dynamics respectively. This **removed the old
@@ -206,10 +206,13 @@ modeling relearning-from-scratch and restoring the `fast <= 0.8*slow` invariant 
 params; D-independent (constraint 4) and the `min` only lowers the lapse value
 (constraint 3). Improved by_user +1.70e-4 (short_term bucket −0.00048, Again −0.00062,
 all classes better): a systematic, population-wide post-lapse over-retention fix.
-**iter-101 (surprise-weighted lapse difficulty, current champion):** on a lapse
-(`rating==1`) the difficulty increment `delta_d` is scaled by `(1 + 0.5*(retention − 0.9))`
+**iter-101 + iter-105 (surprise-weighted lapse difficulty, current champion):** on a lapse
+(`rating==1`) the difficulty increment `delta_d` is scaled by `(1 + 1.0*(retention − 0.9))`
 in `fsrs7_next_d` — a lapse on a card the model expected to recall (high `R`) raises `D`
-more; an overdue lapse (low `R`, failure expected) raises it less. 0 new trainable params
+more; an overdue lapse (low `R`, failure expected) raises it less. (iter-101 introduced this
+at coefficient 0.5, +1.79e-4; iter-105 found 0.5 under-shot and raised it to **1.0**, +1.18e-4
+more, a clean across-the-board win — surprise-weighting is *selective*, so more spread sharpens
+D-discrimination without over-sticking D on recoverable cards.) 0 new trainable params
 (the 0.5 is hardcoded; factor ∈ [0.55, 1.05] always positive ⇒ lapse still raises `D`,
 ordering preserved). Only reshapes the **D-update** — the D→S map is untouched (constr 4),
 the current review's stability used the old `D` (constr 2/3), the curve is untouched
@@ -524,7 +527,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,930** (iter-101). (History:
+**Current champion complexity baseline: 16,930** (iter-105; iter-101's value, unchanged by the iter-105 literal swap). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -537,8 +540,9 @@ the `d^(-fail_d_exp)` factor + struct field + 8 constant-tuple literals) → **1
 iter-97 added the post-lapse fast-trace reset in `fsrs7_step` (a `rating==1` ternary
 +1 cyclomatic·40 + `fminf` tokens) → **16,865**; iter-101 added the surprise-weighted
 lapse-difficulty branch in `fsrs7_next_d` (a `rating==1` `if` +1 cyclomatic·40 + the
-`retention` arg/expr tokens) → **16,930**. The +5% gate is measured against this
-current baseline.)
+`retention` arg/expr tokens) → **16,930**; iter-105 raised that branch's coefficient
+0.5→1.0 (literal swap, no token-count change) → **16,930**. The +5% gate is measured
+against this current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 
