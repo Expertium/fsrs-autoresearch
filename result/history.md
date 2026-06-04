@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_108 record(s). Generated from `history.jsonl` — do not edit by hand._
+_109 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -112,3 +112,4 @@ _108 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 106 | 2026-06-04T05:52:49 | 0.0001 | 0.32008 | 0.32006 | +0.00002 | 16,930 | 16,931 | +0.01% | rejected | Replace the linear lapse-surprise factor (1+1.0*(R-0.9)) with exponential exp(2.0*(R-0.9)) (always-positive, stronger spread). |
 | 107 | 2026-06-04T06:27:52 | 0.0001 | 0.32008 | 0.32430 | -0.00422 | 16,930 | 16,986 | +0.33% | rejected | On a same-day review (elapsed_time < 1 day) freeze the slow trace at its pre-review value; fast trace and difficulty still update. |
 | 108 | 2026-06-04T06:36:35 | 0.0001 | 0.32008 | 0.32021 | -0.00014 | 16,930 | 16,950 | +0.12% | rejected | Down-weight the slow forgetting-curve component for low-stability (fresh) cards via a (1-exp(-s/0.1)) consolidation-onset gate on weight2. |
+| 109 | 2026-06-04T07:03:39 | 0.0001 | 0.32008 | 0.32007 | +0.00001 | 16,930 | 16,930 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA2 0.9913->0.9942. |
