@@ -132,7 +132,24 @@ float fsrs7_forgetting_curve(
     const float weight1 = fsrs_params.base_weight1 * powf(state.s_fast, -fsrs_params.s_weight_power1);
     const float weight2 = fsrs_params.base_weight2 * powf(state.s, fsrs_params.s_weight_power2)
         * expf(fsrs_params.d_weight * (state.d - 5.0f));
-    const float retention = (weight1 * r1 + weight2 * r2) / (weight1 + weight2);
+
+    // iter-138: COMPLIANT sub-day forgetting drop. iter-135's discontinuous jump
+    // (r1 *= 0.93 for all t>0) won +1.073e-4 but was vetoed -- the curve must GENUINELY
+    // start at p(0)=1 and be continuous (user 2026-06-04). Replace the jump with a
+    // CONTINUOUS ramp on the FAST component r1 (curve only; the fast-trace UPDATE in
+    // fsrs7_step keeps the un-discounted r1, so dynamics are unchanged):
+    //   g(t) = floor + (1-floor)*exp(-t/tau),   g(0)=1 exactly, g(inf)->floor.
+    // g(0)=1 so r1(0)*g(0)=1 (curve starts at 100%, continuous); g drops over a
+    // ~few-minute tau to a 0.93 floor (the jump's line-searched optimum), so reviews
+    // beyond ~15 min get ~the jump's 0.93 discount while 1-min reviews get a smaller
+    // discount ramping from 1 (fresher memory -- if anything more correct). g is convex
+    // decreasing, so g*r1 is convex decreasing (product of convex-decreasing positives:
+    // (g r1)'' = g'' r1 + 2 g' r1' + g r1'' > 0) and the mixture stays convex/monotone
+    // with p(0)=1 (continuous) and p(inf)->0 (r1->0). 0 new trainable params.
+    constexpr float subday_floor = 0.85f;  // line-searched (0.93/0.91/0.85/0.78 bracket the peak)
+    constexpr float subday_tau = 0.003f;  // days (~4.3 min ramp; 0.003 beat 0.006)
+    const float subday = subday_floor + (1.0f - subday_floor) * expf(-elapsed_time / subday_tau);
+    const float retention = (weight1 * subday * r1 + weight2 * r2) / (weight1 + weight2);
 
     return 1e-5f + (1.0f - 2e-5f) * retention;
 }

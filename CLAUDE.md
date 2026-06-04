@@ -181,7 +181,7 @@ clipper, diagnostics table, and this section).
 | `w[23..30]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
-**Dual-trace memory (introduced iter-43), 34 params; current champion iter-105.**
+**Dual-trace memory (introduced iter-43), 34 params; current champion iter-138.**
 iter-40 added a 2nd stability state `s_fast` (fast trace) alongside `s` (slow
 trace); each drives its own forgetting-curve component and updates via the
 short-/long-term stability dynamics respectively. This **removed the old
@@ -222,6 +222,26 @@ trainable-`d_surprise` iters 36/37/47/58 hit at ~1.5e-5: the trainable param was
 (light users pin it at 0 → by_review only); fixing the coefficient forces the coupling on
 ALL users → ~10× the by_user gain. Validates a retry pattern: revisit walled trainable-param
 mechanisms as fixed-formula changes.**
+
+**iter-138 (continuous sub-day forgetting drop, CURRENT CHAMPION — crosses the 0.31995
+finishing line, by_user 0.31991).** In `fsrs7_forgetting_curve` the FAST component `r1` is
+multiplied — **in the curve only**; the fast-trace *update* in `fsrs7_step` keeps the
+un-discounted `r1`, so the dynamics are unchanged — by a continuous ramp
+`g(delta_t) = 0.85 + 0.15·exp(−delta_t / 0.003)`. `g(0)=1` **exactly**, so the curve still
+starts at `p(0)=1` and is continuous (constraints 11/12); over a ~4-min timescale `g` falls to
+a 0.85 floor, so sub-day reviews beyond ~15 min get a ~15% discount on the fast component while
+1-minute reviews get only a small discount (ramping from 1 — fresher memory). `g` is convex
+decreasing, so `g·r1` is convex decreasing ((g·r1)″ = g″r1 + 2g′r1′ + g·r1″ > 0) and the
+mixture stays convex/monotone with both endpoints intact. This is the **constraint-compliant
+successor** to a discontinuous "jump" (`r1 *= 0.93` for all `t>0`, iter-135) that was tried and
+**reverted by the user** because it dipped `p` below 1 as `delta_t→0⁺`; the continuous ramp is
+both compliant AND **better** (+1.639e-4 vs the jump's +1.073e-4 — the flat jump over-penalised
+the freshest reviews). 0 new trainable params (floor/τ hardcoded). by_user-concentrated gain
+(light users are L2-pinned to the default and cannot fit the sub-day over-confidence away).
+floor line-searched (0.93→+1.355e-4, 0.91→+1.476e-4, **0.85→+1.629e-4 peak**, 0.78→overshoot);
+τ 0.003 beat 0.006. **Validates a general lever: the model is systematically over-confident on
+sub-day reviews at the default parameterization, and a fixed, population-wide curve-shape
+correction is a real by_user lever.**
 
 Training: 8 epochs, batch 1024, Adam, lr 3e-2, betas (0.55, 0.85).
 Loss = log-loss(per-review) + sched_penalty_1 + sched_penalty_2 + L2-to-defaults.
@@ -527,7 +547,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,930** (iter-105; iter-101's value, unchanged by the iter-105 literal swap). (History:
+**Current champion complexity baseline: 16,964** (iter-138 continuous sub-day ramp; +34 over iter-105's 16,930 for the `subday`/`subday_floor`/`subday_tau` expression in `fsrs7_forgetting_curve`). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -541,8 +561,11 @@ iter-97 added the post-lapse fast-trace reset in `fsrs7_step` (a `rating==1` ter
 +1 cyclomatic·40 + `fminf` tokens) → **16,865**; iter-101 added the surprise-weighted
 lapse-difficulty branch in `fsrs7_next_d` (a `rating==1` `if` +1 cyclomatic·40 + the
 `retention` arg/expr tokens) → **16,930**; iter-105 raised that branch's coefficient
-0.5→1.0 (literal swap, no token-count change) → **16,930**. The +5% gate is measured
-against this current baseline.)
+0.5→1.0 (literal swap, no token-count change) → **16,930**; iter-138 added the continuous
+sub-day ramp (`subday_floor` + `subday_tau` constants + the `subday` ramp expression and the
+`* subday *` factor in `fsrs7_forgetting_curve`) → **16,964**. (Note: iter-135's discontinuous
+jump reached 16,938 but was reverted; the continuous ramp is the live champion.) The +5% gate
+is measured against this current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 
