@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_111 record(s). Generated from `history.jsonl` — do not edit by hand._
+_112 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -115,3 +115,4 @@ _111 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 109 | 2026-06-04T07:03:39 | 0.0001 | 0.32008 | 0.32007 | +0.00001 | 16,930 | 16,930 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA2 0.9913->0.9942. |
 | 110 | 2026-06-04T07:11:39 | 0.0001 | 0.32008 | 0.32008 | +0.00000 | 16,930 | 16,946 | +0.09% | rejected | On a successful review (rating>1) subtract 1.0*max(0.9-retention,0) from delta_d, so overdue (low-R) recalls lower difficulty (additive, affects Good). |
 | 111 | 2026-06-04T07:20:39 | 0.0001 | 0.32008 | 0.32023 | -0.00015 | 16,930 | 17,088 | +0.93% | rejected | On a same-day (elapsed_time<1d) successful review, amplify the slow-trace growth increment by 1.5x (the inverse of iter-107 freeze). |
+| 112 | 2026-06-04T07:38:40 | 0.0010 | 0.32008 | 0.32051 | -0.00044 | 16,930 | 17,028 | +0.58% | rejected | Add a 4th state variable lapse_recency (set 1 on a lapse, halved each review) that steepens the fast forgetting-curve component during relearning. |
