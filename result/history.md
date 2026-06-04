@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_98 record(s). Generated from `history.jsonl` — do not edit by hand._
+_99 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -102,3 +102,4 @@ _98 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 96 | 2026-06-04T03:17:30 | 0.0001 | 0.32054 | 0.32084 | -0.00030 | 16,804 | 16,815 | +0.07% | rejected | Steepened D->S coupling curvature in s_inc: (11-d) -> 5*((11-d)/5)^1.3 (level-neutral at d=6, sharpens hard/easy tails). |
 | 97 | 2026-06-04T03:23:44 | 0.0001 | 0.32054 | 0.32037 | +0.00017 | 16,804 | 16,865 | +0.36% | accepted | On a lapse, cap the fast-trace post-lapse stability at 0.8*post-lapse slow stability (restoring fast<slow invariant, relearn-from-scratch). |
 | 98 | 2026-06-04T03:56:42 | 0.0001 | 0.32038 | 0.32037 | +0.00000 | 16,865 | 16,865 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate PENALTY_W_L2 0.3333->0.2222. |
+| 99 | 2026-06-04T04:02:40 | 0.0001 | 0.32037 | 0.32034 | +0.00003 | 16,865 | 16,865 | +0.00% | rejected | Lowered post-lapse fast-trace cap fraction 0.8->0.5 (relearning treated as more fragile than fresh learning). |
