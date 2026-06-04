@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_85 record(s). Generated from `history.jsonl` — do not edit by hand._
+_86 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -89,3 +89,4 @@ _85 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 83 | 2026-06-03T22:01:43 | 0.0001 | 0.32056 | 0.32056 | -0.00001 | 16,827 | 16,827 | +0.00% | rejected | Changed difficulty mean-reversion target from D0(rating=4, easiest) to D0(rating=3, Good) in fsrs7_next_d; 0 params. |
 | 84 | 2026-06-04T00:14:50 | 0.0002 | 0.32056 | 0.32056 | -0.00001 | 16,827 | 16,836 | +0.05% | rejected | Added trainable per-user difficulty mean-reversion target w[36] (init 4.0), replacing hardcoded rating-4 anchor in fsrs7_next_d. |
 | 85 | 2026-06-04T00:31:07 | 0.0000 | 0.32056 | 0.32055 | +0.00001 | 16,827 | 16,804 | -0.14% | accepted | Ablated failure-path difficulty exponent fail_d_exp (w[11], w[20]); post-lapse stability now D-independent. 36->34 params. |
+| 86 | 2026-06-04T01:00:43 | 0.0001 | 0.32055 | 0.32054 | +0.00001 | 16,804 | 16,804 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA2 0.9913->0.9942. |
