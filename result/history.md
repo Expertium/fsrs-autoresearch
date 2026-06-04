@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_90 record(s). Generated from `history.jsonl` — do not edit by hand._
+_91 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -94,3 +94,4 @@ _90 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 88 | 2026-06-04T01:23:35 | — | 0.32055 | 0.32054 | +0.00001 | 16,804 | 16,804 | +0.00% | accepted | BUGFIX (not a research proposal): corrected apply_parameter_clipper base2>=base1 chain index 28/27 -> 26/25, missed in iter-85 ablation reindex. |
 | 89 | 2026-06-04T01:31:41 | 0.0001 | 0.32054 | 0.32051 | +0.00004 | 16,804 | 16,804 | +0.00% | rejected | Raised base2 upper clamp 0.99->0.997 (slow-curve base; 10.5% of users were pinned at ceiling). 0 params. |
 | 90 | 2026-06-04T01:41:42 | 0.0002 | 0.32054 | 0.32050 | +0.00005 | 16,804 | 16,834 | +0.18% | rejected | Added s_decay2 (S-modulation of slow decay, symmetric to s_decay1); factor2 now log-space. +1 param 34->35. |
+| 91 | 2026-06-04T01:48:44 | 0.0001 | 0.32054 | 0.32051 | +0.00004 | 16,804 | 16,804 | +0.00% | rejected | Lowered base1 (fast-curve base) floor 0.2->0.1 for steeper sub-day forgetting (short_term bucket). 0 params. |
