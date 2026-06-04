@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_105 record(s). Generated from `history.jsonl` — do not edit by hand._
+_106 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -109,3 +109,4 @@ _105 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 103 | 2026-06-04T05:31:33 | 0.0001 | 0.32020 | 0.32018 | +0.00001 | 16,930 | 16,930 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA2 0.9913->0.9869. |
 | 104 | 2026-06-04T05:40:22 | 0.0001 | 0.32020 | 0.32023 | -0.00003 | 16,930 | 16,981 | +0.30% | rejected | Skip the difficulty mean-reversion on a lapse (rating==1); successes keep normal reversion. |
 | 105 | 2026-06-04T05:47:00 | 0.0001 | 0.32020 | 0.32008 | +0.00012 | 16,930 | 16,930 | +0.00% | accepted | Increase the iter-101 lapse-surprise coefficient from 0.5 to 1.0 (stronger R-modulation of the lapse difficulty increment). |
+| 106 | 2026-06-04T05:52:49 | 0.0001 | 0.32008 | 0.32006 | +0.00002 | 16,930 | 16,931 | +0.01% | rejected | Replace the linear lapse-surprise factor (1+1.0*(R-0.9)) with exponential exp(2.0*(R-0.9)) (always-positive, stronger spread). |
