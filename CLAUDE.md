@@ -527,7 +527,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,938** (iter-135 sub-day curve jump; +8 over iter-105's 16,930 for the `subday_jump` discount on the fast curve component). (History:
+**Current champion complexity baseline: 16,930** (iter-105; iter-101's value, unchanged by the iter-105 literal swap). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -541,10 +541,8 @@ iter-97 added the post-lapse fast-trace reset in `fsrs7_step` (a `rating==1` ter
 +1 cyclomatic·40 + `fminf` tokens) → **16,865**; iter-101 added the surprise-weighted
 lapse-difficulty branch in `fsrs7_next_d` (a `rating==1` `if` +1 cyclomatic·40 + the
 `retention` arg/expr tokens) → **16,930**; iter-105 raised that branch's coefficient
-0.5→1.0 (literal swap, no token-count change) → **16,930**; iter-135 added the
-`subday_jump` constant + the `* subday_jump *` factor in `fsrs7_forgetting_curve`
-(a constraint-12-sanctioned t→0⁺ jump: r1 discounted 0.93 in the curve only) → **16,938**.
-The +5% gate is measured against this current baseline.)
+0.5→1.0 (literal swap, no token-count change) → **16,930**. The +5% gate is measured
+against this current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 
