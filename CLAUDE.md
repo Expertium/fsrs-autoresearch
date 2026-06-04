@@ -809,6 +809,19 @@ change-log, not post-hoc storytelling.
 
 ## Things to be careful about
 
+- **The user (Andrew) edits repo files directly — and those edits must be
+  preserved and committed, never reverted (user directive 2026-06-04).** Andrew
+  sometimes hand-edits files himself (e.g. `README.md`, `CLAUDE.md`,
+  `src/autoresearch/plot_history.py`). When such an edit shows up as an
+  uncommitted change in `git status`, it is **intentional**: do **not** revert,
+  `git checkout`, stash, or overwrite it on your own initiative, and do **not**
+  leave it dangling/excluded indefinitely — **commit it** (a dedicated commit is
+  fine, or fold it into related work) so the tree stays clean for `hp_tune`.
+  When reverting a *rejected iteration*, still list your own mutation files
+  explicitly (never a blanket `git checkout -- .`) so you never clobber one of
+  his edits. The one editing restriction that remains: don't *author* changes to
+  `plot_history.py` yourself unless he explicitly asks (see its "Hands off"
+  note) — but his edits to it still get committed, not reverted.
 - You can modify src/main/csrc/fsrs, just not other files in src/main/csrc. Don't worry about wasting a few more minutes if it means big log loss wins
 - `WRITE_RESULT = False` in `src/main/config.py:20` by default — flip to
   True only when you actually want per-user output (slow).
