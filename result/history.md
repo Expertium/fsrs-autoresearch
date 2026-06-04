@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_120 record(s). Generated from `history.jsonl` — do not edit by hand._
+_121 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -124,3 +124,4 @@ _120 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 118 | 2026-06-04T08:51:23 | 0.0001 | 0.32008 | 0.32004 | +0.00004 | 16,930 | 16,961 | +0.18% | rejected | Strengthen the D-dependent fast-init fraction to min(0.99, 0.8*exp(-0.12*(D-5))) (larger k=0.12, capped easy side). |
 | 119 | 2026-06-04T09:04:50 | 0.0001 | 0.32008 | 0.32006 | +0.00002 | 16,930 | 16,930 | +0.00% | rejected | Lower the iter-97 post-lapse fast-trace reset cap fraction from 0.8 to 0.6 (sharper relearning forgetting). |
 | 120 | 2026-06-04T09:11:41 | 0.0001 | 0.32008 | 0.32062 | -0.00054 | 16,930 | 16,945 | +0.09% | rejected | Replace the SInc difficulty factor (11-d) with 10*((11-d)/10)^1.5 (steeper stability-gain penalty for hard cards). |
+| 121 | 2026-06-04T09:21:18 | 0.0001 | 0.32008 | 0.32043 | -0.00035 | 16,930 | 16,947 | +0.10% | rejected | Make the difficulty-update increment nonlinear in rating via \|rating-3\|^1.5 (Again/failures raise D ~1.4x more). |
