@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_125 record(s). Generated from `history.jsonl` — do not edit by hand._
+_126 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -129,3 +129,4 @@ _125 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 123 | 2026-06-04T09:46:57 | 0.0001 | 0.32008 | 0.32019 | -0.00011 | 16,930 | 16,940 | +0.06% | rejected | Re-introduce a fixed post-lapse difficulty factor new_s_fail *= d^(-0.1) (harder cards retain less after a lapse). |
 | 124 | 2026-06-04T09:52:57 | 0.0001 | 0.32008 | 0.32013 | -0.00006 | 16,930 | 16,943 | +0.08% | rejected | Floor the long-trace Easy stability bonus (easy_bonus) at 1.1, forced on all users (lift L2-walled light users). |
 | 125 | 2026-06-04T10:04:34 | 0.0001 | 0.32008 | 0.32005 | +0.00002 | 16,930 | 16,930 | +0.00% | rejected | Set the lapse-surprise pivot to 1.0 so the lapse difficulty-increment factor equals retention (R). |
+| 126 | 2026-06-04T10:11:04 | 0.0001 | 0.32008 | 0.33130 | -0.01122 | 16,930 | 16,930 | +0.00% | rejected | Clamp the training-loss gradient \|dloss_dp\| to <=10 (robust/pseudo-Huber loss down-weighting confident-wrong outliers). |
