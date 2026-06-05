@@ -182,24 +182,26 @@ clipper, diagnostics table, and this section).
 |---|---|
 | `w[0..3]` | Initial stability per rating (Again/Hard/Good/Easy) |
 | `w[4..6]` | Difficulty |
-| `w[7..14]` | Long-term stability update (8 params) — drives the **slow** trace `s` |
-| `w[15..22]` | Short-term stability update (8 params) — drives the **fast** trace `s_fast` |
-| `w[23..30]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
-| `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
+| `w[7..14]` | Long-term stability update (8 params) — drives the **long** trace `s_long` |
+| `w[15..22]` | Short-term stability update (8 params) — drives the **short** trace `s_short` |
+| `w[23..30]` | 8-param forgetting curve (short component keyed to `s_short`, long to `s_long`) |
+| `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1). **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
 
 **Dual-trace memory (introduced iter-43), 34 params; current champion iter-105.**
-iter-40 added a 2nd stability state `s_fast` (fast trace) alongside `s` (slow
+iter-40 added a 2nd stability state `s_short` (short trace) alongside `s_long` (long
 trace); each drives its own forgetting-curve component and updates via the
 short-/long-term stability dynamics respectively. This **removed the old
 long/short transition blend** (its 2 params, formerly `w[25..26]`, were deleted
-in iter-43 — that's why the curve params shifted down by 2). The fast trace's
+in iter-43 — that's why the curve params shifted down by 2). The short trace's
 initial stability is **hardcoded** at `0.8 * initial_stability` (a per-user
 multiplier didn't earn its param: iter-69 trainable near-miss, iter-70 confirmed
-0.8 is the by_user optimum). **iter-71 (trace-specific fast learning):** the fast
-trace now updates from the **fast component's own recall `r1`** (the
-`fsrs7_fast_component_recall` helper), not the mixed-curve retention; the slow
-trace still updates from the mixed retention. State variables: **3** (`s`, `d`,
-`s_fast`). **iter-85 (ablation):** removed the failure-path difficulty exponent
+0.8 is the by_user optimum). **iter-71 (trace-specific short learning):** the short
+trace now updates from the **short component's own recall `r1`** (the
+`fsrs7_short_component_recall` helper), not the mixed-curve retention; the long
+trace still updates from the mixed retention. State variables: **3** (`s_long`, `d`,
+`s_short`). **(2026-06-05 cosmetic rename:** the two stability traces were `s` /
+`s_fast` before; now `s_long` / `s_short`. Confined to `fsrs7.cu`/`fsrs7.cuh`; a
+pure no-op.) **iter-85 (ablation):** removed the failure-path difficulty exponent
 `fail_d_exp` — a single field in the *shared* stability sub-struct, so it was the
 long `w[11]` **and** short `w[20]` at once. Post-lapse stability (`new_s_fail`) is
 now **difficulty-independent** (the exponent was the most inert param in the model,
@@ -559,7 +561,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,930** (iter-105; iter-138's continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the user 2026-06-05 for being "ugly", so the live baseline is back to iter-105's 16,930). (History:
+**Current champion complexity baseline: 16,932** (iter-105 + the 2026-06-05 cosmetic refactor: +2 over 16,930 for the three subtraction literals that shift d_weight/d_decay/s_decay1 to non-negative bounds in `fsrs7_forgetting_curve`/`fsrs7_short_component_recall`; the `s`→`s_long`/`s_fast`→`s_short` rename is token-count-neutral. iter-138's continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the user 2026-06-05 for being "ugly"). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -576,7 +578,8 @@ lapse-difficulty branch in `fsrs7_next_d` (a `rating==1` `if` +1 cyclomatic·40 
 0.5→1.0 (literal swap, no token-count change) → **16,930** (current champion, iter-105). iter-138
 briefly added the continuous sub-day ramp (`subday_floor` + `subday_tau` constants + the `subday`
 ramp expression and the `* subday *` factor in `fsrs7_forgetting_curve`) → 16,964, but the user
-REVERTED it 2026-06-05 (aesthetic — "it's ugly"), so the live baseline is back to **16,930**.
+REVERTED it 2026-06-05 (aesthetic — "it's ugly"), so the live baseline returned to iter-105's
+16,930, then the 2026-06-05 cosmetic non-negative-param refactor nudged it to **16,932** (+2).
 (iter-135's discontinuous jump reached 16,938 and was also reverted.) The +5% gate is measured
 against this current baseline.)
 

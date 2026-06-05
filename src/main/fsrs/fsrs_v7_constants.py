@@ -43,9 +43,9 @@ FSRS7_DEFAULT_35_VALUES = (
     0.7113,
     0.0,
     0.5989,
-    -0.0519,
-    0.2048,
-    0.0498,
+    0.4481,  # 31 d_weight: was -0.0519; +0.5 shift so the param is >=0 (curve formula subtracts 0.5)
+    0.5048,  # 32 d_decay:  was 0.2048;  +0.3 shift (curve formula subtracts 0.3)
+    0.3498,  # 33 s_decay1: was 0.0498;  +0.3 shift (curve formula subtracts 0.3)
 )
 
 FSRS_MIN_VALUES = (
@@ -80,9 +80,9 @@ FSRS_MIN_VALUES = (
     0.1,
     0.0,
     0.1,
-    -0.5,  # 35 d_weight min
-    -0.3,  # 36 d_decay min
-    -0.3,  # 37 s_decay1 min
+    0.0,  # 31 d_weight min  (was -0.5; +0.5 shift to make param >=0, curve formula subtracts 0.5)
+    0.0,  # 32 d_decay min   (was -0.3; +0.3 shift, curve formula subtracts 0.3)
+    0.0,  # 33 s_decay1 min  (was -0.3; +0.3 shift, curve formula subtracts 0.3)
 )
 
 FSRS_MAX_VALUES = (
@@ -117,9 +117,9 @@ FSRS_MAX_VALUES = (
     1.0,
     0.9,
     1.1,
-    0.5,  # 35 d_weight max
-    0.3,  # 36 d_decay max
-    0.3,  # 37 s_decay1 max
+    1.0,  # 31 d_weight max  (was 0.5; +0.5 shift of the [-0.5,0.5] range -> [0,1])
+    0.6,  # 32 d_decay max   (was 0.3; +0.3 shift of the [-0.3,0.3] range -> [0,0.6])
+    0.6,  # 33 s_decay1 max  (was 0.3; +0.3 shift of the [-0.3,0.3] range -> [0,0.6])
 )
 
 FSRS7_L2_SIGMA_35_VALUES = (

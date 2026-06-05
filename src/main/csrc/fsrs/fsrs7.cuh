@@ -4,20 +4,21 @@
 
 struct fsrs_state_t {
     // DUAL-TRACE MEMORY (iter-40). Two persistent stability states instead of
-    // one. `s` is the SLOW / consolidated trace (long-term memory); `s_fast` is
-    // the FAST trace (recent, short-term memory). The forgetting curve mixes a
-    // recall component driven by each trace; after each review the slow trace
-    // updates via the long-term (consolidation) dynamics and the fast trace via
-    // the short-term dynamics. This replaces the single-S + transition-blend
-    // approximation with an explicit two-store memory model, attacking the
-    // Markovian (S,D) limitation that the residual short-term / Again loss lives
-    // in. Adding a field to fsrs_state_t (NOT fsrs_params_t) carries through the
-    // kernel + Enzyme autodiff generically and needs no Python-side glue; param
-    // count stays 38. Scratch: peak 5.9M slots ⇒ 12 B/state = 71 MB of the
-    // 500 MB buffer (14%), measured iter-40, so headroom is ample.
-    float s;
+    // one. `s_long` is the SLOW / consolidated trace (long-term memory);
+    // `s_short` is the FAST trace (recent, short-term memory). The forgetting
+    // curve mixes a recall component driven by each trace; after each review the
+    // long trace updates via the long-term (consolidation) dynamics and the short
+    // trace via the short-term dynamics. This replaces the single-S +
+    // transition-blend approximation with an explicit two-store memory model,
+    // attacking the Markovian (S,D) limitation that the residual short-term /
+    // Again loss lives in. Adding a field to fsrs_state_t (NOT fsrs_params_t)
+    // carries through the kernel + Enzyme autodiff generically and needs no
+    // Python-side glue; param count stays 38. Scratch: peak 5.9M slots => 12
+    // B/state = 71 MB of the 500 MB buffer (14%), measured iter-40, headroom ample.
+    // (s_long / s_short were named s / s_fast before the 2026-06-05 cosmetic rename.)
+    float s_long;
     float d;
-    float s_fast;
+    float s_short;
 };
 
 struct fsrs_stability_after_review_params_t {
@@ -75,23 +76,29 @@ struct fsrs_params_t {
     float s_weight_power1;
     float s_weight_power2;
 
-    // 35: Difficulty modulation of the forgetting-curve mixture. Scales the
-    // slow-forgetting component's weight by exp(d_weight * (D - 5)). Default 0
-    // = no D-dependence (mixture weights stay > 0, so both curve endpoints
-    // p(0)=1 and p(inf)=0 are preserved).
+    // 31: Difficulty modulation of the forgetting-curve mixture. Scales the
+    // long-forgetting component's weight by exp((d_weight - 0.5) * (D - 5)). The
+    // param is clamped to [0, 1]; the curve subtracts 0.5 so the effective
+    // coefficient is in [-0.5, 0.5] (2026-06-05 cosmetic shift to keep the param
+    // non-negative). Neutral value 0.5 = no D-dependence (mixture weights stay
+    // > 0, so both curve endpoints p(0)=1 and p(inf)=0 are preserved).
     float d_weight;
 
-    // 36: Difficulty modulation of the slow-forgetting component's DECAY
+    // 32: Difficulty modulation of the long-forgetting component's DECAY
     // (curve *shape*, distinct from d_weight's mixture-weight reweighting).
-    // decay2_mag = clamp(decay2 * exp(d_decay*(D-5)), 0.01, 0.95). Default 0
-    // = no D-dependence. The clamp keeps |decay| in the float-safe range so
+    // decay2_mag = clamp(decay2 * exp((d_decay - 0.3)*(D-5)), 0.01, 0.95). The
+    // param is clamped to [0, 0.6]; the curve subtracts 0.3 so the effective
+    // coefficient is in [-0.3, 0.3] (2026-06-05 cosmetic shift). Neutral value
+    // 0.3 = no D-dependence. The clamp keeps |decay| in the float-safe range so
     // base^(1/decay) never overflows; endpoints p(0)=1, p(inf)=0 still hold.
     float d_decay;
 
-    // 37: Stability modulation of the FAST-forgetting component's DECAY.
-    // decay1_mag = clamp(decay1 * powf(S, s_decay1), 0.01, 0.95). Default 0 =
-    // no S-dependence (recovers decay1 exactly; decay1 stays in [0.01,0.25]).
-    // The fast component dominates the mixture only at small S, so this lever
+    // 33: Stability modulation of the SHORT-forgetting component's DECAY.
+    // decay1_mag = clamp(decay1 * powf(s_short, s_decay1 - 0.3), 0.01, 0.95). The
+    // param is clamped to [0, 0.6]; the curve subtracts 0.3 so the effective
+    // exponent is in [-0.3, 0.3] (2026-06-05 cosmetic shift). Neutral value 0.3 =
+    // no S-dependence (recovers decay1 exactly; decay1 stays in [0.01,0.25]). The
+    // short component dominates the mixture only at small s_short, so this lever
     // reshapes the short-term (sub-day) curve while staying near-invisible to
     // high-S recall predictions. Clamp keeps base1^(1/decay1) float-safe and
     // endpoints p(0)=1, p(inf)=0 hold (base1<1 => factor1>0, monotone).
