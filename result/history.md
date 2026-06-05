@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_138 record(s). Generated from `history.jsonl` — do not edit by hand._
+_139 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -141,4 +141,5 @@ _138 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 135 | 2026-06-04T12:47:41 | 0.0001 | 0.32008 | 0.31997 | +0.00011 | 16,930 | 16,938 | +0.05% | rejected | Sub-day jump: multiply the fast curve component r1 by a fixed 0.93 in the forgetting curve only (line-searched optimum). |
 | 136 | 2026-06-04T12:54:48 | 0.0001 | 0.31997 | 0.32056 | -0.00059 | 16,938 | 17,044 | +0.63% | rejected | Stack a delta_t weight on the training gradient: dt_weight=0.3+0.7*(1-exp(-delta_t/1.0)) at each target review (down-weights short). |
 | 137 | 2026-06-04T13:10:31 | 0.0001 | 0.32008 | 0.32007 | +0.00000 | 16,930 | 17,029 | +0.58% | rejected | Mirror of iter-136: UP-weight short reviews in the training gradient via grad_weight *= 1+0.5*exp(-delta_t/1.0). |
-| 138 | 2026-06-04T13:36:26 | 0.0001 | 0.32008 | 0.31991 | +0.00016 | 16,930 | 16,964 | +0.20% | accepted | Compliant sub-day drop: multiply fast curve r1 (curve only) by continuous ramp floor+(1-floor)*exp(-delta_t/tau), floor=0.85 tau=0.003 (line-searched). |
+| 138 | 2026-06-04T13:36:26 | 0.0001 | 0.32008 | 0.31991 | +0.00016 | 16,930 | 16,964 | +0.20% | rejected | Compliant sub-day drop: multiply fast curve r1 (curve only) by continuous ramp floor+(1-floor)*exp(-delta_t/tau), floor=0.85 tau=0.003 (line-searched). |
+| 139 | 2026-06-05T19:57:59 | 0.0001 | 0.32008 | 0.32006 | +0.00001 | 16,930 | 16,930 | +0.00% | rejected | Swept the lapse-surprise pivot P in fsrs7_next_d (delta_d*=1+1*(retention-P) on lapse) over P=0.80..0.95 step 0.01. |

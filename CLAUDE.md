@@ -187,7 +187,7 @@ clipper, diagnostics table, and this section).
 | `w[23..30]` | 8-param forgetting curve (fast component keyed to `s_fast`, slow to `s`) |
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1) |
 
-**Dual-trace memory (introduced iter-43), 34 params; current champion iter-138.**
+**Dual-trace memory (introduced iter-43), 34 params; current champion iter-105.**
 iter-40 added a 2nd stability state `s_fast` (fast trace) alongside `s` (slow
 trace); each drives its own forgetting-curve component and updates via the
 short-/long-term stability dynamics respectively. This **removed the old
@@ -229,8 +229,12 @@ trainable-`d_surprise` iters 36/37/47/58 hit at ~1.5e-5: the trainable param was
 ALL users → ~10× the by_user gain. Validates a retry pattern: revisit walled trainable-param
 mechanisms as fixed-formula changes.**
 
-**iter-138 (continuous sub-day forgetting drop, CURRENT CHAMPION — crosses the 0.31995
-finishing line, by_user 0.31991).** In `fsrs7_forgetting_curve` the FAST component `r1` is
+**iter-138 (continuous sub-day forgetting drop) — ACCEPTED, then REVERTED by the user
+2026-06-05 (purely aesthetic: "it's ugly, that's the reason, lol"). The win was real and
+constraint-compliant, but the user preferred the cleaner code; champion reverted to iter-105
+(by_user 0.32007685), `fsrs7_forgetting_curve` restored byte-identical to iter-105, and the
+<0.31995 finishing line is deliberately given up. Mechanism kept below for the record.**
+Originally crossed the 0.31995 finishing line (by_user 0.31991): in `fsrs7_forgetting_curve` the FAST component `r1` is
 multiplied — **in the curve only**; the fast-trace *update* in `fsrs7_step` keeps the
 un-discounted `r1`, so the dynamics are unchanged — by a continuous ramp
 `g(delta_t) = 0.85 + 0.15·exp(−delta_t / 0.003)`. `g(0)=1` **exactly**, so the curve still
@@ -555,7 +559,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,964** (iter-138 continuous sub-day ramp; +34 over iter-105's 16,930 for the `subday`/`subday_floor`/`subday_tau` expression in `fsrs7_forgetting_curve`). (History:
+**Current champion complexity baseline: 16,930** (iter-105; iter-138's continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the user 2026-06-05 for being "ugly", so the live baseline is back to iter-105's 16,930). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -569,11 +573,12 @@ iter-97 added the post-lapse fast-trace reset in `fsrs7_step` (a `rating==1` ter
 +1 cyclomatic·40 + `fminf` tokens) → **16,865**; iter-101 added the surprise-weighted
 lapse-difficulty branch in `fsrs7_next_d` (a `rating==1` `if` +1 cyclomatic·40 + the
 `retention` arg/expr tokens) → **16,930**; iter-105 raised that branch's coefficient
-0.5→1.0 (literal swap, no token-count change) → **16,930**; iter-138 added the continuous
-sub-day ramp (`subday_floor` + `subday_tau` constants + the `subday` ramp expression and the
-`* subday *` factor in `fsrs7_forgetting_curve`) → **16,964**. (Note: iter-135's discontinuous
-jump reached 16,938 but was reverted; the continuous ramp is the live champion.) The +5% gate
-is measured against this current baseline.)
+0.5→1.0 (literal swap, no token-count change) → **16,930** (current champion, iter-105). iter-138
+briefly added the continuous sub-day ramp (`subday_floor` + `subday_tau` constants + the `subday`
+ramp expression and the `* subday *` factor in `fsrs7_forgetting_curve`) → 16,964, but the user
+REVERTED it 2026-06-05 (aesthetic — "it's ugly"), so the live baseline is back to **16,930**.
+(iter-135's discontinuous jump reached 16,938 and was also reverted.) The +5% gate is measured
+against this current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 
