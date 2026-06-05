@@ -126,10 +126,16 @@ PHASES = [
     dict(
         name="default",
         n_epochs=0,
-        max_steps=200,   # 2026-06-02: 100 -> 200 (run 100 MORE user-facing-default steps)
+        # 2026-06-05: FRESH 50-step run for the iter-105 champion (+ the cosmetic
+        # non-negative-param shift). The model changed structurally since the
+        # previous 200-step run (iter-71/85/97/101/105), so its tuned default no
+        # longer transfers — start over in NEW files. The previous run is kept
+        # intact under the un-suffixed filenames (FSRS_7_central_diff_default_results.json
+        # / loss_default.png); this run writes the *_iter105 variants so nothing is overwritten.
+        max_steps=50,
         approx_eval_secs=8,
-        checkpoint=OUTPUT_DIR / "FSRS_7_central_diff_default_results.json",
-        plot=OUTPUT_DIR / "loss_default.png",
+        checkpoint=OUTPUT_DIR / "FSRS_7_central_diff_default_results_iter105.json",
+        plot=OUTPUT_DIR / "loss_default_iter105.png",
         title="USER-FACING DEFAULT  (no per-user SGD, FSRS_N_EPOCHS=0)",
     ),
     dict(
