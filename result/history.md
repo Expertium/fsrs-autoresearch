@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_150 record(s). Generated from `history.jsonl` — do not edit by hand._
+_151 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -154,3 +154,4 @@ _150 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 148 | 2026-06-06T12:47:34 | 0.0001 | 0.31991 | 0.31990 | +0.00002 | 16,932 | 16,937 | +0.03% | rejected | Raise the lapse-surprise coefficient past its positivity cap: delta_d *= max(0.1, 1 + 1.5*(retention-0.9)) (was 1 + 1.0*(retention-0.9)). |
 | 149 | 2026-06-06T13:21:41 | 0.0001 | 0.31991 | 0.31990 | +0.00002 | 16,932 | 16,932 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA1 0.55->0.7, BETA2 0.9913->0.9869. |
 | 150 | 2026-06-06T13:57:46 | 0.0001 | 0.31991 | 0.31995 | -0.00004 | 16,932 | 16,963 | +0.18% | rejected | Make difficulty mean-reversion rate R-dependent: 0.01*max(0.1, 1+1.0*(retention-0.9)) instead of fixed 0.01. |
+| 151 | 2026-06-06T14:03:14 | 0.0001 | 0.31991 | 0.32069 | -0.00077 | 16,932 | 16,948 | +0.09% | rejected | Add early-review D-step boost: delta_d *= 1 + 1.0*exp(-s_long/7) (fresh cards get more D-update gain, decays as card matures). |
