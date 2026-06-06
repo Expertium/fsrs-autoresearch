@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_157 record(s). Generated from `history.jsonl` — do not edit by hand._
+_158 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -161,3 +161,4 @@ _157 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 155 | 2026-06-06T14:50:04 | 0.0001 | 0.31991 | 0.31992 | -0.00001 | 16,932 | 16,938 | +0.04% | rejected | Change the difficulty mean-reversion anchor from fixed init_d(4) to init_d(current rating). |
 | 156 | 2026-06-06T14:55:30 | 0.0001 | 0.31991 | 0.31993 | -0.00002 | 16,932 | 16,942 | +0.06% | rejected | Replace linear lapse-surprise factor (1+1.0*(R-0.9)) with sigmoid 0.5 + 1/(1+exp(-8*(R-0.9))). |
 | 157 | 2026-06-06T14:59:41 | 0.0001 | 0.31991 | 0.31987 | +0.00004 | 16,932 | 16,992 | +0.35% | rejected | R-shift the rating neutral point for successes: neutral = 3 + (R-0.9) for rating>=2 (lapse unchanged). |
+| 158 | 2026-06-06T15:53:21 | 0.0001 | 0.31991 | 0.32004 | -0.00012 | 16,932 | 16,948 | +0.09% | rejected | Add a lapse-only d-surprise factor (1 + 0.5*(5-d)/5) to fsrs7_next_d, multiplying delta_d alongside the R-surprise. |
