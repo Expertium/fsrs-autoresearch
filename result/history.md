@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_156 record(s). Generated from `history.jsonl` — do not edit by hand._
+_157 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -160,3 +160,4 @@ _156 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 154 | 2026-06-06T14:38:34 | 0.0001 | 0.31991 | 0.32003 | -0.00012 | 16,932 | 16,954 | +0.13% | rejected | Make the D->S coupling R-dependent: replace (11-d) with (11-d) - 0.2*(0.9-R)*(d-5) in s_inc. |
 | 155 | 2026-06-06T14:50:04 | 0.0001 | 0.31991 | 0.31992 | -0.00001 | 16,932 | 16,938 | +0.04% | rejected | Change the difficulty mean-reversion anchor from fixed init_d(4) to init_d(current rating). |
 | 156 | 2026-06-06T14:55:30 | 0.0001 | 0.31991 | 0.31993 | -0.00002 | 16,932 | 16,942 | +0.06% | rejected | Replace linear lapse-surprise factor (1+1.0*(R-0.9)) with sigmoid 0.5 + 1/(1+exp(-8*(R-0.9))). |
+| 157 | 2026-06-06T14:59:41 | 0.0001 | 0.31991 | 0.31987 | +0.00004 | 16,932 | 16,992 | +0.35% | rejected | R-shift the rating neutral point for successes: neutral = 3 + (R-0.9) for rating>=2 (lapse unchanged). |
