@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_160 record(s). Generated from `history.jsonl` — do not edit by hand._
+_161 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -164,3 +164,4 @@ _160 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 158 | 2026-06-06T15:53:21 | 0.0001 | 0.31991 | 0.32004 | -0.00012 | 16,932 | 16,948 | +0.09% | rejected | Add a lapse-only d-surprise factor (1 + 0.5*(5-d)/5) to fsrs7_next_d, multiplying delta_d alongside the R-surprise. |
 | 159 | 2026-06-06T15:56:56 | 0.0001 | 0.31991 | 0.32018 | -0.00027 | 16,932 | 16,931 | -0.01% | rejected | Flip the sign of weight1's s_short exponent (remove the minus): weight1 = base_weight1 * s_short^(+power1). |
 | 160 | 2026-06-06T16:00:12 | 0.0001 | 0.31991 | 0.32017 | -0.00026 | 16,932 | 16,932 | +0.00% | rejected | Key weight1 off s_long instead of s_short: weight1 = base_weight1 * s_long^(-power1). |
+| 161 | 2026-06-06T16:06:30 | 0.0001 | 0.31991 | 0.32028 | -0.00036 | 16,932 | 16,990 | +0.34% | rejected | Direction-aware D-damping: damp D-increases by (10-d)/9, D-decreases by (d-1)/9 (was (10-d)/9 for both). |
