@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_154 record(s). Generated from `history.jsonl` — do not edit by hand._
+_155 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -158,3 +158,4 @@ _154 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 152 | 2026-06-06T14:16:37 | 0.0001 | 0.31991 | 0.31987 | +0.00005 | 16,932 | 16,932 | +0.00% | rejected | Extend the lapse-surprise factor (1+1.0*(R-0.9)) to the Hard rating too: change gate rating==1 to rating<=2 in fsrs7_next_d. |
 | 153 | 2026-06-06T14:21:49 | 0.0001 | 0.31991 | 0.31985 | +0.00007 | 16,932 | 16,998 | +0.39% | rejected | Give the Hard rating its own surprise coefficient 2.0 (separate rating==2 branch, factor floored at 0.1), vs the lapse coef 1.0. |
 | 154 | 2026-06-06T14:38:34 | 0.0001 | 0.31991 | 0.32003 | -0.00012 | 16,932 | 16,954 | +0.13% | rejected | Make the D->S coupling R-dependent: replace (11-d) with (11-d) - 0.2*(0.9-R)*(d-5) in s_inc. |
+| 155 | 2026-06-06T14:50:04 | 0.0001 | 0.31991 | 0.31992 | -0.00001 | 16,932 | 16,938 | +0.04% | rejected | Change the difficulty mean-reversion anchor from fixed init_d(4) to init_d(current rating). |
