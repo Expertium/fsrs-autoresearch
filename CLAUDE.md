@@ -308,6 +308,25 @@ AlphaEvolve/Karpathy-style: Claude reads the current champion, proposes a
 mutation, writes the patch, runs the benchmark, accepts or rejects against a
 threshold + complexity gate, and keeps an archive of winners.
 
+> **!!! CURRENT RESEARCH FOCUS (2026-06-06 user directive): DIFFICULTY (D) FORMULAS ONLY.**
+> The scope is narrowed to the **difficulty sub-system**: D initialization
+> (`fsrs7_initial_difficulty`), the post-review D update (`fsrs7_next_d` — the
+> rating→ΔD map, `fsrs7_linear_damping`, `fsrs7_mean_reversion`, the iter-101/105
+> R-surprise weighting), and the **D→S coupling** (how D enters the stability
+> update, e.g. the `(11 − d)` factor in `fsrs7_stability_after_review_one_term`).
+> **Everything else is OFF-SCOPE for now** — do NOT propose changes to the
+> forgetting-curve shape, the stability-update dynamics, the dual trace, recency /
+> optimizer / LR / scheduler, or the default/anchor params. Within D, go wide: small
+> tweaks AND bold architectural bets are both welcome, **up to replacing the D
+> formula entirely with a new one**, as long as it conceptually serves the same
+> purpose — a per-card difficulty state where *harder ⇒ stability grows more slowly*.
+> **Keep D dependent on R (retention)** — theoretically it should be; the iter-101/105
+> lapse-surprise (`ΔD ×= 1 + (R − 0.9)`) is the current R-coupling — preserve or
+> extend an R-dependence, never drop it. **Threshold math, acceptance criteria, the
+> complexity gate, and hard constraints 1–12 are UNCHANGED** (constraint 4 still
+> binds: higher D ⇒ post-review S non-increasing, on BOTH the success and lapse
+> paths) — only the surface you touch is narrower.
+
 > **Iteration budget — this is a long campaign (150+ iterations).** The user
 > is running this loop autonomously for ~2 weeks, which is **150+ and likely
 > 300+ iterations**. Do **not** optimize for iteration economy, fear "wasting"
@@ -746,6 +765,18 @@ and the old optima drift. It requires a clean git tree (refuses to auto-commit
 otherwise) and owns one iteration number per pass. The multi-knob pass is one
 logical unit, not a "lumping" violation — per-knob deltas are in the trial log
 (`result/hp_tune_last.json`).
+
+**Default-parameter meta-opt (`central_diff_init_w.py`) — separate from hp_tune, and
+SLOW.** This re-optimizes the user-facing defaults `FSRS7_DEFAULT_35_VALUES` (which are
+also the per-user init **and** the L2 anchor) for the 0-epoch `default` loss via ~50
+Adam + central-difference steps (**~hours** on the host; see iter-140). Re-run it after a
+*sequence* of structural changes shifts the optimal defaults — iter-140 recovered +1.62e-4
+this way once the defaults had drifted since iter-67 — but **never more often than every 5
+iterations** (user directive 2026-06-06; it's expensive). It's an **outer/rare**
+recalibration like the epoch×batch grid, NOT part of the per-iteration loop. Run:
+`python -m src.autoresearch.central_diff_init_w` (host; writes `best_params` to
+`result/init_w_metaopt/`, restores the champion `constants.py` on exit — wiring the tuned
+defaults in is a deliberate, human-reviewed step).
 
 ### Compaction cadence
 
