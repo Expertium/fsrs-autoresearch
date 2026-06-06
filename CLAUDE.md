@@ -170,13 +170,35 @@ setup.py                    # custom EnzymeBuildExtension for the .cu file
 
 ## FSRS-7 architecture (the thing we're evolving)
 
-35-parameter PyTorch model in `src/models/fsrs_v7.py:74`. **Snapshot of
-the current baseline — not the source of truth.** The clipper in
-`FSRS7ParameterClipper` (same file) is authoritative for both shape and
-bounds; `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py` is the
-mirror the diagnostics report reads. Any patch that adds, removes, or
-reorders parameters must update **all three** in lock-step (model class,
-clipper, diagnostics table, and this section).
+The **live model is the custom CUDA forward** (`src/main/csrc/fsrs/fsrs7.cu`
++ `fsrs7.cuh`), a 34-parameter dual-trace model. Its parameter vector,
+clamps, defaults, and L2 anchor live in `src/main/fsrs/fsrs_v7_constants.py`
+(`FSRS7_DEFAULT_35_VALUES` = init/anchor, `FSRS_MIN_VALUES` / `FSRS_MAX_VALUES`
+= the per-element clamp ranges, `FSRS7_L2_SIGMA_35_VALUES` = L2 sigmas); the
+live clamp is applied by `fsrs_v7_helpers.apply_parameter_clipper`, and
+`FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py` is the mirror the
+diagnostics report reads. **These — `fsrs7.cu`/`fsrs7.cuh` (shape +
+formulas), `fsrs_v7_constants.py` (bounds + defaults + sigmas), and
+`FSRS7_BOUNDS_STATIC` (diagnostics mirror) — are authoritative and must be
+updated in lock-step** by any patch that adds, removes, or reorders
+parameters (plus the param table below and this section).
+
+> **⚠ `src/models/fsrs_v7.py` is DEAD baseline code — NOT the live model
+> (confirmed 2026-06-06).** It is the original iteration-0 pure-Python FSRS-7
+> (a *35*-param layout that still contains the iter-43-removed transition
+> params `w[25..26]`, with its own `init_w` / `FSRS7ParameterClipper` /
+> `forward`). The benchmark **never** calls its forward, `init_w`, or clipper —
+> `run.py` training/eval runs entirely on the CUDA extension, seeded from
+> `FSRS7_DEFAULT_35_VALUES` and clamped by `fsrs_v7_helpers.apply_parameter_clipper`.
+> The class survives only because it is imported in `src/models/__init__.py`,
+> registered in `MODEL_REGISTRY`, and instantiated once by `prepare.py` *solely*
+> to read its `batch_size` class attribute (which has a `config.batch_size`
+> fallback). **Do NOT edit `fsrs_v7.py` to change the model, and do NOT trust
+> its clipper / `init_w` as a layout reference — they are stale by 2 params.**
+> It is still listed in the complexity-scored `mutation_files`, so removing it
+> is a deliberate cleanup (untangle the `__init__.py` import + `MODEL_REGISTRY`
+> + prepare's `batch_size` read + re-baseline the complexity score), not a
+> drop-in delete.
 
 | Param range | Role |
 |---|---|
@@ -285,22 +307,25 @@ not as an absolute target.
 
 ## Adding a new model variant
 
-1. Copy `src/models/fsrs_v7.py` → `src/models/fsrs_vX.py`. Rename the class.
-2. Modify the parts you want to mutate (forgetting curve, stability update,
-   transition function, clipper bounds). Keep the `init_w` shape unless you
-   also update the clipper.
-3. Register in `src/models/model_factory.py:8`:
-   ```python
-   MODEL_REGISTRY: dict[ModelName, Any] = {
-       ...
-       "FSRS-7": FSRS7,
-       "FSRS-vX": FSRSvX,  # new
-   }
-   ```
-4. Add the new name to `ModelName` in `src/prepare/prepare_config.py:11`.
-5. Re-run training: `docker compose run --rm srs-benchmark bash src/main/run.sh`
-   (no Docker rebuild needed — Python-only changes don't trigger Enzyme rebuild;
-   only changes to files under `src/main/csrc/` do).
+The live model is the CUDA forward, so a "variant" is an **in-place edit of
+`src/main/csrc/fsrs/fsrs7.cu`** (+ `fsrs7.cuh` for struct/field changes), not a
+new Python class. The old Python-class workflow (copy `fsrs_v7.py`, register in
+`MODEL_REGISTRY`) is **obsolete** — `fsrs_v7.py` is dead code (see the ⚠ note
+under "FSRS-7 architecture").
+
+1. Edit the formula in `src/main/csrc/fsrs/fsrs7.cu` (and `fsrs7.cuh` for
+   struct/field changes).
+2. If you add / remove / reorder trainable params, update **all** of these in
+   lock-step: the `fsrs_params_t` struct in `fsrs7.cuh` (field order = `w[]`
+   index order), `fsrs_v7_constants.py` (`FSRS7_DEFAULT_35_VALUES`,
+   `FSRS_MIN_VALUES`, `FSRS_MAX_VALUES`, `FSRS7_L2_SIGMA_35_VALUES` — keep all
+   the same length), `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`,
+   and the param table above. (The live clamp
+   `fsrs_v7_helpers.apply_parameter_clipper` just reads the MIN/MAX arrays, so it
+   needs no separate edit. Do **not** touch `fsrs_v7.py`.)
+3. Re-run training: `docker compose --progress quiet run --rm srs-benchmark bash
+   src/main/run.sh`. Any edit to a file under `src/main/csrc/` triggers an Enzyme
+   rebuild (a few minutes); Python-only edits do not.
 
 ## Autoresearch loop
 
@@ -357,7 +382,10 @@ apply.
 ### Mutation surface
 
 Python-side FSRS code only:
-- `src/models/fsrs_v7.py` (or a new `fsrs_vX.py`) — model forward / clipper
+- `src/models/fsrs_v7.py` — **DEAD baseline code, NOT an edit target.** It stays
+  in the complexity-scored set (a fixed offset only); the live model forward /
+  clamps are the CUDA files + constants below. See the ⚠ note under "FSRS-7
+  architecture".
 - `src/models/fsrs_v7_interval_penalty.py` — scheduling penalty
 - `src/main/fsrs/fsrs_v7_constants.py` — `LR`, `BETAS`, `RECENCY_C0/C1`,
   `PENALTY_W_L2`, `FSRS7_DEFAULT_35_VALUES` (init_w), `FSRS_MIN_VALUES`
@@ -388,10 +416,13 @@ left untouched. It is not in the scored `mutation_files`, so it never affects
 the gate.
 
 **Sync note for clamps + init_w:** `fsrs_v7_constants.FSRS_MIN_VALUES` /
-`FSRS_MAX_VALUES` / `FSRS7_DEFAULT_35_VALUES` are used by the CUDA training
-path; `fsrs_v7.py`'s `FSRS7ParameterClipper` and `init_w` are used by the
-Python pretrain. Any variant that changes one must change the other (and
-update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py`).
+`FSRS_MAX_VALUES` / `FSRS7_DEFAULT_35_VALUES` / `FSRS7_L2_SIGMA_35_VALUES` are
+the authoritative param vector for the CUDA training path (init/anchor, clamps,
+sigmas); the live clamp is `fsrs_v7_helpers.apply_parameter_clipper`, which reads
+the MIN/MAX arrays. Any variant that changes one must change the others (and
+update `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py` and the param
+table above). `fsrs_v7.py`'s `FSRS7ParameterClipper` / `init_w` are **dead** and
+must NOT be used as a reference (they are the stale iter-0 35-param layout).
 
 ### Allowed change types
 

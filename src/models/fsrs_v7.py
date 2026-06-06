@@ -1,3 +1,24 @@
+# =============================================================================
+# DEAD / VESTIGIAL BASELINE CODE -- NOT the live FSRS-7 model. (Confirmed 2026-06-06.)
+#
+# This is the original iteration-0 pure-Python FSRS-7 (a 35-param layout that
+# still includes the iter-43-REMOVED transition params w[25..26]). The benchmark
+# does NOT use it: training/eval (src/main/run.py) runs entirely on the custom
+# CUDA forward (src/main/csrc/fsrs/fsrs7.cu + fsrs7.cuh), seeded from
+# FSRS7_DEFAULT_35_VALUES and clamped by fsrs_v7_helpers.apply_parameter_clipper
+# (both in src/main/fsrs/). The init_w / FSRS7ParameterClipper / forward below
+# are NOT called by the loop and are STALE -- do not use them as a layout
+# reference (they are 2 params off from the live 34-param CUDA model).
+#
+# This class survives only because it is imported in src/models/__init__.py,
+# registered in MODEL_REGISTRY, and instantiated once by src/prepare/prepare.py
+# SOLELY to read its `batch_size` class attribute (which has a config.batch_size
+# fallback). It is also still in run.py's complexity-scored `mutation_files`, so
+# deleting it is a deliberate cleanup (untangle the import + registry + prepare's
+# batch_size read + re-baseline the complexity score), not a drop-in removal.
+# See CLAUDE.md "FSRS-7 architecture" for the full story. DO NOT edit to change
+# the model.
+# =============================================================================
 from typing import List, Union
 import torch
 from torch import nn, Tensor
