@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_140 record(s). Generated from `history.jsonl` — do not edit by hand._
+_141 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -144,3 +144,4 @@ _140 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 138 | 2026-06-04T13:36:26 | 0.0001 | 0.32008 | 0.31991 | +0.00016 | 16,930 | 16,964 | +0.20% | rejected | Compliant sub-day drop: multiply fast curve r1 (curve only) by continuous ramp floor+(1-floor)*exp(-delta_t/tau), floor=0.85 tau=0.003 (line-searched). |
 | 139 | 2026-06-05T19:57:59 | 0.0001 | 0.32008 | 0.32006 | +0.00001 | 16,930 | 16,930 | +0.00% | rejected | Swept the lapse-surprise pivot P in fsrs7_next_d (delta_d*=1+1*(retention-P) on lapse) over P=0.80..0.95 step 0.01. |
 | 140 | 2026-06-06T11:01:15 | 0.0001 | 0.32008 | 0.31991 | +0.00016 | 16,932 | 16,932 | +0.00% | accepted | Re-tuned the user-facing default parameters (FSRS7_DEFAULT_35_VALUES) via central_diff_init_w 50-step 0-epoch meta-opt for the current model. |
+| 141 | 2026-06-06T11:31:06 | 0.0001 | 0.31991 | 0.31997 | -0.00005 | 16,932 | 16,936 | +0.02% | rejected | Extend the iter-101/105 R-surprise D-update weighting from lapses only to all ratings (success surprise = 0.9-retention). |
