@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_149 record(s). Generated from `history.jsonl` — do not edit by hand._
+_150 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -153,3 +153,4 @@ _149 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 147 | 2026-06-06T12:42:31 | 0.0001 | 0.31991 | 0.31993 | -0.00002 | 16,932 | 16,998 | +0.39% | rejected | Give Good (rating 3) an R-dependent D-decrease: delta_d += -next_d_mult*0.5*max(0, 0.9-retention). |
 | 148 | 2026-06-06T12:47:34 | 0.0001 | 0.31991 | 0.31990 | +0.00002 | 16,932 | 16,937 | +0.03% | rejected | Raise the lapse-surprise coefficient past its positivity cap: delta_d *= max(0.1, 1 + 1.5*(retention-0.9)) (was 1 + 1.0*(retention-0.9)). |
 | 149 | 2026-06-06T13:21:41 | 0.0001 | 0.31991 | 0.31990 | +0.00002 | 16,932 | 16,932 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate BETA1 0.55->0.7, BETA2 0.9913->0.9869. |
+| 150 | 2026-06-06T13:57:46 | 0.0001 | 0.31991 | 0.31995 | -0.00004 | 16,932 | 16,963 | +0.18% | rejected | Make difficulty mean-reversion rate R-dependent: 0.01*max(0.1, 1+1.0*(retention-0.9)) instead of fixed 0.01. |
