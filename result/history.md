@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_159 record(s). Generated from `history.jsonl` — do not edit by hand._
+_160 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -163,3 +163,4 @@ _159 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 157 | 2026-06-06T14:59:41 | 0.0001 | 0.31991 | 0.31987 | +0.00004 | 16,932 | 16,992 | +0.35% | rejected | R-shift the rating neutral point for successes: neutral = 3 + (R-0.9) for rating>=2 (lapse unchanged). |
 | 158 | 2026-06-06T15:53:21 | 0.0001 | 0.31991 | 0.32004 | -0.00012 | 16,932 | 16,948 | +0.09% | rejected | Add a lapse-only d-surprise factor (1 + 0.5*(5-d)/5) to fsrs7_next_d, multiplying delta_d alongside the R-surprise. |
 | 159 | 2026-06-06T15:56:56 | 0.0001 | 0.31991 | 0.32018 | -0.00027 | 16,932 | 16,931 | -0.01% | rejected | Flip the sign of weight1's s_short exponent (remove the minus): weight1 = base_weight1 * s_short^(+power1). |
+| 160 | 2026-06-06T16:00:12 | 0.0001 | 0.31991 | 0.32017 | -0.00026 | 16,932 | 16,932 | +0.00% | rejected | Key weight1 off s_long instead of s_short: weight1 = base_weight1 * s_long^(-power1). |
