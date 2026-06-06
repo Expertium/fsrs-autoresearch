@@ -187,7 +187,13 @@ clipper, diagnostics table, and this section).
 | `w[23..30]` | 8-param forgetting curve (short component keyed to `s_short`, long to `s_long`) |
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1). **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
 
-**Dual-trace memory (introduced iter-43), 34 params; current champion iter-105.**
+**Dual-trace memory (introduced iter-43), 34 params; current champion iter-140.**
+**(iter-140, 2026-06-06):** re-tuned the user-facing default parameters
+(`FSRS7_DEFAULT_35_VALUES`) via the `central_diff_init_w` 50-step 0-epoch meta-opt for
+the current model — they had drifted out of sync since iter-67. Trained `logloss_by_user`
+**0.32007685 → 0.31991476 (+1.62e-4)**, re-crossing the 0.31995 finishing line cleanly
+(0 new params, 0 complexity change; the gain is the better fixed L2 anchor helping the
+L2-dominated light users). Architecture below is unchanged from iter-105.
 iter-40 added a 2nd stability state `s_short` (short trace) alongside `s_long` (long
 trace); each drives its own forgetting-curve component and updates via the
 short-/long-term stability dynamics respectively. This **removed the old
@@ -561,7 +567,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,932** (iter-105 + the 2026-06-05 cosmetic refactor: +2 over 16,930 for the three subtraction literals that shift d_weight/d_decay/s_decay1 to non-negative bounds in `fsrs7_forgetting_curve`/`fsrs7_short_component_recall`; the `s`→`s_long`/`s_fast`→`s_short` rename is token-count-neutral. iter-138's continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the user 2026-06-05 for being "ugly"). (History:
+**Current champion complexity baseline: 16,932** (champion is now iter-140 — re-tuned numeric defaults only, no complexity change. The 16,932 = iter-105 + the 2026-06-05 cosmetic refactor: +2 over 16,930 for the three subtraction literals that shift d_weight/d_decay/s_decay1 to non-negative bounds in `fsrs7_forgetting_curve`/`fsrs7_short_component_recall`; the `s`→`s_long`/`s_fast`→`s_short` rename is token-count-neutral. iter-138's continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the user 2026-06-05 for being "ugly"). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -575,13 +581,14 @@ iter-97 added the post-lapse fast-trace reset in `fsrs7_step` (a `rating==1` ter
 +1 cyclomatic·40 + `fminf` tokens) → **16,865**; iter-101 added the surprise-weighted
 lapse-difficulty branch in `fsrs7_next_d` (a `rating==1` `if` +1 cyclomatic·40 + the
 `retention` arg/expr tokens) → **16,930**; iter-105 raised that branch's coefficient
-0.5→1.0 (literal swap, no token-count change) → **16,930** (current champion, iter-105). iter-138
+0.5→1.0 (literal swap, no token-count change) → **16,930** (iter-105). iter-138
 briefly added the continuous sub-day ramp (`subday_floor` + `subday_tau` constants + the `subday`
 ramp expression and the `* subday *` factor in `fsrs7_forgetting_curve`) → 16,964, but the user
 REVERTED it 2026-06-05 (aesthetic — "it's ugly"), so the live baseline returned to iter-105's
-16,930, then the 2026-06-05 cosmetic non-negative-param refactor nudged it to **16,932** (+2).
-(iter-135's discontinuous jump reached 16,938 and was also reverted.) The +5% gate is measured
-against this current baseline.)
+16,930, then the 2026-06-05 cosmetic non-negative-param refactor nudged it to **16,932** (+2);
+iter-140 (2026-06-06) re-tuned the numeric default literals with NO complexity change — still
+**16,932**, the current champion. (iter-135's discontinuous jump reached 16,938 and was also
+reverted.) The +5% gate is measured against this current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 
