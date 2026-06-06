@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_162 record(s). Generated from `history.jsonl` — do not edit by hand._
+_163 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -166,3 +166,4 @@ _162 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 160 | 2026-06-06T16:00:12 | 0.0001 | 0.31991 | 0.32017 | -0.00026 | 16,932 | 16,932 | +0.00% | rejected | Key weight1 off s_long instead of s_short: weight1 = base_weight1 * s_long^(-power1). |
 | 161 | 2026-06-06T16:06:30 | 0.0001 | 0.31991 | 0.32028 | -0.00036 | 16,932 | 16,990 | +0.34% | rejected | Direction-aware D-damping: damp D-increases by (10-d)/9, D-decreases by (d-1)/9 (was (10-d)/9 for both). |
 | 162 | 2026-06-06T16:24:15 | 0.0008 | 0.31991 | 0.31976 | +0.00015 | 16,932 | 17,116 | +1.09% | rejected | Make the rating->number map 4 trainable params dd[r] (w[34..37]) replacing the fixed linear (rating-3); delta_d = -next_d_mult * dd[r]. |
+| 163 | 2026-06-06T16:28:54 | 0.0001 | 0.31991 | 0.31991 | +0.00001 | 16,932 | 17,068 | +0.80% | rejected | Replace the linear (rating-3) D-update map with FIXED constants at the iter-162 learned medians {-1.93,-1.01,0.01,1.00} (0 new params). |
