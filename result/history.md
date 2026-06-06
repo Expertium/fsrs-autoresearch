@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_147 record(s). Generated from `history.jsonl` — do not edit by hand._
+_148 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -151,3 +151,4 @@ _147 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 145 | 2026-06-06T12:22:26 | 0.0001 | 0.31991 | 0.32150 | -0.00159 | 16,932 | 17,001 | +0.41% | rejected | On a lapse, scale post-lapse long stability by d^(-0.5*exp(-s_long/7)) -- chronic-re-lapser penalty gated by low pre-lapse stability. |
 | 146 | 2026-06-06T12:33:09 | 0.0001 | 0.31991 | 0.31992 | -0.00000 | 16,932 | 16,951 | +0.11% | rejected | Add a one-sided high-R quadratic to the lapse-surprise: delta_d *= 1 + (R-0.9) + 10*max(0, R-0.9)^2. |
 | 147 | 2026-06-06T12:42:31 | 0.0001 | 0.31991 | 0.31993 | -0.00002 | 16,932 | 16,998 | +0.39% | rejected | Give Good (rating 3) an R-dependent D-decrease: delta_d += -next_d_mult*0.5*max(0, 0.9-retention). |
+| 148 | 2026-06-06T12:47:34 | 0.0001 | 0.31991 | 0.31990 | +0.00002 | 16,932 | 16,937 | +0.03% | rejected | Raise the lapse-surprise coefficient past its positivity cap: delta_d *= max(0.1, 1 + 1.5*(retention-0.9)) (was 1 + 1.0*(retention-0.9)). |
