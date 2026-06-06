@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_144 record(s). Generated from `history.jsonl` — do not edit by hand._
+_145 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -148,3 +148,4 @@ _144 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 142 | 2026-06-06T11:41:13 | 0.0001 | 0.31991 | 0.32007 | -0.00015 | 16,932 | 16,944 | +0.07% | rejected | Re-introduce a fixed (non-trainable) post-lapse difficulty->stability coupling: new_s_fail *= (d/5)^(-0.3). |
 | 143 | 2026-06-06T11:56:31 | 0.0001 | 0.31991 | 0.31992 | -0.00000 | 16,932 | 16,932 | +0.00% | rejected | Widen the next_d_mult (w[6]) upper clamp from 4.0 to 7.0 (CUDA MAX, Python clipper, diagnostics bounds). |
 | 144 | 2026-06-06T12:07:13 | 0.0001 | 0.31991 | 0.32041 | -0.00050 | 16,932 | 16,943 | +0.06% | rejected | Change the D->S success coupling shape from linear (11-d) to 6*((11-d)/6)^1.5 (super-linear, anchored at d=5). |
+| 145 | 2026-06-06T12:22:26 | 0.0001 | 0.31991 | 0.32150 | -0.00159 | 16,932 | 17,001 | +0.41% | rejected | On a lapse, scale post-lapse long stability by d^(-0.5*exp(-s_long/7)) -- chronic-re-lapser penalty gated by low pre-lapse stability. |
