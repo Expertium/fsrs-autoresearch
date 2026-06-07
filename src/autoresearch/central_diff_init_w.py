@@ -218,9 +218,65 @@ def _restore_constants() -> None:
 # Evaluate a candidate via the docker benchmark
 # ============================================================================
 
+# Batch IO (paths under OUTPUT_DIR; the repo dir is bind-mounted into the container).
+BATCH_CAND_PATH = OUTPUT_DIR / "batch_candidates.json"
+BATCH_OUT_PATH  = OUTPUT_DIR / "batch_results.json"
+
+
+def evaluate_batch(params_list, n_epochs: int):
+    """Evaluate MANY candidate default-vectors in ONE container via
+    batch_eval_default.py, which loads the LMDB tensor cache + each split's GPU
+    tensors ONCE and loops all candidates against them. ~15-20x faster than one
+    `docker compose run` per candidate for the 0-epoch default phase (the per-eval
+    container + CUDA-init + tensor-load overhead is ~all of an ~12 s single eval;
+    the marginal forward+eval is ~0.5 s). Returns logloss_by_user per candidate,
+    in order, BIT-IDENTICAL to the per-run path (verified). Bypasses constants.py:
+    the batch script injects each candidate in-process, so the champion file is
+    never mutated. n_epochs must be 0 (default phase; sigma/8-epoch needs the
+    training path added to batch_eval_default.py)."""
+    assert n_epochs == 0, "evaluate_batch supports the 0-epoch default phase only."
+    BATCH_CAND_PATH.write_text(
+        json.dumps({"candidates": [list(map(float, p)) for p in params_list]})
+    )
+    before_mtime = BATCH_OUT_PATH.stat().st_mtime if BATCH_OUT_PATH.exists() else 0.0
+    cmd = [
+        "docker", "compose", "--progress", "quiet", "run", "--rm",
+        "-e", f"FSRS_N_EPOCHS={n_epochs}",
+        "srs-benchmark", "bash", "-c",
+        "python setup.py -q build_ext --inplace && "
+        "python -m src.autoresearch.batch_eval_default",
+    ]
+    last_err = ""
+    for attempt in range(EVAL_RETRIES + 1):
+        start = time.perf_counter()
+        result = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True)
+        dur = time.perf_counter() - start
+        fresh = BATCH_OUT_PATH.exists() and BATCH_OUT_PATH.stat().st_mtime > before_mtime
+        if result.returncode == 0 and fresh:
+            out = json.loads(BATCH_OUT_PATH.read_text(encoding="utf-8"))["by_user"]
+            if len(out) == len(params_list):
+                print(f"    [batch] {len(params_list)} evals in {dur:.0f}s "
+                      f"({dur / max(len(params_list), 1):.1f}s/cand)")
+                return [float(x) for x in out]
+            last_err = f"batch returned {len(out)} results for {len(params_list)} candidates"
+        else:
+            last_err = (result.stderr or result.stdout or "")[-2000:]
+        print(f"      ! batch eval failed (attempt {attempt + 1}/{EVAL_RETRIES + 1}, "
+              f"rc={result.returncode}, fresh={fresh}, {dur:.0f}s); retrying in 5s")
+        time.sleep(5)
+    raise RuntimeError(
+        f"Batch benchmark failed after {EVAL_RETRIES + 1} attempts "
+        f"(n={len(params_list)}, epochs={n_epochs}).\nLast tail:\n{last_err}"
+    )
+
+
 def evaluate(params: List[float], n_epochs: int) -> float:
     """Write params into constants.py, run the benchmark at FSRS_N_EPOCHS=n_epochs,
     return logloss_by_user from result/diagnostics.json."""
+    # 0-epoch (default phase): route single evals through the fast batch path too
+    # (one load per call). Non-zero epochs (recency, gated off) keep the per-run path.
+    if n_epochs == 0:
+        return evaluate_batch([params], n_epochs)[0]
     replace_default_values(params)
     before_mtime = DIAG_PATH.stat().st_mtime if DIAG_PATH.exists() else 0.0
 
@@ -309,31 +365,44 @@ class AdamCentralDiff:
         self.t = 0                  # step counter (bias correction)
         self.counteval = 0          # total function evaluations
 
-    def compute_gradient(self, eval_fn: Callable) -> "tuple[np.ndarray, list]":
+    def compute_gradient(self, eval_fn: Callable, eval_batch_fn: Callable | None = None) -> "tuple[np.ndarray, list]":
         """Central-difference gradient at self.params. Both perturbed points are
         clipped to bounds first; the denominator uses the realized step so the
-        estimate stays correct at saturated bounds."""
+        estimate stays correct at saturated bounds. The 2*N perturbations are
+        mutually independent (each perturbs one dim of the SAME base point), so if
+        eval_batch_fn is given they are evaluated in ONE batch call (tensor cache
+        loaded once) — identical numbers, ~15-20x faster than 2*N separate runs."""
         grad = np.zeros(self.n)
         eval_log = []
 
+        # Build all 2N clipped perturbation candidates + their realized denominators.
+        cands = []
+        denoms = []
         for i in range(self.n):
             p_plus = self.params.copy()
             p_minus = self.params.copy()
             p_plus[i] = np.clip(self.params[i] + self.h, self.bounds[i][0], self.bounds[i][1])
             p_minus[i] = np.clip(self.params[i] - self.h, self.bounds[i][0], self.bounds[i][1])
+            cands.append(p_plus.tolist())
+            cands.append(p_minus.tolist())
+            denoms.append(p_plus[i] - p_minus[i])
 
-            f_plus = eval_fn(p_plus.tolist())
-            f_minus = eval_fn(p_minus.tolist())
-            self.counteval += 2
+        if eval_batch_fn is not None:
+            losses = eval_batch_fn(cands)
+        else:
+            losses = [eval_fn(c) for c in cands]
+        self.counteval += len(cands)
 
-            denom = p_plus[i] - p_minus[i]
+        for i in range(self.n):
+            f_plus = losses[2 * i]
+            f_minus = losses[2 * i + 1]
+            denom = denoms[i]
             grad[i] = (f_plus - f_minus) / denom if denom != 0.0 else 0.0
-
             eval_log.append({
                 "param_index": i,
-                "params_plus": p_plus.tolist(),
+                "params_plus": cands[2 * i],
                 "loss_plus": f_plus,
-                "params_minus": p_minus.tolist(),
+                "params_minus": cands[2 * i + 1],
                 "loss_minus": f_minus,
             })
             print(f"    dim {i:2d}  f+={f_plus:.6f}  f-={f_minus:.6f}  grad={grad[i]:+.6f}")
@@ -428,6 +497,9 @@ def run_phase(phase: dict, starting_params: np.ndarray, bounds: List[tuple]):
     max_steps = phase["max_steps"]
     ckpt = phase["checkpoint"]
     eval_fn = lambda p: evaluate(p, n_epochs)
+    # 0-epoch (default) phase: batch each step's 2*N perturbations into one
+    # container (load tensors once) — see evaluate_batch / batch_eval_default.py.
+    eval_batch_fn = (lambda plist: evaluate_batch(plist, n_epochs)) if n_epochs == 0 else None
 
     print("\n" + "=" * 80)
     print(f"PHASE '{phase['name']}'  —  {phase['title']}")
@@ -470,7 +542,7 @@ def run_phase(phase: dict, starting_params: np.ndarray, bounds: List[tuple]):
         print(f"Computing gradient via central differences "
               f"({2 * optimizer.n} evals)...")
 
-        grad, eval_log = optimizer.compute_gradient(eval_fn)
+        grad, eval_log = optimizer.compute_gradient(eval_fn, eval_batch_fn)
         print(f"Gradient norm: {np.linalg.norm(grad):.6f}")
 
         new_params = optimizer.step(grad)
