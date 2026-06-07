@@ -209,7 +209,23 @@ parameters (plus the param table below and this section).
 | `w[23..30]` | 8-param forgetting curve (short component keyed to `s_short`, long to `s_long`) |
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1). **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
 
-**Dual-trace memory (introduced iter-43), 34 params; current champion iter-140.**
+**Dual-trace memory (introduced iter-43), 34 params; current champion iter-165.**
+**(iter-165, 2026-06-07 — current champion):** the LONG forgetting component's
+difficulty modulation moved from the decay EXPONENT to the curve's horizontal
+TIME-SCALE. `r2` now sees `t * exp((d_decay-0.3)*(d-5))` with `decay2` itself
+un-modulated — i.e. `decay2_mag = clamp(decay2, …)` and the d-factor multiplies
+`t/s_long` inside `r2 = (1 + factor2 * (t/s_long) * exp((d_decay-0.3)*(d-5)))^(-decay2_mag)`
+(was `decay2_mag = clamp(decay2 * exp((d_decay-0.3)*(d-5)), …)` modulating the
+exponent). Same param `d_decay`, same (degenerate) pivot 5; the difference is that
+hard cards now get a faster effective clock — a *level* shift — rather than a
+steeper asymptotic power-law *slope*. by_user 0.31991476 → 0.31980351 (+1.11e-4 ≥
+0.0001), by_review +1.82e-4; Easy −1.0e-3 / Good −3.5e-4 / long-term bucket −2.9e-4
+better, Hard +4.9e-4 the cost. 0 new params (formula change), complexity 16932→16938.
+The decoupling frees both params: `decay2` range_frac 0.64→0.99 (sets the slope),
+`d_decay` grad 0.34→0.86 & upper-bound-hit 2.5%→5.6% (sets the D time-shift) — so a
+`d_decay` bound-widen / hp_tune / default re-tune may extract more. (A prior probe
+iter-164 that only changed the exponent form's curvature exp→linear was flat — the
+win is the *channel*, not the curvature.)
 **(iter-140, 2026-06-06):** re-tuned the user-facing default parameters
 (`FSRS7_DEFAULT_35_VALUES`) via the `central_diff_init_w` 50-step 0-epoch meta-opt for
 the current model — they had drifted out of sync since iter-67. Trained `logloss_by_user`
@@ -617,7 +633,7 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,932** (champion is now iter-140 — re-tuned numeric defaults only, no complexity change. The 16,932 = iter-105 + the 2026-06-05 cosmetic refactor: +2 over 16,930 for the three subtraction literals that shift d_weight/d_decay/s_decay1 to non-negative bounds in `fsrs7_forgetting_curve`/`fsrs7_short_component_recall`; the `s`→`s_long`/`s_fast`→`s_short` rename is token-count-neutral. iter-138's continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the user 2026-06-05 for being "ugly"). (History:
+**Current champion complexity baseline: 16,938** (champion is now iter-165 — moved the long-curve D-modulation from the decay exponent to the time-scale, **+6 over iter-140's 16,932**. The 16,932 = iter-105 + the 2026-06-05 cosmetic refactor: +2 over 16,930 for the three subtraction literals that shift d_weight/d_decay/s_decay1 to non-negative bounds in `fsrs7_forgetting_curve`/`fsrs7_short_component_recall`; the `s`→`s_long`/`s_fast`→`s_short` rename is token-count-neutral. iter-138's continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the user 2026-06-05 for being "ugly"). (History:
 C++ scoring was added at 16,766 — the 36-param dual-trace champion was 15,322
 python-only, the two CUDA files add 1,436 (`fsrs7.cu` 1,230, `fsrs7.cuh` 206), and
 wiring them into `mutation_files` added 8 to `run.py`. Numeric-literal hp-tunes /
@@ -636,9 +652,11 @@ briefly added the continuous sub-day ramp (`subday_floor` + `subday_tau` constan
 ramp expression and the `* subday *` factor in `fsrs7_forgetting_curve`) → 16,964, but the user
 REVERTED it 2026-06-05 (aesthetic — "it's ugly"), so the live baseline returned to iter-105's
 16,930, then the 2026-06-05 cosmetic non-negative-param refactor nudged it to **16,932** (+2);
-iter-140 (2026-06-06) re-tuned the numeric default literals with NO complexity change — still
-**16,932**, the current champion. (iter-135's discontinuous jump reached 16,938 and was also
-reverted.) The +5% gate is measured against this current baseline.)
+iter-140 (2026-06-06) re-tuned the numeric default literals with NO complexity change —
+**16,932**; iter-165 (2026-06-07) moved the long-curve D-modulation from the decay exponent to the
+time-scale (decay2 left un-modulated; the `exp((d_decay-0.3)*(d-5))` factor now multiplies `t/s_long`
+inside r2) → **16,938** (+6), the current champion. (iter-135's discontinuous jump also reached 16,938
+and was reverted — unrelated.) The +5% gate is measured against this current baseline.)
 
 ### Pre-submission checklist (verify silently before writing the patch)
 

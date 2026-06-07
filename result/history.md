@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_164 record(s). Generated from `history.jsonl` — do not edit by hand._
+_165 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -168,3 +168,4 @@ _164 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 162 | 2026-06-06T16:24:15 | 0.0008 | 0.31991 | 0.31976 | +0.00015 | 16,932 | 17,116 | +1.09% | rejected | Make the rating->number map 4 trainable params dd[r] (w[34..37]) replacing the fixed linear (rating-3); delta_d = -next_d_mult * dd[r]. |
 | 163 | 2026-06-06T16:28:54 | 0.0001 | 0.31991 | 0.31991 | +0.00001 | 16,932 | 17,068 | +0.80% | rejected | Replace the linear (rating-3) D-update map with FIXED constants at the iter-162 learned medians {-1.93,-1.01,0.01,1.00} (0 new params). |
 | 164 | 2026-06-07T13:10:11 | 0.0001 | 0.31991 | 0.31993 | -0.00001 | 16,932 | 16,933 | +0.01% | rejected | Replace the exponential d_decay modulation of decay2 with a linear factor: decay2*(1+(d_decay-0.3)*(d-5)) (was decay2*exp(...)). |
+| 165 | 2026-06-07T13:15:35 | 0.0001 | 0.31991 | 0.31980 | +0.00011 | 16,932 | 16,938 | +0.04% | accepted | Move the d_decay modulation from the long-decay exponent to the curve's time-scale: r2 sees t*exp((d_decay-0.3)*(d-5)) (decay2 no longer d-modulated). |

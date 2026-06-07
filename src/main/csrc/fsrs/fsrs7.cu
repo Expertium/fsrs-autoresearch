@@ -122,12 +122,19 @@ float fsrs7_forgetting_curve(
     // [0.01, 0.95] keeps |decay| safe: factor = base^(1/decay) overflows float once
     // |decay| < ~0.008. The neutral 0.3 reduces to -decay2 exactly (decay2 already
     // in [0.01,0.95]).
-    const float decay2_mag = fsrs7_clamp(
-        fsrs_params.decay2 * expf((fsrs_params.d_decay - 0.3f) * (state.d - 5.0f)),
-        0.01f, 0.95f);
+    // iter-165 (R=f(D) channel test): move the D-effect from the decay EXPONENT to
+    // the horizontal TIME-SCALE. decay2 is no longer d-modulated; instead the long
+    // component sees time scaled by exp((d_decay-0.3)*(d-5)) -- hard cards (coef>0)
+    // experience time faster (lower retention) but keep the SAME asymptotic decay
+    // slope, whereas the exponent form gave hard cards a STEEPER slope. d_decay and
+    // the pivot are preserved. d_timescale in ~[0.22,4.48] (no overflow); r2 stays
+    // convex/monotone with endpoints p(0)=1,p(inf)=0 for any params (the d-scale is
+    // delta_t-independent, so constraints 1/11/12 hold).
+    const float decay2_mag = fsrs7_clamp(fsrs_params.decay2, 0.01f, 0.95f);
     const float decay2 = -decay2_mag;
     const float factor2 = powf(fsrs_params.base2, 1.0f / decay2) - 1.0f;
-    const float r2 = powf(1.0f + factor2 * t_over_s_long, decay2);
+    const float d_timescale = expf((fsrs_params.d_decay - 0.3f) * (state.d - 5.0f));
+    const float r2 = powf(1.0f + factor2 * t_over_s_long * d_timescale, decay2);
 
     // Mixture weights, each keyed to the trace its component reads: as the short
     // trace grows weight1 shrinks (S^-power1) and as the long trace grows weight2
