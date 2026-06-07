@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_166 record(s). Generated from `history.jsonl` — do not edit by hand._
+_167 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -170,3 +170,4 @@ _166 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 164 | 2026-06-07T13:10:11 | 0.0001 | 0.31991 | 0.31993 | -0.00001 | 16,932 | 16,933 | +0.01% | rejected | Replace the exponential d_decay modulation of decay2 with a linear factor: decay2*(1+(d_decay-0.3)*(d-5)) (was decay2*exp(...)). |
 | 165 | 2026-06-07T13:15:35 | 0.0001 | 0.31991 | 0.31980 | +0.00011 | 16,932 | 16,938 | +0.04% | accepted | Move the d_decay modulation from the long-decay exponent to the curve's time-scale: r2 sees t*exp((d_decay-0.3)*(d-5)) (decay2 no longer d-modulated). |
 | 166 | 2026-06-07T13:24:22 | 0.0001 | 0.31980 | 0.31979 | +0.00001 | 16,938 | 16,938 | +0.00% | rejected | Widen d_decay (w[32]) upper bound 0.6 -> 0.9 (effective coef +0.3 -> +0.6); 5.6% were pinned at the bound in the iter-165 champion. |
+| 167 | 2026-06-07T13:31:19 | 0.0001 | 0.31980 | 0.31977 | +0.00004 | 16,938 | 16,940 | +0.01% | rejected | Apply the iter-165 d_timescale exp((d_decay-0.3)*(d-5)) to the SHORT component r1 too, not just long r2 (unified difficulty clock; reuses d_decay, 0 new params). |
