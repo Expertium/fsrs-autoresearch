@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_168 record(s). Generated from `history.jsonl` — do not edit by hand._
+_169 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -172,3 +172,4 @@ _168 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 166 | 2026-06-07T13:24:22 | 0.0001 | 0.31980 | 0.31979 | +0.00001 | 16,938 | 16,938 | +0.00% | rejected | Widen d_decay (w[32]) upper bound 0.6 -> 0.9 (effective coef +0.3 -> +0.6); 5.6% were pinned at the bound in the iter-165 champion. |
 | 167 | 2026-06-07T13:31:19 | 0.0001 | 0.31980 | 0.31977 | +0.00004 | 16,938 | 16,940 | +0.01% | rejected | Apply the iter-165 d_timescale exp((d_decay-0.3)*(d-5)) to the SHORT component r1 too, not just long r2 (unified difficulty clock; reuses d_decay, 0 new params). |
 | 168 | 2026-06-07T13:56:11 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 16,938 | 16,938 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate none. |
+| 169 | 2026-06-07T19:51:42 | 0.0001 | 0.31980 | 0.31977 | +0.00003 | 16,938 | 16,938 | +0.00% | rejected | Re-tune FSRS7_DEFAULT_35_VALUES via 25-step central_diff (0-epoch) meta-opt for the iter-165 structure; round to 4dp. |
