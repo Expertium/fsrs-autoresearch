@@ -194,7 +194,7 @@ def main() -> None:
                 "best_params": best_mult.tolist(), "best_loss": float(best_loss),
                 "history": history, "completed_steps": step + 1, "groups": [g for g, _ in GROUPS],
             })
-            _save_plot(history, PLOT, "sigma-group tune: logloss_by_user")
+            _save_plot(history, PLOT, "sigma-group tune: logloss_by_user", ytick=0.0001)
 
         print(f"\n[sigma] DONE. best_loss={best_loss:.6f}  best_mult={best_mult.tolist()}")
         _restore()
