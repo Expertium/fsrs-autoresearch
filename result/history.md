@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_173 record(s). Generated from `history.jsonl` — do not edit by hand._
+_174 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -177,3 +177,4 @@ _173 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 171 | 2026-06-07T20:21:14 | 0.0001 | 0.31980 | 0.32018 | -0.00038 | 16,938 | 17,333 | +2.33% | rejected | AutoClip p=10 -> p=90 (clip only the top-10% grad-norm spikes per user). |
 | 172 | 2026-06-07T20:33:24 | 0.0001 | 0.31980 | 0.32137 | -0.00156 | 16,938 | 17,416 | +2.82% | rejected | Rating-aware AutoClip (p=90): clip only the recall-component (rating>1) of each row's gradient, preserve the Again-component (rating==1). |
 | 173 | 2026-06-07T20:50:46 | 0.0001 | 0.31980 | 0.31984 | -0.00004 | 16,938 | 17,015 | +0.45% | rejected | fp64 partial test: compute the retention path (forgetting curve + short-component recall) in double internally, fp32 I/O preserved. |
+| 174 | 2026-06-08T09:30:57 | 0.0001 | 0.31980 | 0.31990 | -0.00009 | 16,938 | 16,938 | +0.00% | rejected | Re-tune FSRS7_DEFAULT_35_VALUES via 500-step central_diff (0-epoch) meta-opt for the iter-165 structure; round to 4dp. |
