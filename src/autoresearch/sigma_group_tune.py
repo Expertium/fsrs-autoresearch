@@ -75,7 +75,7 @@ MULT_BOUNDS = [(0.25, 4.0)] * N_GROUPS  # scale each group's sigma 0.25x .. 4x
 
 # meta-Adam HPs (multipliers are O(1); larger h/LR than the param meta-opt).
 LR, BETA1, BETA2, EPS, H = 0.03, 0.9, 0.999, 1e-8, 0.05
-MAX_STEPS = 100
+MAX_STEPS = 25  # de-risk probe: enough to tell whether sigma-shape has potential
 N_EPOCHS = 8
 
 CKPT = OUTPUT_DIR / "sigma_group_results.json"
