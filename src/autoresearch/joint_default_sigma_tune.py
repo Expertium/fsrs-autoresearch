@@ -50,6 +50,7 @@ import json
 import os
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -79,6 +80,14 @@ np.random.seed(42)
 # evaluate the same 2k subset (consistent metric). ─────────────────────────────
 N_USERS_TUNE = 2000
 os.environ["FSRS_N_USERS"] = str(N_USERS_TUNE)
+
+# Parallel sigma-gradient: FSRS_TUNE_PARALLEL=2 runs the 2*N_SIG σ-gradient evals
+# 2-at-a-time via per-eval FSRS_PARAM_FILE (no constants.py race), each capping its
+# per-split VRAM to FSRS_TUNE_VRAM_GB so two fit on one 12 GB GPU. 1 = sequential
+# (constants.py write, full VRAM). Only the σ-gradient parallelizes; the single
+# gate/step/baseline evals stay sequential on constants.py.
+PARALLEL_WORKERS = int(os.environ.get("FSRS_TUNE_PARALLEL", "1"))
+VRAM_CAP_GB = float(os.environ.get("FSRS_TUNE_VRAM_GB", "5.0"))
 
 # ── config ──────────────────────────────────────────────────────────────────
 MAX_CYCLES = 25
@@ -120,6 +129,38 @@ def _bench(n_epochs: int) -> float:
     raise RuntimeError(f"benchmark failed after {EVAL_RETRIES+1} tries:\n{last}")
 
 
+def _bench_paramfile(param_path, defaults, sigma_full) -> float:
+    """8-ep --recency eval reading params from a per-eval JSON (FSRS_PARAM_FILE) so it
+    can run CONCURRENTLY with other evals (no constants.py race); per-split VRAM is
+    capped (FSRS_VRAM_GB) so two fit on one GPU. Reads by_user from <file>.result.
+    param_path is a repo-relative Path under result/init_w_metaopt/ (bind-mounted)."""
+    param_path.write_text(json.dumps({
+        "defaults": [float(x) for x in defaults],
+        "sigma": [float(x) for x in sigma_full],
+    }))
+    result_path = param_path.with_name(param_path.name + ".result")
+    if result_path.exists():
+        result_path.unlink()
+    cont_param = "result/init_w_metaopt/" + param_path.name  # container-relative (cwd = repo)
+    cmd = [
+        "docker", "compose", "--progress", "quiet", "run", "--rm",
+        "-e", f"FSRS_N_EPOCHS={N_EPOCHS}",
+        "-e", f"FSRS_N_USERS={N_USERS_TUNE}",
+        "-e", f"FSRS_VRAM_GB={VRAM_CAP_GB}",
+        "-e", f"FSRS_PARAM_FILE={cont_param}",
+        "-e", "FSRS_CACHE_RO=1",
+        "srs-benchmark", "bash", "src/main/run.sh",
+    ]
+    last = ""
+    for attempt in range(EVAL_RETRIES + 1):
+        r = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True)
+        if r.returncode == 0 and result_path.exists():
+            return float(json.loads(result_path.read_text())["by_user"])
+        last = (r.stderr or r.stdout or "")[-1500:]
+        time.sleep(5)
+    raise RuntimeError(f"paramfile bench failed ({param_path.name}):\n{last}")
+
+
 def main() -> None:
     _ensure_backup()
     atexit.register(_restore_constants)
@@ -149,11 +190,28 @@ def main() -> None:
         def def_grad_batch(plist):                  # batched 0-ep --default evals
             return evaluate_batch(plist, 0)
 
-        def sigma_eval(mult30):                     # 8-ep --recency on the committed defaults
+        def sigma_eval(mult30):                     # 8-ep --recency on the committed defaults (sequential)
             m = np.ones(n_def)
             m[SIG_IDX] = np.array(mult30, dtype=float)
             write_constants(state["defaults"], m)
             return _bench(N_EPOCHS)
+
+        def parallel_sigma_batch(cands):
+            """Evaluate the 2*N_SIG sigma perturbations PARALLEL_WORKERS-at-a-time via
+            per-eval param files (overlaps GPU idle/under-utilization). Each candidate
+            pairs the committed defaults with base_sigma*candidate; returns losses in
+            candidate order."""
+            def _one(idx_cand):
+                i, mult30 = idx_cand
+                m = np.ones(n_def)
+                m[SIG_IDX] = np.array(mult30, dtype=float)
+                pf = OUTPUT_DIR / f"parallel_eval_{i}.json"
+                return i, _bench_paramfile(pf, state["defaults"], base_sigma * m)
+            out = [None] * len(cands)
+            with ThreadPoolExecutor(max_workers=PARALLEL_WORKERS) as ex:
+                for i, loss in ex.map(_one, list(enumerate(cands))):
+                    out[i] = loss
+            return out
 
         # --- optimizers ------------------------------------------------------
         opt_def = AdamCentralDiff(
@@ -223,8 +281,9 @@ def main() -> None:
                 print(f"  [2/3] stepped-defaults --recency {rec_def:.8f}  -- rejected (defaults frozen)")
 
             # 4. SIGMA step — 8-ep --recency Adam step on the committed defaults.
-            print(f"  [4] sigma 8-epoch --recency gradient ({2*N_SIG} evals, ~{2*N_SIG*130/3600:.1f} h)...")
-            gs, _ = opt_sig.compute_gradient(sigma_eval, None)
+            print(f"  [4] sigma 8-epoch --recency gradient ({2*N_SIG} evals, {PARALLEL_WORKERS}x parallel)...")
+            _sig_batch = parallel_sigma_batch if PARALLEL_WORKERS > 1 else None
+            gs, _ = opt_sig.compute_gradient(sigma_eval, _sig_batch)
             new_sig30 = opt_sig.step(gs)
             full_mult = np.ones(n_def); full_mult[SIG_IDX] = new_sig30
             state["sig_mult"] = full_mult

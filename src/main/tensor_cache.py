@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 import json
 import math
+import os
 import shutil
 from pathlib import Path
 
@@ -127,6 +128,18 @@ def _open_cache_env(
     map_size: int = TENSOR_CACHE_SIZE,
 ) -> lmdb.Environment:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
+    # Parallel tuning (FSRS_CACHE_RO): open the already-warm cache READONLY +
+    # lock-free so multiple concurrent eval containers share it without an LMDB
+    # write-lock conflict (mdb_txn_begin EAGAIN). No writer is active in this mode,
+    # so MDB_NOLOCK is safe. Default path keeps the write-capable writemap open.
+    if os.environ.get("FSRS_CACHE_RO"):
+        return lmdb.open(
+            str(cache_path),
+            map_size=map_size,
+            subdir=True,
+            readonly=True,
+            lock=False,
+        )
     return lmdb.open(
         str(cache_path),
         map_size=map_size,
@@ -225,11 +238,21 @@ def load_or_rebuild_tensor_cache(
 ) -> lmdb.Environment:
     expected = _expected_manifest(user_splits)
     cache_env = _open_cache_env(cache_path, map_size)
+    _ro = bool(os.environ.get("FSRS_CACHE_RO"))
     if _main_manifest_matches(_read_manifest(cache_env), expected):
+        if _ro:
+            # Read-only concurrent mode: the cache (incl. train-setup + batch-perm)
+            # must already be fully warm — skip the write-path _ensure_* calls.
+            return cache_env
         _ensure_train_setup_cache(cache_env, user_splits)
         _ensure_batch_perm_cache(cache_env, user_splits)
         return cache_env
 
+    if _ro:
+        raise RuntimeError(
+            "FSRS_CACHE_RO set but the tensor cache is stale/missing for this user "
+            "split — warm it with a single non-RO run before launching parallel evals."
+        )
     if not HIDE_PROGRESS:
         print("tensor cache miss; rebuilding")
     cache_env.close()

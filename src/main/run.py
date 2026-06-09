@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from io import BytesIO
 import json
 import math
+import os
 from pathlib import Path
 
 import lmdb
@@ -642,12 +643,34 @@ def run_cached_split(
 def get_split_factor_k(req_size):
     props = torch.cuda.get_device_properties(0)
     cuda_mem_GB = props.total_memory / 1000 ** 3 - 0.5
+    # PARALLEL tuning: cap the per-split VRAM target (FSRS_VRAM_GB) so two concurrent
+    # evals fit on one GPU — forces more, smaller splits. Per-user eval is independent
+    # of split grouping, so this must be metric-neutral (validated). Off by default.
+    _cap = os.environ.get("FSRS_VRAM_GB")
+    if _cap:
+        cuda_mem_GB = min(cuda_mem_GB, float(_cap))
     gb_req = req_size / 510540097 * 22.9
     # smallest x such that cuda_mem_GB * x >= gb_req
     return math.ceil(gb_req / cuda_mem_GB)
 
 def main() -> None:
     assert DEVICE == "cuda", "Only cuda is supported."
+
+    # Per-eval PARAM OVERRIDE for PARALLEL offline tuning (FSRS_PARAM_FILE). Two
+    # concurrent containers can't share constants.py, so each reads its params from
+    # its own JSON {"defaults":[..34], "sigma":[..34]} and writes by_user to
+    # <file>.result. Monkeypatch BEFORE any training so the @torch.compile'd
+    # penalty_loss traces with the overridden sigma/anchor (fresh process => the
+    # trace happens after this patch). Clamps (FSRS_MIN/MAX) stay the champion's.
+    # Inert unless FSRS_PARAM_FILE is set, so normal/champion runs are unaffected.
+    _param_file = os.environ.get("FSRS_PARAM_FILE")
+    if _param_file:
+        _pf = json.loads(Path(_param_file).read_text())
+        if _pf.get("defaults") is not None:
+            fsrs_v7_constants.FSRS7_DEFAULT_35_VALUES = tuple(float(x) for x in _pf["defaults"])
+        if _pf.get("sigma") is not None:
+            fsrs_v7_constants.FSRS7_L2_SIGMA_35_VALUES = tuple(float(x) for x in _pf["sigma"])
+
     env = lmdb.open(
         str(LMDB_PATH),
         map_size=LMDB_SIZE,
@@ -733,6 +756,15 @@ def main() -> None:
             f"forbidden by the autoresearch constraints. If intentional, "
             f"update EXPECTED_N_REVIEWS in src/main/config.py."
         )
+
+    # Parallel-tuning sidecar: emit by_user next to the param file so concurrent
+    # workers read their result without racing on the single diagnostics.json.
+    if _param_file:
+        Path(_param_file + ".result").write_text(json.dumps({
+            "by_user": eval_aggregate.logloss_by_user,
+            "by_review": eval_aggregate.logloss_by_review,
+            "user_count": eval_aggregate.user_count,
+        }))
 
     if not HIDE_PROGRESS:
         fsrs_param_summary = eval_aggregate.fsrs_param_summary()
