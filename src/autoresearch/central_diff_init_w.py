@@ -79,6 +79,10 @@ import numpy as np
 np.random.seed(42)
 warnings.filterwarnings("ignore")
 
+# Launch docker children in a NEW process group so a console CTRL_C_EVENT can't
+# reach them (recurring STATUS_CONTROL_C_EXIT deaths during offline tuning).
+_NEWGRP = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+
 # ============================================================================
 # REPO WIRING  (edit REPO_DIR if you move the checkout)
 # ============================================================================
@@ -251,7 +255,7 @@ def evaluate_batch(params_list, n_epochs: int):
     last_err = ""
     for attempt in range(EVAL_RETRIES + 1):
         start = time.perf_counter()
-        result = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True)
+        result = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True, creationflags=_NEWGRP)
         dur = time.perf_counter() - start
         fresh = BATCH_OUT_PATH.exists() and BATCH_OUT_PATH.stat().st_mtime > before_mtime
         if result.returncode == 0 and fresh:
@@ -294,7 +298,8 @@ def evaluate(params: List[float], n_epochs: int) -> float:
     for attempt in range(EVAL_RETRIES + 1):
         start = time.perf_counter()
         result = subprocess.run(
-            cmd, cwd=str(REPO_DIR), capture_output=True, text=True
+            cmd, cwd=str(REPO_DIR), capture_output=True, text=True,
+            creationflags=_NEWGRP,
         )
         dur = time.perf_counter() - start
         fresh = DIAG_PATH.exists() and DIAG_PATH.stat().st_mtime > before_mtime

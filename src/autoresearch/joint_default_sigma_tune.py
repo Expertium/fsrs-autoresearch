@@ -48,6 +48,7 @@ from __future__ import annotations
 import atexit
 import json
 import os
+import signal
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -80,6 +81,11 @@ np.random.seed(42)
 # evaluate the same 2k subset (consistent metric). ─────────────────────────────
 N_USERS_TUNE = 2000
 os.environ["FSRS_N_USERS"] = str(N_USERS_TUNE)
+
+# Launch docker children in a NEW process group so a console CTRL_C_EVENT in the
+# shared user session can't reach them (the recurring STATUS_CONTROL_C_EXIT
+# 0xC000013A deaths). Paired with SIGINT-ignore in main().
+_NEWGRP = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
 
 # Parallel sigma-gradient: FSRS_TUNE_PARALLEL=2 runs the 2*N_SIG σ-gradient evals
 # 2-at-a-time via per-eval FSRS_PARAM_FILE (no constants.py race), each capping its
@@ -118,7 +124,7 @@ def _bench(n_epochs: int) -> float:
     last = ""
     for attempt in range(EVAL_RETRIES + 1):
         t = time.perf_counter()
-        r = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True)
+        r = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True, creationflags=_NEWGRP)
         dt = time.perf_counter() - t
         fresh = DIAG_PATH.exists() and DIAG_PATH.stat().st_mtime > before
         if r.returncode == 0 and fresh:
@@ -153,7 +159,7 @@ def _bench_paramfile(param_path, defaults, sigma_full) -> float:
     ]
     last = ""
     for attempt in range(EVAL_RETRIES + 1):
-        r = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True)
+        r = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True, creationflags=_NEWGRP)
         if r.returncode == 0 and result_path.exists():
             return float(json.loads(result_path.read_text())["by_user"])
         last = (r.stderr or r.stdout or "")[-1500:]
@@ -162,6 +168,10 @@ def _bench_paramfile(param_path, defaults, sigma_full) -> float:
 
 
 def main() -> None:
+    # Ignore console Ctrl-C: under Task Scheduler / the shared session a stray
+    # CTRL_C_EVENT was killing the run (STATUS_CONTROL_C_EXIT). Stop intentionally
+    # via Stop-ScheduledTask / Stop-Process (TerminateProcess), not Ctrl-C.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     _ensure_backup()
     atexit.register(_restore_constants)
     try:
