@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import atexit
 import json
+import os
 import subprocess
 import time
 
@@ -71,6 +72,14 @@ from src.autoresearch.sigma_group_tune import replace_sigma_values
 
 np.random.seed(42)
 
+# ── fast-tuning PROXY: tune on a seeded 2k-user subset (validated ~1.26x faster
+# per eval; the winner is re-verified on the FULL 3000-user champion metric before
+# acceptance). Exporting it to the environment makes central_diff_init_w's docker
+# builders forward it to the 0-epoch default-gradient container too, so BOTH legs
+# evaluate the same 2k subset (consistent metric). ─────────────────────────────
+N_USERS_TUNE = 2000
+os.environ["FSRS_N_USERS"] = str(N_USERS_TUNE)
+
 # ── config ──────────────────────────────────────────────────────────────────
 MAX_CYCLES = 25
 N_EPOCHS = 8
@@ -94,7 +103,7 @@ def _bench(n_epochs: int) -> float:
     before = DIAG_PATH.stat().st_mtime if DIAG_PATH.exists() else 0.0
     cmd = [
         "docker", "compose", "--progress", "quiet", "run", "--rm",
-        "-e", f"FSRS_N_EPOCHS={n_epochs}",
+        "-e", f"FSRS_N_EPOCHS={n_epochs}", "-e", f"FSRS_N_USERS={N_USERS_TUNE}",
         "srs-benchmark", "bash", "src/main/run.sh",
     ]
     last = ""
@@ -182,7 +191,7 @@ def main() -> None:
             best_loss = _bench(N_EPOCHS)
             best_def = state["defaults"].copy(); best_sig = state["sig_mult"].copy()
             history.append({"step": 0, "loss": best_loss, "rec_def": best_loss, "def_accepted": False})
-            print(f"baseline champion --recency by_user = {best_loss:.8f}  [should match ~0.31980351]")
+            print(f"baseline champion --recency by_user = {best_loss:.8f}  [2k proxy; expect ~0.32115701]")
             _save_plot(history, PLOT, "joint default+sigma tune: logloss_by_user", ytick=1e-4)
 
         print(f"per-param sigma N={N_SIG} (w[4..33]); defaults N={n_def}; "

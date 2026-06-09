@@ -40,5 +40,15 @@ USER_END = 3000
 EXPECTED_N_USERS: int = 3000
 EXPECTED_N_REVIEWS: int | None = 152_354_175  # locked from 2026-05-29 baseline
 
+# Fast-tuning subset knob (PROXY metric). If FSRS_N_USERS > 0, run.py trains+evals
+# a SEEDED-RANDOM subset of this many users instead of all 3000 — used ONLY by the
+# offline meta-tuners to speed up exploration; the winner is always re-verified on
+# the full 3000-user metric before acceptance. Default 0 = full dataset, so
+# normal/champion runs and the preprocessing-guard asserts are UNCHANGED. The guard
+# against a *model variant* secretly dropping users still holds: a variant is code
+# and cannot set this env var.
+N_USERS = int(os.environ.get("FSRS_N_USERS", "0"))
+SUBSET_SEED = 42  # deterministic subset (stable across evals => stable cache key + metric)
+
 # Requires a prepare.py run to change, and untested
-N_SPLITS = 5 
+N_SPLITS = 5

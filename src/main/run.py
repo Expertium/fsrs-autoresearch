@@ -28,6 +28,8 @@ from src.main.config import (
     DEVICE,
     N_EPOCHS,
     N_SPLITS,
+    N_USERS,
+    SUBSET_SEED,
     TEST_BATCH_SIZE_MAX,
     USER_END,
     USER_MAX_TRAIN_SPLIT_LENGTHS_KEY,
@@ -655,6 +657,14 @@ def main() -> None:
     
     users = list(range(USER_START, USER_END + 1))
 
+    # Fast-tuning proxy: train+eval a seeded-random subset (FSRS_N_USERS>0). Stable
+    # across evals (fixed seed) => stable cache key + comparable metric. Off by
+    # default (full 3000-user run). See config.N_USERS.
+    if N_USERS and N_USERS < len(users):
+        import random as _random
+        users = sorted(_random.Random(SUBSET_SEED).sample(users, N_USERS))
+        print(f"[subset] FSRS_N_USERS={N_USERS}: seeded subset of {len(users)} users (PROXY metric)")
+
     with env.begin(write=False) as txn:
         user_max_train_split_lengths = load_metadata_tensor(
             txn,
@@ -703,14 +713,19 @@ def main() -> None:
 
     # Preprocessing invariant guard — see CLAUDE.md "Hard constraints" #6.
     # Catches variants that silently skip users or change review filtering.
-    assert eval_aggregate.user_count == EXPECTED_N_USERS, (
+    # When FSRS_N_USERS>0 (offline proxy tuning only) the guard adapts to the
+    # seeded subset size and the review-count guard is skipped (the subset's
+    # review total is data-dependent); normal/champion runs (N_USERS=0) are
+    # guarded exactly as before.
+    expected_users = N_USERS if N_USERS else EXPECTED_N_USERS
+    assert eval_aggregate.user_count == expected_users, (
         f"preprocessing guard: user_count={eval_aggregate.user_count} but "
-        f"EXPECTED_N_USERS={EXPECTED_N_USERS}. Preprocessing was changed in "
-        f"a way that affects user filtering — this is forbidden by the "
-        f"autoresearch constraints. If you intentionally switched datasets, "
+        f"expected={expected_users} (N_USERS={N_USERS}). Preprocessing was "
+        f"changed in a way that affects user filtering — this is forbidden by "
+        f"the autoresearch constraints. If you intentionally switched datasets, "
         f"update EXPECTED_N_USERS in src/main/config.py."
     )
-    if EXPECTED_N_REVIEWS is not None:
+    if not N_USERS and EXPECTED_N_REVIEWS is not None:
         assert eval_aggregate.review_count == EXPECTED_N_REVIEWS, (
             f"preprocessing guard: review_count={eval_aggregate.review_count} "
             f"but EXPECTED_N_REVIEWS={EXPECTED_N_REVIEWS}. Preprocessing was "

@@ -54,6 +54,8 @@ from src.main.config import (
     LMDB_PATH,
     LMDB_SIZE,
     N_EPOCHS,
+    N_USERS,
+    SUBSET_SEED,
     USER_END,
     USER_MAX_TRAIN_SPLIT_LENGTHS_KEY,
     USER_START,
@@ -75,6 +77,11 @@ def _setup_splits_and_cache():
     cache key matches (no rebuild) and the eval is identical."""
     env = lmdb.open(str(LMDB_PATH), map_size=LMDB_SIZE, readonly=True, lock=False)
     users = list(range(USER_START, USER_END + 1))
+    # Mirror run.py's fast-tuning subset so the 0-epoch default phase evaluates the
+    # SAME seeded 2k proxy as the 8-epoch sigma/gate evals (consistent metric).
+    if N_USERS and N_USERS < len(users):
+        import random as _random
+        users = sorted(_random.Random(SUBSET_SEED).sample(users, N_USERS))
     with env.begin(write=False) as txn:
         user_max_train_split_lengths = R.load_metadata_tensor(
             txn, USER_MAX_TRAIN_SPLIT_LENGTHS_KEY
@@ -125,11 +132,13 @@ def evaluate_candidates(candidates: list[list[float]]) -> list[float]:
         cache_env.close()
         env.close()
 
-    # Preprocessing guard (mirror run.py): every candidate must see all users.
+    # Preprocessing guard (mirror run.py): every candidate must see all users
+    # (or the full seeded subset when FSRS_N_USERS>0).
+    expected_users = N_USERS if N_USERS else EXPECTED_N_USERS
     for ci, a in enumerate(aggs):
-        assert a.user_count == EXPECTED_N_USERS, (
-            f"candidate {ci}: user_count={a.user_count} != EXPECTED_N_USERS="
-            f"{EXPECTED_N_USERS} — split/cache setup diverged from run.py."
+        assert a.user_count == expected_users, (
+            f"candidate {ci}: user_count={a.user_count} != expected={expected_users} "
+            f"(N_USERS={N_USERS}) — split/cache setup diverged from run.py."
         )
     return [a.logloss_by_user for a in aggs]
 

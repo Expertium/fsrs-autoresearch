@@ -239,9 +239,11 @@ def evaluate_batch(params_list, n_epochs: int):
         json.dumps({"candidates": [list(map(float, p)) for p in params_list]})
     )
     before_mtime = BATCH_OUT_PATH.stat().st_mtime if BATCH_OUT_PATH.exists() else 0.0
+    _nu = os.environ.get("FSRS_N_USERS")
+    _euser = ["-e", f"FSRS_N_USERS={_nu}"] if _nu else []
     cmd = [
         "docker", "compose", "--progress", "quiet", "run", "--rm",
-        "-e", f"FSRS_N_EPOCHS={n_epochs}",
+        "-e", f"FSRS_N_EPOCHS={n_epochs}", *_euser,
         "srs-benchmark", "bash", "-c",
         "python setup.py -q build_ext --inplace && "
         "python -m src.autoresearch.batch_eval_default",
@@ -280,9 +282,11 @@ def evaluate(params: List[float], n_epochs: int) -> float:
     replace_default_values(params)
     before_mtime = DIAG_PATH.stat().st_mtime if DIAG_PATH.exists() else 0.0
 
+    _nu = os.environ.get("FSRS_N_USERS")
+    _euser = ["-e", f"FSRS_N_USERS={_nu}"] if _nu else []
     cmd = [
         "docker", "compose", "--progress", "quiet", "run", "--rm",
-        "-e", f"FSRS_N_EPOCHS={n_epochs}",
+        "-e", f"FSRS_N_EPOCHS={n_epochs}", *_euser,
         "srs-benchmark", "bash", "src/main/run.sh",
     ]
 
