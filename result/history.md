@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_179 record(s). Generated from `history.jsonl` — do not edit by hand._
+_180 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -183,3 +183,4 @@ _179 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 177 | 2026-06-10T05:48:54 | 0.0001 | 0.31980 | 0.31975 | +0.00005 | 17,631 | 17,833 | +1.15% | rejected | Sweep SWA (eta_min, start_frac) over (0,0.75),(0.08,0.75),(0.25,0.75),(0.15,0.5),(0.15,0.85). |
 | 178 | 2026-06-10T06:35:41 | 0.0010 | 0.31980 | 0.31975 | +0.00006 | 17,631 | 17,690 | +0.33% | rejected | n_before fatigue clock on the long curve component, exp(K*n/(n+300)); K swept over 0.15/0.3/0.6. |
 | 179 | 2026-06-10T06:46:02 | 0.0010 | 0.31980 | 0.31979 | +0.00001 | 17,631 | 17,742 | +0.63% | rejected | Encoding fatigue: long-trace success stability increment scaled by exp(-K2*n/(n+300)); K2 swept 0.15/0.3/0.6. |
+| 180 | 2026-06-10T07:18:42 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 17,690 | 17,690 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate none. |
