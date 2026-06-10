@@ -698,9 +698,10 @@ and "change the forgetting curve" are two proposals, not one. "Replace Adam
 with NAdam" and "add cosine annealing" are two proposals. In particular,
 **bundling several individually-mapped sub-threshold changes into one
 "composite" iteration so they clear the bar together is NOT allowed**, even
-when each component's solo delta is already attributed in history — iter-181
-tried exactly that (4 mapped shavings, measured +1.6e-4, would have cleared
-the bar) and was vetoed by the user on methodology. The hp_tune multi-knob
+when each component's solo delta is already attributed in history — tried
+once (2026-06-10: a 4-shaving composite measured +1.6e-4, enough to clear
+the bar) and still vetoed on methodology, unrecorded per the user's call.
+The hp_tune multi-knob
 pass stays sanctioned: it tunes numeric hyperparameters only, never bundles
 formula changes. Each iteration tests **one** change against the threshold
 + complexity gate so we can attribute the delta cleanly.
