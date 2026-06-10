@@ -309,13 +309,16 @@ threshold + complexity gate, and keeps an archive of winners.
 > 2026-06-06 D-only narrowing is lifted (the D campaign, iters 141–165,
 > comprehensively closed that subsystem — see `result/history.md`). Current
 > specifics:
-> - **`n_before` feature GREENLIT**: number of reviews the user did *today*
->   (same `day_offset`) before the current review — a fatigue proxy. Must be
->   derived from the raw `.parquet` revlogs in `src/prepare/prepare.py` (no
->   existing code computes it) and threaded through tensors/cache/extension —
->   this pipeline plumbing is user-authorized, including minimal pass-through
->   edits to the otherwise off-limits extension/kernel files. Costs **+0.0010**
->   as a new input feature (threshold table below).
+> - **`n_before` fatigue feature: CONCLUDED + STRIPPED (2026-06-10).** The
+>   user-greenlit same-day-prior-review-count feature was built end-to-end and
+>   measured in iters 178/179: recall-side clock peaked +5.8e-5, encoding-side
+>   +1.1e-5 then negative — both far under the +0.0010 input-feature bar (the
+>   raw −2.4pp fatigue signal is mostly schedule confound; `delta_t` prices
+>   it). The entire pipeline (prepare column → tensors → cache → kernels →
+>   curve arg) was then removed per user call; cache is v8, strip verified
+>   bit-exact (delta 3.9e-9). Old prepare blobs keep an unused `n_before`
+>   named tensor — harmless; do **not** re-prepare. Don't re-propose fatigue
+>   features without new evidence.
 > - **Response-time (DURATION) feature REJECTED** by the user — do not propose.
 > - **Sub-day / iter-138-style mechanisms**: may be *proposed*, but the user
 >   reserves rejecting them on aesthetics without trying.

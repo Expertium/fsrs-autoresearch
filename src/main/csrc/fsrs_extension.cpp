@@ -50,14 +50,12 @@ void check_fsrs_params_tensor(
 torch::Tensor fsrs7_test(
     const torch::Tensor& elapsed_days_real_flat,
     const torch::Tensor& rating_flat,
-    const torch::Tensor& n_before_flat,
     const torch::Tensor& start_index,
     const torch::Tensor& seq_len,
     const torch::Tensor& fsrs_params
 ) {
     check_sample_tensor(elapsed_days_real_flat, "elapsed_days_real_flat", torch::kFloat32);
     check_sample_tensor(rating_flat, "rating_flat", torch::kInt8);
-    check_sample_tensor(n_before_flat, "n_before_flat", torch::kFloat32);
     check_sample_tensor(start_index, "start_index", torch::kInt32);
     check_sample_tensor(seq_len, "seq_len", torch::kInt32);
 
@@ -73,7 +71,6 @@ torch::Tensor fsrs7_test(
     fsrs_test_cuda(
         elapsed_days_real_flat.data_ptr<float>(),
         rating_flat.data_ptr<int8_t>(),
-        n_before_flat.data_ptr<float>(),
         start_index.data_ptr<int32_t>(),
         seq_len.data_ptr<int32_t>(),
         reinterpret_cast<const fsrs_params_t*>(fsrs_params.data_ptr<float>()),
@@ -93,7 +90,6 @@ constexpr int64_t TRAIN_SCRATCH_BYTES = 500LL * 1000LL * 1000LL;
 torch::Tensor fsrs7_train_dispatch(
     const torch::Tensor& elapsed_days_real_flat,
     const torch::Tensor& rating_flat,
-    const torch::Tensor& n_before_flat,
     const torch::Tensor& start_index_UxT,
     const torch::Tensor& grad_weight_UxT,
     const torch::Tensor& seq_len_UxT,
@@ -103,7 +99,6 @@ torch::Tensor fsrs7_train_dispatch(
 ) {
     check_sample_tensor(elapsed_days_real_flat, "elapsed_days_real_flat", torch::kFloat32);
     check_sample_tensor(rating_flat, "rating_flat", torch::kInt8);
-    check_sample_tensor(n_before_flat, "n_before_flat", torch::kFloat32);
     check_sample_tensor(start_index_UxT, "start index", torch::kInt32);
     check_sample_tensor(grad_weight_UxT, "grad weight", torch::kFloat32);
     check_sample_tensor(seq_len_UxT, "seq_len", torch::kInt32);
@@ -134,7 +129,6 @@ torch::Tensor fsrs7_train_dispatch(
     fsrs_train_cuda(
         elapsed_days_real_flat.data_ptr<float>(),
         rating_flat.data_ptr<int8_t>(),
-        n_before_flat.data_ptr<float>(),
         start_index_UxT.data_ptr<int32_t>(),
         grad_weight_UxT.data_ptr<float>(),
         seq_len_UxT.data_ptr<int32_t>(),
@@ -162,7 +156,6 @@ TORCH_LIBRARY(srs, m) {
         "fsrs7_train("
         "Tensor elapsed_days_real_flat, "
         "Tensor rating_flat, "
-        "Tensor n_before_flat, "
         "Tensor start_index_UxT, "
         "Tensor grad_weight_UxT, "
         "Tensor seq_len_UxT, "

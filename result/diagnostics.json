@@ -480,15 +480,15 @@
       },
       {
         "path": "src/main/run.py",
-        "ast_nodes": 4901,
-        "cyclomatic": 68,
-        "score": 7621
+        "ast_nodes": 5135,
+        "cyclomatic": 79,
+        "score": 8295
       },
       {
         "path": "src/main/config.py",
-        "ast_nodes": 107,
+        "ast_nodes": 126,
         "cyclomatic": 0,
-        "score": 107
+        "score": 126
       },
       {
         "path": "src/main/fsrs/fsrs_v7_constants.py",
@@ -527,11 +527,11 @@
         "score": 203
       }
     ],
-    "total_ast_nodes": 11978,
-    "total_cyclomatic": 124,
-    "total_score": 16938
+    "total_ast_nodes": 12231,
+    "total_cyclomatic": 135,
+    "total_score": 17631
   },
-  "compute_seconds": 136.06309659199906,
+  "compute_seconds": 110.55358731996967,
   "config": {
     "s_min": 0.0001,
     "init_s_max": 100.0,

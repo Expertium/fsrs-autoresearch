@@ -8,7 +8,6 @@
 extern "C" void fsrs_test_cuda(
     const float* elapsed_days_real_flat,
     const int8_t* rating_flat,
-    const float* n_before_flat,
     const int32_t* start_index,
     const int32_t* seq_len,
     const fsrs_params_t* fsrs_params,

@@ -6,7 +6,6 @@
 __global__ void fsrs_test_kernel(
     const float* __restrict__ elapsed_days_real_flat,
     const int8_t* __restrict__ rating_flat,
-    const float* __restrict__ n_before_flat,
     const int32_t* __restrict__ start_index,
     const int32_t* __restrict__ seq_len,
     const fsrs_params_t* __restrict__ fsrs_params,
@@ -35,15 +34,13 @@ __global__ void fsrs_test_kernel(
     p[i] = fsrs7_forgetting_curve(
         params,
         elapsed_days_real_flat[target_index],
-        state,
-        n_before_flat[target_index]
+        state
     );
 }
 
 void fsrs_test_cuda(
     const float* __restrict__ elapsed_days_real_flat,
     const int8_t* __restrict__ rating_flat,
-    const float* __restrict__ n_before_flat,
     const int32_t* __restrict__ start_index,
     const int32_t* __restrict__ seq_len,
     const fsrs_params_t* __restrict__ fsrs_params,
@@ -56,7 +53,6 @@ void fsrs_test_cuda(
     fsrs_test_kernel<<<blocks, threads, 0, stream>>>(
         elapsed_days_real_flat,
         rating_flat,
-        n_before_flat,
         start_index,
         seq_len,
         fsrs_params,

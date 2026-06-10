@@ -18,9 +18,6 @@ class ReviewData:
     rating: torch.Tensor
     elapsed_days_real: torch.Tensor
     seq_len: torch.Tensor
-    # n_before (fatigue proxy, user directive 2026-06-10): reviews done earlier
-    # the same day. None-default keeps old call sites valid until plumbed.
-    n_before: torch.Tensor | None = None
 
 
 @dataclass(frozen=True)
@@ -28,7 +25,6 @@ class UserTensorBlob:
     rating: torch.Tensor
     elapsed_days_int: torch.Tensor
     elapsed_days_real: torch.Tensor
-    n_before: torch.Tensor
     card_sorted_index: torch.Tensor
     seq_len: torch.Tensor
     card_last_index: torch.Tensor
@@ -198,7 +194,6 @@ class DataBuilder:
         self.device = torch.device("cpu")
         self.rating = _TensorVector(device=self.device)
         self.elapsed_days_real = _TensorVector(device=self.device)
-        self.n_before = _TensorVector(device=self.device)
         self.seq_len = _TensorVector(device=self.device)
         self.train_index = _TensorVector(torch.int32, device=self.device)
         self.split_review_ord = _TensorVector(torch.int32, device=self.device)
@@ -220,7 +215,6 @@ class DataBuilder:
         self.rating.append(user_data.rating)
         assert user_data.rating.dtype == torch.int8
         self.elapsed_days_real.append(user_data.elapsed_days_real)
-        self.n_before.append(user_data.n_before)
         self.seq_len.append(user_data.seq_len)
 
         self.train_index.append(
@@ -258,7 +252,6 @@ class DataBuilder:
             rating=self.rating.finish(shrink=shrink),
             elapsed_days_real=self.elapsed_days_real.finish(shrink=shrink),
             seq_len=self.seq_len.finish(shrink=shrink),
-            n_before=self.n_before.finish(shrink=shrink),
         )
         data.device = data.review_data.rating.device
 
@@ -314,11 +307,6 @@ class Data:
             rating=self.review_data.rating.to(device),
             elapsed_days_real=self.review_data.elapsed_days_real.to(device),
             seq_len=self.review_data.seq_len.to(device),
-            n_before=(
-                self.review_data.n_before.to(device)
-                if self.review_data.n_before is not None
-                else None
-            ),
         )
         self.device = self.review_data.rating.device
         self.user_flat_offset = self.user_flat_offset.to(device)

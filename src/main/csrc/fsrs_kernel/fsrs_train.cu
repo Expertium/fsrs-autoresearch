@@ -13,11 +13,10 @@ __device__ __forceinline__
 void fsrs7_forgetting_curve_wrapper(
     const fsrs_params_t &fsrs_params,
     const float elapsed_time,
-    const float n_before,
     const fsrs_state_t &state,
     float *p
 ) {
-    *p = fsrs7_forgetting_curve(fsrs_params, elapsed_time, state, n_before);
+    *p = fsrs7_forgetting_curve(fsrs_params, elapsed_time, state);
 }
 
 
@@ -25,7 +24,6 @@ __device__
 void __enzyme_autodiff_forgetting_curve(
     void*,
     int, const fsrs_params_t, fsrs_params_t*,
-    int, const float,
     int, const float,
     int, const fsrs_state_t, fsrs_state_t*,
     int, float*, float*
@@ -113,7 +111,6 @@ float dloss_dp(
 __global__ void fsrs_train_kernel(
     const float* __restrict__ elapsed_days_real_flat,
     const int8_t* __restrict__ rating_flat,
-    const float* __restrict__ n_before_flat,
     const int32_t* __restrict__ start_index,
     const float* __restrict__ grad_weight,
     const int32_t* __restrict__ seq_len_p,
@@ -179,8 +176,7 @@ __global__ void fsrs_train_kernel(
     float p = fsrs7_forgetting_curve(
         params,
         elapsed_days_real_flat[target_index],
-        state,
-        n_before_flat[target_index]
+        state
     );
     const float label = (float) (rating_flat[target_index] > 1);
     float grad_p = grad_weight[i] * dloss_dp(p, label);
@@ -192,7 +188,6 @@ __global__ void fsrs_train_kernel(
         (void*) fsrs7_forgetting_curve_wrapper,
         enzyme_dup, params, &grad_params,
         enzyme_const, elapsed_days_real_flat[target_index],
-        enzyme_const, n_before_flat[target_index],
         enzyme_dup, state, &grad_state,
         enzyme_dupnoneed, &_blank_p, &grad_p
     );
@@ -226,7 +221,6 @@ __global__ void fsrs_train_kernel(
 void fsrs_train_cuda(
     const float* __restrict__ elapsed_days_real_flat,
     const int8_t* __restrict__ rating_flat,
-    const float* __restrict__ n_before_flat,
     const int32_t* __restrict__ start_index,
     const float* __restrict__ grad_weight,
     const int32_t* __restrict__ seq_len_UxT,
@@ -245,7 +239,6 @@ void fsrs_train_cuda(
     fsrs_train_kernel<<<grid, block, 0, stream>>>(
         elapsed_days_real_flat,
         rating_flat,
-        n_before_flat,
         start_index,
         grad_weight,
         seq_len_UxT,

@@ -2,9 +2,9 @@
 
 **Log loss, per-user (primary):** `0.31980`
 **Log loss, per-review (sanity):** `0.33285`
-**Train+eval compute time:** `136.1s`
+**Train+eval compute time:** `110.6s`
 
-**Complexity score:** `16938` (AST nodes: `11978`, cyclomatic: `124`)
+**Complexity score:** `17631` (AST nodes: `12231`, cyclomatic: `135`)
 
 ## Loss by rating
 
