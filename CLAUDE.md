@@ -320,8 +320,18 @@ threshold + complexity gate, and keeps an archive of winners.
 >   named tensor — harmless; do **not** re-prepare. Don't re-propose fatigue
 >   features without new evidence.
 > - **Response-time (DURATION) feature REJECTED** by the user — do not propose.
-> - **Sub-day / iter-138-style mechanisms**: may be *proposed*, but the user
->   reserves rejecting them on aesthetics without trying.
+> - **Forgetting curve CLOSED for added complexity (user veto 2026-06-10
+>   evening): "Let's not add more complexity to the forgetting curve."** No
+>   new factors, components, or mechanisms in `fsrs7_forgetting_curve` /
+>   `fsrs7_short_component_recall`. This supersedes the earlier "sub-day may
+>   be proposed" carve-out — the absolute-clock power-law factor on r1 was
+>   vetoed pre-run under this rule (math write-up exists in the 2026-06-10
+>   session if ever needed). Curve simplifications/ablations remain fine.
+> - **User-directed priorities (2026-06-10 evening): (a) add flexibility in
+>   places OTHER than the forgetting curve** (stability updates, init, lapse
+>   path, …) **and (b) keep hunting training-convergence improvements**
+>   (optimizer variants, warmup, decoupled anchor decay, …) — training-loop
+>   changes still bundle hp_tune per the mandatory-bundle rule.
 > **Threshold math (incl. the new input-feature row), acceptance criteria, the
 > complexity gate, and hard constraints 1–12 are otherwise UNCHANGED.**
 
