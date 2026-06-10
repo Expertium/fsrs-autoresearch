@@ -553,6 +553,20 @@ Examples:
 - Change a formula with no new params: `0.0001`
 - Change optimizer with no new params: `0.0001`
 
+**Mean-of-3 measurement rule (user directive 2026-06-10).** For any
+single-idea iteration judged *without* an hp_tune pass, the `logloss_by_user`
+that goes up against the threshold is the **mean of 3 identical benchmark
+runs** (same code, same config; training is seeded but the harness has
+~1e-5 run-to-run nondeterminism at high LR from scatter_add atomics —
+discovered iter-185; the champion at LR 0.0188 reproduces to ~7e-7, but the
+rule applies regardless so deltas near any bar are trustworthy). At ~2 min a
+run this costs ~6 min per iteration — cheap insurance. **hp_tune passes are
+exempt** (3× per trial would triple a 15–20 min pass): the tuner's single-run
+trials stand, and for an hp_tune-bundled iteration the established near-bar
+practice still applies — if the final best config lands within ~1e-5 of the
+bar, re-measure it 2–3× and judge on the mean. Record the individual run
+values in the history `comment` so the spread is documented.
+
 **Near-misses (improvement real but below threshold).** The threshold is a
 bright line: a variant that improves `logloss_by_user` but by less than its
 threshold is a **reject**, and the champion is unchanged — don't fudge it (a
