@@ -327,11 +327,14 @@ threshold + complexity gate, and keeps an archive of winners.
 >   be proposed" carve-out — the absolute-clock power-law factor on r1 was
 >   vetoed pre-run under this rule (math write-up exists in the 2026-06-10
 >   session if ever needed). Curve simplifications/ablations remain fine.
-> - **User-directed priorities (2026-06-10 evening): (a) add flexibility in
->   places OTHER than the forgetting curve** (stability updates, init, lapse
->   path, …) **and (b) keep hunting training-convergence improvements**
->   (optimizer variants, warmup, decoupled anchor decay, …) — training-loop
->   changes still bundle hp_tune per the mandatory-bundle rule.
+> - **User-directed priorities (2026-06-10 evening, updated late evening):
+>   spend ~5–10 more iterations on the TRAINING LOOP (counting from iter-193),
+>   then pivot to FORMULA changes — and in that phase, changes that ADD NEW
+>   TRAINABLE PARAMETERS are explicitly back on the menu ("it's been a while
+>   since changes that add new parameters have been done"; +0.0002/param bar
+>   unchanged). Flexibility belongs in places OTHER than the forgetting curve
+>   (stability updates, init, lapse path, …). Training-loop changes still
+>   bundle hp_tune per the mandatory-bundle rule.
 > **Threshold math (incl. the new input-feature row), acceptance criteria, the
 > complexity gate, and hard constraints 1–12 are otherwise UNCHANGED.**
 
