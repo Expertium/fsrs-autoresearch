@@ -708,6 +708,19 @@ formula changes. Each iteration tests **one** change against the threshold
 
 ### Automated hyperparameter tuning
 
+> **Optimizer/training-loop changes must always be accompanied by an hp_tune
+> pass (user directive 2026-06-10).** Any iteration that changes the optimizer
+> or training loop (update rule, LR schedule, batching, gradient weighting,
+> loss shaping, …) is evaluated **with** hyperparameters re-tuned for it: run
+> `hp_tune.py --no-commit` on top of the uncommitted change and judge the
+> **combined** best config vs the champion against the iteration's threshold.
+> Rationale: such changes move the loss landscape, and HPs tuned for the old
+> regime can mask a genuine win (iter-183: batch decorrelation alone was
+> +7.0e-5 — sub-threshold at champion HPs tuned for correlated-chunk noise).
+> This bundling counts as **one** idea, not a lumping violation: tuning numeric
+> HPs for a new training regime is part of the change. On accept, the pass
+> also counts as the cadence hp_tune (update `result/.last_hptune_iter`).
+
 Tuning numeric *training* hyperparameters (LR, Adam betas, L2 strength, recency
 weighting) by hand is mechanical, so it's automated in
 `src/autoresearch/hp_tune.py`. It runs a greedy **coordinate-descent** search —
