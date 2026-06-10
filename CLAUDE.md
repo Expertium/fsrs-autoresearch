@@ -304,24 +304,23 @@ AlphaEvolve/Karpathy-style: Claude reads the current champion, proposes a
 mutation, writes the patch, runs the benchmark, accepts or rejects against a
 threshold + complexity gate, and keeps an archive of winners.
 
-> **!!! CURRENT RESEARCH FOCUS (2026-06-06 user directive): DIFFICULTY (D) FORMULAS ONLY.**
-> The scope is narrowed to the **difficulty sub-system**: D initialization
-> (`fsrs7_initial_difficulty`), the post-review D update (`fsrs7_next_d` — the
-> rating→ΔD map, `fsrs7_linear_damping`, `fsrs7_mean_reversion`, the iter-101/105
-> R-surprise weighting), and the **D→S coupling** (how D enters the stability
-> update, e.g. the `(11 − d)` factor in `fsrs7_stability_after_review_one_term`).
-> **Everything else is OFF-SCOPE for now** — do NOT propose changes to the
-> forgetting-curve shape, the stability-update dynamics, the dual trace, recency /
-> optimizer / LR / scheduler, or the default/anchor params. Within D, go wide: small
-> tweaks AND bold architectural bets are both welcome, **up to replacing the D
-> formula entirely with a new one**, as long as it conceptually serves the same
-> purpose — a per-card difficulty state where *harder ⇒ stability grows more slowly*.
-> **Keep D dependent on R (retention)** — theoretically it should be; the iter-101/105
-> lapse-surprise (`ΔD ×= 1 + (R − 0.9)`) is the current R-coupling — preserve or
-> extend an R-dependence, never drop it. **Threshold math, acceptance criteria, the
-> complexity gate, and hard constraints 1–12 are UNCHANGED** (constraint 4 still
-> binds: higher D ⇒ post-review S non-increasing, on BOTH the success and lapse
-> paths) — only the surface you touch is narrower.
+> **!!! CURRENT RESEARCH FOCUS (2026-06-10 user directive): scope RE-OPENED —
+> "find ways to improve FSRS's formulas and/or training pipeline."** The
+> 2026-06-06 D-only narrowing is lifted (the D campaign, iters 141–165,
+> comprehensively closed that subsystem — see `result/history.md`). Current
+> specifics:
+> - **`n_before` feature GREENLIT**: number of reviews the user did *today*
+>   (same `day_offset`) before the current review — a fatigue proxy. Must be
+>   derived from the raw `.parquet` revlogs in `src/prepare/prepare.py` (no
+>   existing code computes it) and threaded through tensors/cache/extension —
+>   this pipeline plumbing is user-authorized, including minimal pass-through
+>   edits to the otherwise off-limits extension/kernel files. Costs **+0.0010**
+>   as a new input feature (threshold table below).
+> - **Response-time (DURATION) feature REJECTED** by the user — do not propose.
+> - **Sub-day / iter-138-style mechanisms**: may be *proposed*, but the user
+>   reserves rejecting them on aesthetics without trying.
+> **Threshold math (incl. the new input-feature row), acceptance criteria, the
+> complexity gate, and hard constraints 1–12 are otherwise UNCHANGED.**
 
 > **Iteration budget — this is a long campaign (150+ iterations).** The user
 > is running this loop autonomously for ~2 weeks, which is **150+ and likely
@@ -505,6 +504,7 @@ A variant is accepted only if `old_logloss_by_user − new_logloss_by_user ≥ t
 | Change | Contribution to threshold |
 |---|---|
 | Each new state variable | +0.0010 |
+| Each new **input feature** (a new per-review input column fed to the model, e.g. `n_before`) | +0.0010 (user directive 2026-06-10) |
 | Each new parameter (new trainable scalar in `self.w`) | +0.0002 |
 | Any other change (formula tweak, training-loop edit, etc.) | +0.0001 baseline |
 | Floor | 0.0001 |
