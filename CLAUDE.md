@@ -692,9 +692,17 @@ to evaluate the accept/reject threshold and complexity gate.
 
 ### Don't lump unrelated ideas
 
-"Change the difficulty formula" and "change the forgetting curve" are two
-proposals, not one. "Replace Adam with NAdam" and "add cosine annealing" are
-two proposals. Each iteration tests **one** change against the threshold
+**Each proposal must contain ONE idea — or at most TWO ideas that are VERY
+closely related (user directive 2026-06-10).** "Change the difficulty formula"
+and "change the forgetting curve" are two proposals, not one. "Replace Adam
+with NAdam" and "add cosine annealing" are two proposals. In particular,
+**bundling several individually-mapped sub-threshold changes into one
+"composite" iteration so they clear the bar together is NOT allowed**, even
+when each component's solo delta is already attributed in history — iter-181
+tried exactly that (4 mapped shavings, measured +1.6e-4, would have cleared
+the bar) and was vetoed by the user on methodology. The hp_tune multi-knob
+pass stays sanctioned: it tunes numeric hyperparameters only, never bundles
+formula changes. Each iteration tests **one** change against the threshold
 + complexity gate so we can attribute the delta cleanly.
 
 ### Automated hyperparameter tuning
