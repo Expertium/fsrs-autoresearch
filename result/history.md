@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_181 record(s). Generated from `history.jsonl` — do not edit by hand._
+_182 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -185,3 +185,4 @@ _181 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 179 | 2026-06-10T06:46:02 | 0.0010 | 0.31980 | 0.31979 | +0.00001 | 17,631 | 17,742 | +0.63% | rejected | Encoding fatigue: long-trace success stability increment scaled by exp(-K2*n/(n+300)); K2 swept 0.15/0.3/0.6. |
 | 180 | 2026-06-10T07:18:42 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 17,690 | 17,690 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate none. |
 | 181 | 2026-06-10T07:52:15 | 0.0000 | 0.31980 | 0.31981 | -0.00001 | 17,690 | 17,690 | +0.00% | rejected | Pure ablation: pin short-trace easy_bonus w[22] to neutral 1.0 (MIN=MAX=DEFAULT=1.0); 34->33 trainable params. |
+| 182 | 2026-06-10T07:59:21 | 0.0001 | 0.31980 | 0.32107 | -0.00127 | 17,690 | 18,498 | +4.57% | rejected | Train box-bounded params in sigmoid space (w = lo+(hi-lo)*sigmoid(u)); chained w[1..3],w[26] stay raw-clamped. 0 new params. |
