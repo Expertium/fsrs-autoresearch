@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_190 record(s). Generated from `history.jsonl` — do not edit by hand._
+_191 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -194,3 +194,4 @@ _190 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 188 | 2026-06-10T18:10:41 | 0.0001 | 0.31980 | 0.31978 | +0.00003 | 17,631 | 17,654 | +0.13% | rejected | Size-aware per-row LR: scale each row's LR by (n_steps/256)^alpha; sweep alpha +/-0.25, hp_tune bundle on the winner. |
 | 189 | 2026-06-10T18:40:49 | 0.0001 | 0.31980 | 0.31979 | +0.00001 | 17,631 | 17,687 | +0.32% | rejected | Replace Adam with NAdam (Nesterov numerator: beta1*m_hat + (1-beta1)*g_hat, plain bias correction); bundled hp_tune. |
 | 190 | 2026-06-10T18:53:25 | 0.0001 | 0.31980 | 0.31981 | -0.00001 | 17,631 | 17,700 | +0.39% | rejected | Additive encoding floor on long-trace success stability: new_s_long >= s_long + delta, fixed delta swept 0.05/0.15/0.4. |
+| 191 | 2026-06-10T19:18:31 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 17,631 | 17,631 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate none. |
