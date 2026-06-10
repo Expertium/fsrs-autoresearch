@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_191 record(s). Generated from `history.jsonl` — do not edit by hand._
+_192 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -195,3 +195,4 @@ _191 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 189 | 2026-06-10T18:40:49 | 0.0001 | 0.31980 | 0.31979 | +0.00001 | 17,631 | 17,687 | +0.32% | rejected | Replace Adam with NAdam (Nesterov numerator: beta1*m_hat + (1-beta1)*g_hat, plain bias correction); bundled hp_tune. |
 | 190 | 2026-06-10T18:53:25 | 0.0001 | 0.31980 | 0.31981 | -0.00001 | 17,631 | 17,700 | +0.39% | rejected | Additive encoding floor on long-trace success stability: new_s_long >= s_long + delta, fixed delta swept 0.05/0.15/0.4. |
 | 191 | 2026-06-10T19:18:31 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 17,631 | 17,631 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate none. |
+| 192 | 2026-06-10T19:31:36 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 17,631 | 17,652 | +0.12% | rejected | Hard-rating high-R stability discount: hard_penalty *= (1 - c*max(0, R-0.9)), fixed c swept 2/5. |
