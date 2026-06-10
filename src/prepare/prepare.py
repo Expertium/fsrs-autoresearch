@@ -128,6 +128,8 @@ def is_current_user_blob(blob: UserTensorBlob, config: Config) -> bool:
         return False
     if blob.seq_len.numel() != blob.rating.numel():
         return False
+    if blob.n_before.numel() != blob.rating.numel():
+        return False
     if blob.card_last_index.numel() != int((blob.seq_len == 1).sum().item()):
         return False
     if blob.split_review_ord.numel() != blob.train_index.numel():
@@ -216,6 +218,12 @@ def build_card_grouping(df: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, np.
 
 
 def build_raw_tensors(df: pd.DataFrame) -> RawTensorLayout:
+    # n_before (user directive 2026-06-10): how many reviews this user did
+    # earlier the SAME day (any card) before this one — a fatigue proxy. The raw
+    # parquet rows are in chronological order, so it is the cumcount within the
+    # dataset's own day boundary (day_offset). Computed BEFORE card-grouping,
+    # then carried through the grouped layout like every other per-review column.
+    df = df.assign(n_before=df.groupby("day_offset").cumcount())
     grouped_df, card_sorted_index, raw_to_grouped_index = build_card_grouping(df)
     seq_len = grouped_df.groupby("card_id").cumcount() + 1
     card_sizes = grouped_df.groupby("card_id", sort=False, dropna=False).size()
@@ -231,6 +239,10 @@ def build_raw_tensors(df: pd.DataFrame) -> RawTensorLayout:
                 grouped_df["elapsed_seconds"].to_numpy() / SECONDS_PER_DAY,
                 dtype=torch.float32,
             ).clamp_min(0),
+            "n_before": torch.tensor(
+                grouped_df["n_before"].to_numpy(),
+                dtype=torch.float32,
+            ),
             "card_sorted_index": torch.tensor(card_sorted_index, dtype=torch.int32),
             "seq_len": torch.tensor(seq_len.to_numpy(), dtype=torch.int32),
             "card_last_index": torch.tensor(card_last_index, dtype=torch.int32),
@@ -255,6 +267,7 @@ def pack_user_tensors(
         rating=raw_tensors["ratings"],
         elapsed_days_int=raw_tensors["elapsed_days_int"],
         elapsed_days_real=raw_tensors["elapsed_days_real"],
+        n_before=raw_tensors["n_before"],
         card_sorted_index=raw_tensors["card_sorted_index"],
         seq_len=raw_tensors["seq_len"],
         card_last_index=raw_tensors["card_last_index"],

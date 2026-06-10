@@ -11,7 +11,7 @@ TENSOR_CACHE_PATH = Path("/data/tensor_cache_db")
 LMDB_SIZE = 32_569_171_968
 TENSOR_CACHE_SIZE = 26_319_083_520
 
-TENSOR_CACHE_VERSION = 6
+TENSOR_CACHE_VERSION = 7  # 7: + n_before per-review field (fatigue feature, 2026-06-10)
 USER_MAX_TRAIN_SPLIT_LENGTHS_KEY = "metadata_user_max_train_split_lengths"
 TEST_BATCH_SIZE_MAX = 10_000_000
 

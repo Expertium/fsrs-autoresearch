@@ -12,6 +12,7 @@ THREADS_PER_BLOCK = int(fsrs_extension.threads_per_block())
 def _fake_srs_fsrs7_train(
     elapsed_days_real_flat,
     rating_flat,
+    n_before_flat,
     start_index_UxT,
     grad_weight_UxT,
     seq_len_UxT,

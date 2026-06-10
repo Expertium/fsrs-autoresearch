@@ -106,7 +106,8 @@ __device__ __forceinline__
 float fsrs7_forgetting_curve(
     const fsrs_params_t &fsrs_params,
     const float elapsed_time,
-    const fsrs_state_t &state
+    const fsrs_state_t &state,
+    const float n_before
 ) {
     // DUAL-TRACE MEMORY (iter-40): the SHORT recall component (r1) is driven by
     // the short trace s_short; the LONG component (r2) by the long trace s_long.
@@ -134,7 +135,19 @@ float fsrs7_forgetting_curve(
     const float decay2 = -decay2_mag;
     const float factor2 = powf(fsrs_params.base2, 1.0f / decay2) - 1.0f;
     const float d_timescale = expf((fsrs_params.d_decay - 0.3f) * (state.d - 5.0f));
-    const float r2 = powf(1.0f + factor2 * t_over_s_long * d_timescale, decay2);
+    // FATIGUE clock (n_before feature, iter-178 probe): reviews taken late in a
+    // big same-day session recall worse on the LONG component (raw-data check:
+    // within-user success on >=1d reviews falls ~2.4pp at n_before 500+, while
+    // the <1d stratum inverts — relearning steps — so the SHORT component is
+    // deliberately left unfatigued). Saturating load f = n/(n+300) in [0,1);
+    // a fixed coefficient (population-wide, the iter-101/105 lesson) scales the
+    // long component's effective clock: fatigued recall behaves like a staler
+    // memory. Per-review constant w.r.t. delta_t => r2 stays convex/monotone
+    // with p(0)=1, p(inf)->0 (same argument as d_timescale, iter-165), so
+    // constraints 1/11/12 hold. FATIGUE_K = 0 is an exact no-op.
+    constexpr float FATIGUE_K = 0.0f;
+    const float fatigue_timescale = expf(FATIGUE_K * (n_before / (n_before + 300.0f)));
+    const float r2 = powf(1.0f + factor2 * t_over_s_long * d_timescale * fatigue_timescale, decay2);
 
     // Mixture weights, each keyed to the trace its component reads: as the short
     // trace grows weight1 shrinks (S^-power1) and as the long trace grows weight2
@@ -230,10 +243,13 @@ fsrs_state_t fsrs7_step(
     const float elapsed_time,
     const int8_t rating
 ) {
+    // n_before = 0.0f: the in-sequence retention estimate stays UNFATIGUED —
+    // prediction-side mechanism only, dynamics untouched (curve-only pattern).
     const float retention = fsrs7_forgetting_curve(
         fsrs_params,
         elapsed_time,
-        fsrs_state
+        fsrs_state,
+        0.0f
     );
 
     // DUAL-TRACE update. The LONG trace evolves by the long-term (consolidation)

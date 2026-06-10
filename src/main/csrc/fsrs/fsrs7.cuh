@@ -119,9 +119,15 @@ fsrs_state_t fsrs7_step(
     const int8_t rating
 );
 
+// n_before (user-greenlit input feature, 2026-06-10): number of reviews the
+// user did earlier the SAME day before this one — a fatigue proxy for the
+// CURRENT (predicted) review. Prediction-side only: fsrs7_step passes 0.0f
+// (neutral), so the state dynamics are untouched (the iter-138 "curve only"
+// pattern). 0.0f must always be the exact no-op value.
 __device__
 float fsrs7_forgetting_curve(
     const fsrs_params_t &fsrs_params,
     const float elapsed_time,
-    const fsrs_state_t &state
+    const fsrs_state_t &state,
+    const float n_before
 );

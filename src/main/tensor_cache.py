@@ -295,6 +295,7 @@ def load_cached_review_data(
             rating=get_tensor(txn, _cache_tensor_prefix(split_i, "rating"), device),
             elapsed_days_real=get_tensor(txn, _cache_tensor_prefix(split_i, "elapsed_days_real"), device),
             seq_len=get_tensor(txn, _cache_tensor_prefix(split_i, "seq_len"), device),
+            n_before=get_tensor(txn, _cache_tensor_prefix(split_i, "n_before"), device),
         )
 
 
@@ -385,6 +386,16 @@ def _rebuild_tensor_cache(
                 split_i,
                 infos,
                 "elapsed_days_real",
+            ),
+        ),
+        (
+            "n_before",
+            lambda split_i, infos: _build_review_field(
+                source_env,
+                cache_env,
+                split_i,
+                infos,
+                "n_before",
             ),
         ),
         ("seq_len", lambda split_i, infos: _build_review_field(source_env, cache_env, split_i, infos, "seq_len")),

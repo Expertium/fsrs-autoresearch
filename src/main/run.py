@@ -230,6 +230,7 @@ def split_users_by_train_length(
 def run_cpp_train_pass(
     elapsed_days_real,
     rating,
+    n_before,
     start_indices,
     seq_lens,
     grad_weight,
@@ -247,8 +248,9 @@ def run_cpp_train_pass(
         value=0,
     ).view(U, B // threads_per_block)
     return torch.ops.srs.fsrs7_train(
-        elapsed_days_real, 
-        rating, 
+        elapsed_days_real,
+        rating,
+        n_before,
         start_indices.view_as(seq_lens_UxT),
         grad_weight.view_as(seq_lens_UxT),
         seq_lens_UxT,
@@ -277,6 +279,7 @@ def train_iter(
     split_review_ord: torch.Tensor,
     elapsed_days_real: torch.Tensor,
     rating: torch.Tensor,
+    n_before: torch.Tensor,
     seq_len: torch.Tensor,
     threads_per_block: int,
     batch_num_inner_batches: int,
@@ -321,6 +324,7 @@ def train_iter(
     per_example_grad = run_cpp_train_pass(
         elapsed_days_real,
         rating,
+        n_before,
         start_indices,
         batch_seq_lens,
         grad_weight,
@@ -449,6 +453,7 @@ def train(
             split_review_ord,
             data.review_data.elapsed_days_real,
             data.review_data.rating,
+            data.review_data.n_before,
             data.review_data.seq_len,
             THREADS_PER_BLOCK,
             batch_num_inner_batches,
@@ -479,8 +484,9 @@ def predict_test_set(fsrs_params: torch.Tensor, data: Data) -> torch.Tensor:
         seq_lens = data.review_data.seq_len[test_index_perm_slice]
         start_indices = test_index_perm_slice - seq_lens + 1
         p = fsrs_extension.fsrs7_test(
-                data.review_data.elapsed_days_real, 
-                data.review_data.rating, 
+                data.review_data.elapsed_days_real,
+                data.review_data.rating,
+                data.review_data.n_before,
                 start_indices,
                 seq_lens,
                 batch_fsrs_params,
