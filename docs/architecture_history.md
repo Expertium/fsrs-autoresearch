@@ -178,4 +178,9 @@ moved the long-curve D-modulation from the decay exponent to the time-scale
 (decay2 left un-modulated; the `exp((d_decay-0.3)*(d-5))` factor now
 multiplies `t/s_long` inside r2) → **16,938** (+6), the current champion.
 (iter-135's discontinuous jump also reached 16,938 and was reverted —
-unrelated.)
+unrelated.) 2026-06-10 re-baseline: the committed off-by-default tuning
+tooling from the joint default+sigma campaign (`FSRS_N_USERS` subset knob,
+`FSRS_PARAM_FILE` per-eval override, `FSRS_VRAM_GB` cap, cache-RO plumbing in
+`run.py`/`config.py`; commits 8cae55a/cc43307/f7b5511) added +693 →
+**17,631**, the current champion baseline. Tooling re-baselines rather than
+counting against a research iteration (the `compute_seconds` precedent).

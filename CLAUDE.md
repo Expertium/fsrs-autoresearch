@@ -584,10 +584,14 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 16,938** (iter-165). The +5% gate is
-measured against this current baseline — update this number in lock-step with
-any accepted variant. The full lineage of how the score moved from 16,766
-(when C++ scoring was added) to 16,938 is archived in
+**Current champion complexity baseline: 17,631** (iter-165 model; re-baselined
+2026-06-10: the committed off-by-default tuning tooling — `FSRS_N_USERS` subset,
+`FSRS_PARAM_FILE`, `FSRS_VRAM_GB`, cache-RO plumbing in `run.py`/`config.py` —
+added +693 over iter-165's 16,938; tooling re-baselines rather than counting
+against a research iteration, per the `compute_seconds` precedent). The +5%
+gate is measured against this current baseline — update this number in
+lock-step with any accepted variant. The full lineage of how the score moved
+from 16,766 (when C++ scoring was added) to here is archived in
 `docs/architecture_history.md`.
 
 ### Pre-submission checklist (verify silently before writing the patch)
