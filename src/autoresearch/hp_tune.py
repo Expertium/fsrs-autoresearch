@@ -61,13 +61,20 @@ import argparse
 import ast
 import json
 import math
+import os
 import re
+import signal
 import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+
+# Stray-console-Ctrl-C immunity (the 5d6ba93 pattern): docker children get their
+# own process group so a console CTRL_C_EVENT cannot reach them; main() ignores
+# SIGINT. A stray Ctrl-C killed an unprotected sweep on this machine (2026-06-10).
+_NEWGRP = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
 
 REPO = Path(__file__).resolve().parents[2]
 CONSTANTS = REPO / "src" / "main" / "fsrs" / "fsrs_v7_constants.py"
@@ -271,7 +278,7 @@ def build_hparams() -> list[HParam]:
 # ── running the benchmark ────────────────────────────────────────────────────
 def run_benchmark() -> tuple[float, int, float]:
     t0 = time.time()
-    proc = subprocess.run(BENCH_CMD, cwd=str(REPO), capture_output=True, text=True)
+    proc = subprocess.run(BENCH_CMD, cwd=str(REPO), capture_output=True, text=True, creationflags=_NEWGRP)
     if proc.returncode != 0:
         raise RuntimeError(
             f"benchmark exited {proc.returncode}\n"
@@ -294,7 +301,7 @@ def run_benchmark_grid(extra_env: dict[str, str] | None = None) -> tuple[float, 
     for k, v in (extra_env or {}).items():
         cmd += ["-e", f"{k}={v}"]
     cmd += ["srs-benchmark", "bash", "src/main/run.sh"]
-    proc = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
+    proc = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True, creationflags=_NEWGRP)
     if proc.returncode != 0:
         raise RuntimeError(
             f"benchmark exited {proc.returncode}\n"
@@ -786,6 +793,7 @@ def finalize(res: dict, threshold: float) -> None:
 
 
 def main() -> None:
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:  # Windows consoles default to cp1252; keep our stdout UTF-8-safe
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
