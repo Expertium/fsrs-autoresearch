@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_176 record(s). Generated from `history.jsonl` — do not edit by hand._
+_177 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -180,3 +180,4 @@ _176 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 174 | 2026-06-08T09:30:57 | 0.0001 | 0.31980 | 0.31990 | -0.00009 | 16,938 | 16,938 | +0.00% | rejected | Re-tune FSRS7_DEFAULT_35_VALUES via 500-step central_diff (0-epoch) meta-opt for the iter-165 structure; round to 4dp. |
 | 175 | 2026-06-10T05:20:35 | 0.0001 | 0.31980 | 0.31978 | +0.00002 | 16,938 | 16,938 | +0.00% | rejected | Joint gated default+sigma alternating co-tune on a 2k-user proxy; best candidate after 9/25 cycles, 3k-verified. |
 | 176 | 2026-06-10T05:28:27 | 0.0001 | 0.31980 | 0.31975 | +0.00006 | 17,631 | 17,833 | +1.15% | rejected | SWA tail: cosine LR floor 0.15 + per-row uniform parameter averaging over the final 25% of training steps. |
+| 177 | 2026-06-10T05:48:54 | 0.0001 | 0.31980 | 0.31975 | +0.00005 | 17,631 | 17,833 | +1.15% | rejected | Sweep SWA (eta_min, start_frac) over (0,0.75),(0.08,0.75),(0.25,0.75),(0.15,0.5),(0.15,0.85). |
