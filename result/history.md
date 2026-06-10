@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_183 record(s). Generated from `history.jsonl` — do not edit by hand._
+_184 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -187,3 +187,4 @@ _183 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 181 | 2026-06-10T07:52:15 | 0.0000 | 0.31980 | 0.31981 | -0.00001 | 17,690 | 17,690 | +0.00% | rejected | Pure ablation: pin short-trace easy_bonus w[22] to neutral 1.0 (MIN=MAX=DEFAULT=1.0); 34->33 trainable params. |
 | 182 | 2026-06-10T07:59:21 | 0.0001 | 0.31980 | 0.32107 | -0.00127 | 17,690 | 18,498 | +4.57% | rejected | Train box-bounded params in sigmoid space (w = lo+(hi-lo)*sigmoid(u)); chained w[1..3],w[26] stay raw-clamped. 0 new params. |
 | 183 | 2026-06-10T08:15:23 | 0.0001 | 0.31980 | 0.31973 | +0.00007 | 17,690 | 17,879 | +1.07% | rejected | Decorrelate train batches: fixed seeded within-row shuffle of train_index (+matching split_review_ord); batches sample across each row's history. 0 params. |
+| 184 | 2026-06-10T08:26:26 | 0.0001 | 0.31980 | 0.31985 | -0.00005 | 17,690 | 17,892 | +1.14% | rejected | Cross-epoch per-chunk gradient EMA g_used = a*g + (1-a)*ema_prev (first epoch pass-through); sweep a in {0.8, 0.6, 0.4}. |
