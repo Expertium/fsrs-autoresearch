@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_187 record(s). Generated from `history.jsonl` — do not edit by hand._
+_188 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -191,3 +191,4 @@ _187 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 185 | 2026-06-10T15:30:19 | 0.0001 | 0.31980 | 0.31971 | +0.00009 | 17,690 | 17,929 | +1.35% | rejected | Batch decorrelation (fixed seeded within-row shuffle) + hp_tune coordinate descent of the 6 training knobs for the decorrelated regime. |
 | 186 | 2026-06-10T16:17:20 | 0.0001 | 0.31980 | 0.31974 | +0.00006 | 17,631 | 17,784 | +0.87% | rejected | SWA tail-averaging (eta_min 0.15, start_frac 0.75) + hp_tune of the 6 training knobs for the SWA regime. |
 | 187 | 2026-06-10T17:34:59 | 0.0001 | 0.31980 | 0.31991 | -0.00011 | 17,631 | 17,664 | +0.19% | rejected | Decouple the L2-to-default prior from Adam: anchor spring applied in the update (AdamW-style); bundled hp_tune. |
+| 188 | 2026-06-10T18:10:41 | 0.0001 | 0.31980 | 0.31978 | +0.00003 | 17,631 | 17,654 | +0.13% | rejected | Size-aware per-row LR: scale each row's LR by (n_steps/256)^alpha; sweep alpha +/-0.25, hp_tune bundle on the winner. |
