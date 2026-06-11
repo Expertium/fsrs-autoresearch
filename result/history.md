@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_197 record(s). Generated from `history.jsonl` — do not edit by hand._
+_198 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -201,3 +201,4 @@ _197 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 195 | 2026-06-11T08:59:09 | 0.0001 | 0.31970 | 0.31975 | -0.00005 | 18,442 | 18,451 | +0.05% | rejected | Cosine LR floor: ETA_MIN constant wired into scheduler eta_min; value from mini-bracket; bundled hp_tune pass. |
 | 196 | 2026-06-11T09:52:39 | 0.0001 | 0.31970 | 0.31966 | +0.00004 | 18,442 | 18,607 | +0.89% | rejected | SWA tail-averaging re-probe on decorrelated champion (eta_min 0.15, start_frac 0.75); bundled hp_tune. |
 | 197 | 2026-06-11T10:07:12 | 0.0001 | 0.31970 | 0.31969 | +0.00000 | 18,442 | 18,442 | +0.00% | rejected | Adam epsilon raised from 1e-8: one-sided bracket {1e-6, 1e-5, 1e-4} in optimizer denom; bundled hp_tune. |
+| 198 | 2026-06-11T10:19:04 | 0.0001 | 0.31970 | 0.32003 | -0.00033 | 18,442 | 18,442 | +0.00% | rejected | Fixed consolidation coupling: long-trace success growth multiplied by (s_short/s_long)^k; sign bracket k in {+0.2, -0.2}. |
