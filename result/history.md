@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_196 record(s). Generated from `history.jsonl` — do not edit by hand._
+_197 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -200,3 +200,4 @@ _196 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 194 | 2026-06-11T08:39:39 | 0.0001 | 0.31980 | 0.31970 | +0.00011 | 17,631 | 18,442 | +4.60% | accepted | Per-epoch batch composition reshuffle: fixed within-row shuffle composed with per-epoch affine bijection; bundled hp_tune pass. |
 | 195 | 2026-06-11T08:59:09 | 0.0001 | 0.31970 | 0.31975 | -0.00005 | 18,442 | 18,451 | +0.05% | rejected | Cosine LR floor: ETA_MIN constant wired into scheduler eta_min; value from mini-bracket; bundled hp_tune pass. |
 | 196 | 2026-06-11T09:52:39 | 0.0001 | 0.31970 | 0.31966 | +0.00004 | 18,442 | 18,607 | +0.89% | rejected | SWA tail-averaging re-probe on decorrelated champion (eta_min 0.15, start_frac 0.75); bundled hp_tune. |
+| 197 | 2026-06-11T10:07:12 | 0.0001 | 0.31970 | 0.31969 | +0.00000 | 18,442 | 18,442 | +0.00% | rejected | Adam epsilon raised from 1e-8: one-sided bracket {1e-6, 1e-5, 1e-4} in optimizer denom; bundled hp_tune. |
