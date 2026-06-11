@@ -51,8 +51,10 @@ import torch
 
 # ── FSRS-7 clamp bounds ──────────────────────────────────────────────────────
 #
-# Source of truth: src/models/fsrs_v7.py, class FSRS7ParameterClipper.
-# These tuples mirror the clipper's literal `.clamp(lower, upper)` calls.
+# Source of truth: src/main/fsrs/fsrs_v7_constants.py (FSRS_MIN_VALUES /
+# FSRS_MAX_VALUES) as applied by fsrs_v7_helpers.apply_parameter_clipper —
+# NOT the dead fsrs_v7.py FSRS7ParameterClipper (stale iter-0 layout).
+# These tuples mirror the live clamp arrays plus the clipper's chain fixups.
 # Numeric lower means "constant"; a string lower like "w[0]" means
 # "chained to the current value of that parameter for this user" — i.e. a
 # dynamic lower bound that the diagnostics report keeps symbolic for
@@ -116,7 +118,8 @@ def fsrs7_effective_bounds(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute per-row (per-user) effective clamp bounds, resolving the chained
-    lower bounds w[1]>=w[0], w[2]>=w[1], w[3]>=w[2], w[28]>=w[27], w[30]>=w[29].
+    lower bounds w[1]>=w[0], w[2]>=w[1], w[3]>=w[2], w[26]>=w[25] (base2>=base1;
+    the only non-S0 chain since the iter-85 reindex + iter-88 fix).
 
     Args:
         rows: weights tensor of shape ``[N, 35]`` (one row per user/split).

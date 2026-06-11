@@ -716,8 +716,9 @@ Diagnostics:
     w[i]:
         bounds: (lower, upper)              # effective per-user bound; lower
                                             # may be "w[j]" for chained clamps
-                                            # (w[1..3] >= w[i-1], w[28]>=w[27],
-                                            # w[30]>=w[29])
+                                            # (w[1..3] >= w[i-1], w[26]>=w[25]
+                                            # base2>=base1 — the only non-S0
+                                            # chain since iter-85/88)
         p01 / median / p99:  __ / __ / __   # over all (user, split) rows
         Hit lower bound on __% of users
         Hit upper bound on __% of users
