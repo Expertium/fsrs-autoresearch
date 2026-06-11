@@ -15,9 +15,13 @@ import time
 
 from src.autoresearch.complexity import score_paths
 from src.autoresearch.diagnostics import (
+    CURVE_CHECKPOINTS,
     GradTracker,
+    LossProbeTracker,
     build_diagnostics_dict,
+    build_loss_probe,
     format_markdown_report,
+    probe_loss,
 )
 from src.main import srs_ops
 from src.main.config import (
@@ -86,6 +90,9 @@ class EvaluationResult:
     # per-review tensors.
     loss_by_rating: dict[str, dict[str, float]]
     loss_by_delta_t: dict[str, dict[str, float]]
+    # Test loss per time-series split (index 0..N_SPLITS-1), same sums+counts
+    # shape — the test half of the generalization-gap diagnostic.
+    loss_by_split: list[dict[str, float]]
 
 
 @dataclass
@@ -105,6 +112,9 @@ class EvaluationAggregate:
     loss_by_delta_t: dict[str, dict[str, float]] = field(
         default_factory=lambda: _zero_bucket_dict(_DELTA_T_BUCKETS)
     )
+    loss_by_split: list[dict[str, float]] = field(
+        default_factory=lambda: [{"loss_sum": 0.0, "count": 0} for _ in range(N_SPLITS)]
+    )
 
     def add(self, result: EvaluationResult) -> None:
         self.review_loss_sum += result.logloss_by_review * result.review_count
@@ -122,6 +132,9 @@ class EvaluationAggregate:
         for name in _DELTA_T_BUCKETS:
             self.loss_by_delta_t[name]["loss_sum"] += result.loss_by_delta_t[name]["loss_sum"]
             self.loss_by_delta_t[name]["count"] += result.loss_by_delta_t[name]["count"]
+        for k in range(N_SPLITS):
+            self.loss_by_split[k]["loss_sum"] += result.loss_by_split[k]["loss_sum"]
+            self.loss_by_split[k]["count"] += result.loss_by_split[k]["count"]
 
     @property
     def logloss_by_review(self) -> float:
@@ -474,6 +487,8 @@ def train(
     epoch_affine_a: torch.Tensor,
     epoch_affine_b: torch.Tensor,
     tracker: GradTracker | None = None,
+    loss_tracker: LossProbeTracker | None = None,
+    probe: dict[str, torch.Tensor] | None = None,
 ):
     train_split_lengths_cat = data.train_split_lengths
     num_training_steps_per_epoch_cat = train_setup.num_training_steps_per_epoch_cat
@@ -494,6 +509,24 @@ def train(
     step_i_cat = torch.zeros_like(num_training_steps_cat)
     flat_fsrs_params = fsrs_params.view(-1, fsrs_params.size(-1))
     optim_state = fsrs_v7_optimizer.init_adamw_state(flat_fsrs_params)
+
+    # Training-loss curve probe (pure observation; see LossProbeTracker).
+    do_probe = loss_tracker is not None and probe is not None and probe["row_ids"].numel() > 0
+    if do_probe:
+        curve_rows = probe["row_ids"][probe["curve_mask"]]
+        curve_idx = probe["review_idx"][probe["curve_mask"]]
+
+        def _probe_curve(k: int) -> None:
+            loss = probe_loss(flat_fsrs_params, data, curve_rows, curve_idx)
+            epochs = step_i_cat.to(torch.float64) / num_training_steps_per_epoch_cat.clamp_min(1).to(torch.float64)
+            loss_tracker.observe_curve(
+                k, float(loss.sum().item()), int(loss.numel()),
+                float(epochs.sum().item()), int(epochs.numel()),
+            )
+
+        _probe_curve(0)  # initial params, before any step
+        next_probe_k = 1
+
     for iter in tqdm(range(train_splits_length_cat_max), desc="Training", smoothing=0.06, disable=HIDE_PROGRESS):
         flat_fsrs_params, optim_state, step_i_cat, flat_grad = train_iter(
             flat_fsrs_params,
@@ -517,6 +550,11 @@ def train(
         )
         if tracker is not None:
             tracker.observe(flat_grad, step_i_cat, num_training_steps_per_epoch_cat)
+        if do_probe:
+            k = ((iter + 1) * CURVE_CHECKPOINTS) // train_splits_length_cat_max
+            if k >= next_probe_k:
+                _probe_curve(k)
+                next_probe_k = k + 1
 
     assert (step_i_cat >= num_training_steps_cat).all()
     assert (step_i_cat == num_training_steps_cat).any()
@@ -575,6 +613,16 @@ def evaluate_on_test_set(fsrs_params: torch.Tensor, users: list[int], data: Data
             "loss_sum": float(loss[mask].sum().item()),
             "count": int(mask.sum().item()),
         }
+    # Test loss per time-series split (the test half of the generalization-gap
+    # diagnostic; the train half is the probe in run()).
+    split_idx_test = data.get_test_index_param_key().split_index
+    loss_by_split: list[dict[str, float]] = []
+    for k in range(N_SPLITS):
+        m = split_idx_test == k
+        loss_by_split.append({
+            "loss_sum": float(loss[m].sum().item()),
+            "count": int(m.sum().item()),
+        })
     # Per-delta_t bucket (sub-day vs >= 1 day). delta_t is in real days.
     short_mask = delta_t_test < 1.0
     loss_by_delta_t: dict[str, dict[str, float]] = {
@@ -616,6 +664,7 @@ def evaluate_on_test_set(fsrs_params: torch.Tensor, users: list[int], data: Data
         fsrs_param_rows=fsrs_param_rows,
         loss_by_rating=loss_by_rating,
         loss_by_delta_t=loss_by_delta_t,
+        loss_by_split=loss_by_split,
     )
     # print(f"n: {result.review_count}")
     # print(f"Log loss avg by review: {result.logloss_by_review:.5f}")
@@ -637,12 +686,28 @@ def run(
     data: Data,
     train_setup: TrainSetup,
     tracker: GradTracker | None = None,
+    loss_tracker: LossProbeTracker | None = None,
 ) -> torch.Tensor:
     fsrs_params = make_initial_fsrs_params(len(users))
     epoch_affine_a, epoch_affine_b = decorrelate_batches(users, data, train_setup)
+    probe = build_loss_probe(data, train_setup) if loss_tracker is not None else None
     fsrs_params = train(
-        fsrs_params, data, train_setup, epoch_affine_a, epoch_affine_b, tracker=tracker
+        fsrs_params, data, train_setup, epoch_affine_a, epoch_affine_b,
+        tracker=tracker, loss_tracker=loss_tracker, probe=probe,
     )
+    # Generalization-gap probe: train loss per time-series split at the FINAL
+    # params (the test half is bucketed in evaluate_on_test_set).
+    if loss_tracker is not None and probe is not None and probe["row_ids"].numel() > 0:
+        flat = fsrs_params.view(-1, fsrs_params.size(-1))
+        loss = probe_loss(flat, data, probe["row_ids"], probe["review_idx"])
+        split_of = (probe["row_ids"] % N_SPLITS).to(torch.int64)
+        loss_sum = torch.zeros(N_SPLITS, dtype=torch.float64, device=loss.device)
+        loss_sum.scatter_add_(0, split_of, loss.to(torch.float64))
+        cnt = torch.zeros(N_SPLITS, dtype=torch.float64, device=loss.device)
+        cnt.scatter_add_(0, split_of, torch.ones_like(loss, dtype=torch.float64))
+        loss_tracker.observe_gap(
+            loss_sum.cpu().tolist(), [int(x) for x in cnt.cpu().tolist()]
+        )
     return fsrs_params
 
 
@@ -652,6 +717,7 @@ def train_cached_split(
     users: list[int],
     review_data,
     tracker: GradTracker | None = None,
+    loss_tracker: LossProbeTracker | None = None,
 ) -> torch.Tensor:
     train_data, train_setup = load_cached_train_only(
         cache_env,
@@ -659,7 +725,7 @@ def train_cached_split(
         DEVICE,
         review_data,
     )
-    return run(users, train_data, train_setup, tracker=tracker).detach()
+    return run(users, train_data, train_setup, tracker=tracker, loss_tracker=loss_tracker).detach()
 
 
 def evaluate_cached_split(
@@ -687,6 +753,7 @@ def run_cached_split(
     user_subset: list[int],
     user_max_train_split_lengths: torch.Tensor,
     tracker: GradTracker | None = None,
+    loss_tracker: LossProbeTracker | None = None,
 ) -> EvaluationResult:
     user_indices = torch.tensor(user_subset, dtype=torch.int32) - 1
     split_work = int(user_max_train_split_lengths[user_indices].sum().item())
@@ -698,7 +765,7 @@ def run_cached_split(
 
     torch.cuda.empty_cache()
     review_data = load_cached_review_data(cache_env, split_i, DEVICE)
-    fsrs_params = train_cached_split(cache_env, split_i, user_subset, review_data, tracker=tracker)
+    fsrs_params = train_cached_split(cache_env, split_i, user_subset, review_data, tracker=tracker, loss_tracker=loss_tracker)
 
     torch.cuda.empty_cache()
     result = evaluate_cached_split(cache_env, split_i, user_subset, review_data, fsrs_params)
@@ -778,6 +845,7 @@ def main() -> None:
     t_compute0 = time.perf_counter()
     eval_aggregate = EvaluationAggregate()
     grad_tracker = GradTracker()
+    loss_probe_tracker = LossProbeTracker(N_SPLITS)
     try:
         for split_i, user_subset in enumerate(user_splits):
             result = run_cached_split(
@@ -787,6 +855,7 @@ def main() -> None:
                 user_subset,
                 user_max_train_split_lengths,
                 tracker=grad_tracker,
+                loss_tracker=loss_probe_tracker,
             )
             eval_aggregate.add(result)
     finally:
@@ -843,10 +912,11 @@ def main() -> None:
     if WRITE_RESULT:
         write_evaluation_results(eval_aggregate)
 
-    _write_diagnostics(eval_aggregate, grad_tracker.summarise(), compute_seconds)
+    _write_diagnostics(eval_aggregate, grad_tracker.summarise(), compute_seconds,
+                       loss_probe=loss_probe_tracker.summarise())
 
 
-def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict | None = None, compute_seconds: float = 0.0) -> None:
+def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict | None = None, compute_seconds: float = 0.0, loss_probe: dict | None = None) -> None:
     """Produce result/diagnostics.{json,md} for the autoresearch loop."""
     def _flatten(bucket_dict: dict[str, dict[str, float]], names: tuple[str, ...]) -> dict:
         out: dict[str, float | int] = {}
@@ -860,6 +930,13 @@ def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict |
     flat_loss_by_rating = _flatten(eval_aggregate.loss_by_rating, _RATING_NAMES)
     flat_loss_by_delta_t = _flatten(eval_aggregate.loss_by_delta_t, _DELTA_T_BUCKETS)
     flat_loss_by_delta_t["threshold_days"] = 1.0
+    test_loss_by_split = {
+        "loss": [
+            (b["loss_sum"] / b["count"]) if b["count"] else float("nan")
+            for b in eval_aggregate.loss_by_split
+        ],
+        "count": [int(b["count"]) for b in eval_aggregate.loss_by_split],
+    }
 
     rows = torch.cat(eval_aggregate.fsrs_param_rows_parts, dim=0)
 
@@ -895,6 +972,8 @@ def _write_diagnostics(eval_aggregate: EvaluationAggregate, grad_summary: dict |
         grad_summary=grad_summary,
         complexity_score=complexity_score,
         compute_seconds=compute_seconds,
+        loss_probe=loss_probe,
+        test_loss_by_split=test_loss_by_split,
     )
 
     result_dir = Path("result")

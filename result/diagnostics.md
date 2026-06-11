@@ -2,9 +2,9 @@
 
 **Log loss, per-user (primary):** `0.31970`
 **Log loss, per-review (sanity):** `0.33271`
-**Train+eval compute time:** `156.4s`
+**Train+eval compute time:** `158.1s`
 
-**Complexity score:** `18442` (AST nodes: `12842`, cyclomatic: `140`)
+**Complexity score:** `19909` (AST nodes: `13589`, cyclomatic: `158`)
 
 ## Loss by rating
 
@@ -21,6 +21,36 @@
 |---|---:|---:|
 | Short-term (< 1.0d) | 57249399 | 0.34998 |
 | Long-term (>= 1.0d) | 95104776 | 0.32231 |
+
+## Train/test loss by time-series split
+
+_Train side measured on a fixed probe (up to 512 reviews/row); split 0 = earliest (shortest history), last = latest._
+
+| Split | Train (probe) | Test | Gap (test − train) | Test n |
+|--:|---:|---:|---:|---:|
+| 0 | 0.30950 | 0.33891 | +0.02941 | 30470835 |
+| 1 | 0.31016 | 0.33569 | +0.02553 | 30470835 |
+| 2 | 0.31080 | 0.32824 | +0.01744 | 30470835 |
+| 3 | 0.31205 | 0.32919 | +0.01714 | 30470835 |
+| 4 | 0.31276 | 0.33152 | +0.01876 | 30470835 |
+
+## Training-loss curve (fixed train probe)
+
+| Loop frac | Mean epoch | Probe loss |
+|--:|--:|---:|
+| 0.00 | 0.00 | 0.33897 |
+| 0.08 | 0.09 | 0.33810 |
+| 0.17 | 0.19 | 0.33764 |
+| 0.25 | 0.31 | 0.33698 |
+| 0.33 | 0.48 | 0.33598 |
+| 0.42 | 0.70 | 0.33470 |
+| 0.50 | 0.98 | 0.33303 |
+| 0.58 | 1.36 | 0.33117 |
+| 0.67 | 1.86 | 0.32874 |
+| 0.75 | 2.55 | 0.32557 |
+| 0.83 | 3.55 | 0.32112 |
+| 0.92 | 5.16 | 0.31528 |
+| 1.00 | 8.05 | 0.31080 |
 
 ## Per-parameter stats
 

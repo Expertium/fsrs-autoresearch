@@ -438,6 +438,145 @@ class GradTracker:
         }
 
 
+# ── Train-side loss probe (generalization gap + training-loss curve) ─────────
+#
+# 2026-06-11 (user request): two extra diagnostics —
+#   (a) train vs test log loss per time-series split (the generalization gap,
+#       and whether it differs between early and late splits), and
+#   (b) a training-loss curve, to see whether optimization descends smoothly
+#       or in spikes.
+# The Enzyme training kernel returns *gradients only* — there is no forward
+# loss anywhere in the hot path — so train loss has to be measured by explicit
+# `fsrs7_test` forward passes over a fixed probe sample of train reviews.
+# The probe is deterministic and consumes no RNG: `decorrelate_batches` already
+# gives each (user, split) row's train segment a seeded shuffle, so taking the
+# first K positions of the segment is a uniform sample. Training results stay
+# bit-exact; the probes only add a few seconds of forward-only compute.
+
+PROBE_PER_ROW = 512        # train reviews sampled per (user, split) row — gap probe
+CURVE_PROBE_PER_ROW = 64   # subset of the gap probe re-evaluated at checkpoints
+CURVE_CHECKPOINTS = 12     # mid-training curve evals (plus one before training)
+
+
+class LossProbeTracker:
+    """Accumulates train-side probe losses across user chunks.
+
+    Products (via :meth:`summarise`):
+
+    * ``curve`` — probe loss at ``CURVE_CHECKPOINTS + 1`` evenly spaced points
+      of each chunk's training loop (index 0 = initial params). Chunks train
+      separately but run the same relative schedule, so checkpoints merge by
+      index, weighted by review counts. Rows progress through their epochs at
+      their own pace (ragged lengths), so the x-axis is the loop fraction; the
+      population-mean epoch at each checkpoint is recorded alongside.
+    * ``train_loss_by_split`` — final-params probe loss per time-series split,
+      to set against the test loss per split (generalization gap). Measured
+      AFTER training ends, so unlike a running average it is not stale.
+    """
+
+    def __init__(self, n_splits: int, n_checkpoints: int = CURVE_CHECKPOINTS):
+        self.n_splits = n_splits
+        self.n_checkpoints = n_checkpoints
+        self.curve_loss_sum = [0.0] * (n_checkpoints + 1)
+        self.curve_count = [0] * (n_checkpoints + 1)
+        self.curve_epoch_sum = [0.0] * (n_checkpoints + 1)
+        self.curve_rows = [0] * (n_checkpoints + 1)
+        self.split_loss_sum = [0.0] * n_splits
+        self.split_count = [0] * n_splits
+
+    def observe_curve(
+        self, k: int, loss_sum: float, count: int, epoch_sum: float, rows: int
+    ) -> None:
+        k = min(k, self.n_checkpoints)
+        self.curve_loss_sum[k] += float(loss_sum)
+        self.curve_count[k] += int(count)
+        self.curve_epoch_sum[k] += float(epoch_sum)
+        self.curve_rows[k] += int(rows)
+
+    def observe_gap(self, split_loss_sum: list[float], split_count: list[int]) -> None:
+        for i in range(self.n_splits):
+            self.split_loss_sum[i] += float(split_loss_sum[i])
+            self.split_count[i] += int(split_count[i])
+
+    def summarise(self) -> dict:
+        curve = []
+        for k in range(self.n_checkpoints + 1):
+            if self.curve_count[k] == 0:
+                continue
+            curve.append({
+                "frac": k / self.n_checkpoints,
+                "mean_epoch": self.curve_epoch_sum[k] / max(self.curve_rows[k], 1),
+                "train_loss": self.curve_loss_sum[k] / self.curve_count[k],
+                "count": self.curve_count[k],
+            })
+        return {
+            "curve": curve,
+            "train_loss_by_split": [
+                (self.split_loss_sum[i] / self.split_count[i])
+                if self.split_count[i] else float("nan")
+                for i in range(self.n_splits)
+            ],
+            "train_count_by_split": list(self.split_count),
+            "probe_per_row": PROBE_PER_ROW,
+            "curve_probe_per_row": CURVE_PROBE_PER_ROW,
+        }
+
+
+def build_loss_probe(data, train_setup) -> dict[str, torch.Tensor]:
+    """Fixed per-row probe of train reviews for the loss diagnostics.
+
+    ``decorrelate_batches`` already gave each row's train segment a seeded
+    shuffle, so the first K positions of the segment are a uniform sample —
+    fully deterministic, no RNG consumed, training untouched. Duck-typed
+    (``data`` is run.py's Data, ``train_setup`` its TrainSetup) so this stays
+    importable host-side without the CUDA extension."""
+    lengths = data.train_split_lengths.to(torch.int64)
+    offsets = train_setup.train_split_lengths_offset.view(-1).to(torch.int64)
+    take = lengths.clamp_max(PROBE_PER_ROW)
+    row_ids = torch.repeat_interleave(
+        torch.arange(take.size(0), device=take.device), take
+    )
+    ends = torch.cumsum(take, 0)
+    total = int(take.sum().item())
+    pos = torch.arange(total, device=take.device) - (ends - take)[row_ids]
+    flat = (offsets[row_ids] + pos).clamp_max(data.train_index.size(0) - 1)
+    return {
+        "row_ids": row_ids,
+        "review_idx": data.train_index[flat].to(torch.int64),
+        "curve_mask": pos < CURVE_PROBE_PER_ROW,
+    }
+
+
+@torch.no_grad()
+def probe_loss(
+    flat_fsrs_params: torch.Tensor,
+    data,
+    row_ids: torch.Tensor,
+    review_idx: torch.Tensor,
+) -> torch.Tensor:
+    """Forward-only per-review BCE over a probe of train reviews. The training
+    kernel emits gradients, not losses, so train loss needs this explicit
+    fsrs7_test pass (same kernel + clamping as the test eval). The extension
+    import is lazy so this module stays importable on the host."""
+    from src.main import srs_ops  # container-only; lazy to keep host imports safe
+
+    seq_lens = data.review_data.seq_len[review_idx]
+    # int64 is for torch indexing only; the extension gets int32 like the
+    # predict_test_set / train_iter paths.
+    start_indices = (review_idx - seq_lens.to(torch.int64) + 1).to(torch.int32)
+    p = srs_ops.fsrs_extension.fsrs7_test(
+        data.review_data.elapsed_days_real,
+        data.review_data.rating,
+        start_indices,
+        seq_lens,
+        flat_fsrs_params[row_ids],
+    )
+    label = (data.review_data.rating[review_idx] > 1).float()
+    return torch.nn.functional.binary_cross_entropy(
+        p.clamp(min=1e-7, max=1 - 1e-7), label, reduction="none"
+    )
+
+
 # ── Top-level assembly + formatting ──────────────────────────────────────────
 
 
@@ -451,6 +590,8 @@ def build_diagnostics_dict(
     grad_summary: Optional[dict[str, list[float]]] = None,
     complexity_score: Optional[dict] = None,
     compute_seconds: float = 0.0,
+    loss_probe: Optional[dict] = None,
+    test_loss_by_split: Optional[dict] = None,
     s_min: float = 0.0001,
     init_s_max: float = 100.0,
 ) -> dict:
@@ -502,6 +643,8 @@ def build_diagnostics_dict(
             }
             for ps in per_param
         ],
+        "loss_by_split": _assemble_loss_by_split(loss_probe, test_loss_by_split),
+        "train_probe_curve": (loss_probe or {}).get("curve"),
         "complexity": complexity_score,
         "compute_seconds": compute_seconds,
         "config": {
@@ -509,8 +652,31 @@ def build_diagnostics_dict(
             "init_s_max": init_s_max,
             "n_rows": int(rows.size(0)),
             "grad_capture_wired": grad_summary is not None,
+            "loss_probe_wired": loss_probe is not None,
         },
     }
+
+
+def _assemble_loss_by_split(
+    loss_probe: Optional[dict], test_loss_by_split: Optional[dict]
+) -> Optional[dict]:
+    """Merge the train-side probe and test-side per-split losses + their gap."""
+    if test_loss_by_split is None:
+        return None
+    out: dict = {
+        "test_loss": test_loss_by_split["loss"],
+        "test_count": test_loss_by_split["count"],
+    }
+    if loss_probe is not None:
+        train = loss_probe["train_loss_by_split"]
+        out["train_probe_loss"] = train
+        out["train_probe_count"] = loss_probe["train_count_by_split"]
+        out["probe_per_row"] = loss_probe["probe_per_row"]
+        out["gap"] = [
+            (t - tr) if (t == t and tr == tr) else float("nan")  # NaN-safe
+            for t, tr in zip(test_loss_by_split["loss"], train)
+        ]
+    return out
 
 
 def format_markdown_report(diag: dict) -> str:
@@ -558,6 +724,39 @@ def format_markdown_report(diag: dict) -> str:
         f"{lbd['long_term_count']} | {lbd['long_term']:.5f} |"
     )
     lines.append("")
+
+    lbs = diag.get("loss_by_split")
+    if lbs:
+        lines.append("## Train/test loss by time-series split\n")
+        if "train_probe_loss" in lbs:
+            lines.append(
+                f"_Train side measured on a fixed probe "
+                f"(up to {lbs['probe_per_row']} reviews/row); split 0 = earliest "
+                f"(shortest history), last = latest._\n"
+            )
+            lines.append("| Split | Train (probe) | Test | Gap (test − train) | Test n |")
+            lines.append("|--:|---:|---:|---:|---:|")
+            for i, (tr, te, gap, n) in enumerate(zip(
+                lbs["train_probe_loss"], lbs["test_loss"], lbs["gap"], lbs["test_count"]
+            )):
+                lines.append(f"| {i} | {tr:.5f} | {te:.5f} | {gap:+.5f} | {n} |")
+        else:
+            lines.append("| Split | Test | Test n |")
+            lines.append("|--:|---:|---:|")
+            for i, (te, n) in enumerate(zip(lbs["test_loss"], lbs["test_count"])):
+                lines.append(f"| {i} | {te:.5f} | {n} |")
+        lines.append("")
+
+    curve = diag.get("train_probe_curve")
+    if curve:
+        lines.append("## Training-loss curve (fixed train probe)\n")
+        lines.append("| Loop frac | Mean epoch | Probe loss |")
+        lines.append("|--:|--:|---:|")
+        for pt in curve:
+            lines.append(
+                f"| {pt['frac']:.2f} | {pt['mean_epoch']:.2f} | {pt['train_loss']:.5f} |"
+            )
+        lines.append("")
 
     lines.append("## Per-parameter stats\n")
     lines.append(

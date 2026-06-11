@@ -220,7 +220,8 @@ parameters (plus the param table below and this section).
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1). **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
 
 **Current champion: iter-194 (2026-06-11) — by_user 0.31969851, complexity
-18,442, 34 params, 3 state variables (`s_long`, `d`, `s_short`).** Iter-194 is
+19,909 (tooling re-baseline 2026-06-11, see the complexity gate), 34 params, 3
+state variables (`s_long`, `d`, `s_short`).** Iter-194 is
 a training-loop change (per-epoch batch-composition reshuffle, see the
 Training paragraph below); the model formulas are unchanged since iter-165.
 The mechanisms live in the CUDA forward right now:
@@ -635,12 +636,15 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 18,442** (iter-194: the accepted
-per-epoch batch-reshuffle added +811 / +4.6% to `run.py` over the prior 17,631
-— which was iter-165's 16,938 plus +693 of off-by-default tuning tooling
-re-baselined 2026-06-10 per the `compute_seconds` precedent). The +5%
-gate is measured against this current baseline — update this number in
-lock-step with any accepted variant. The full lineage of how the score moved
+**Current champion complexity baseline: 19,909** (2026-06-11: +1,467 of
+pure-observation loss-probe diagnostics in `run.py` — the user-requested
+train/test-gap + training-curve instrumentation, re-baselined per the tooling
+precedent; the probe builder/forward live in unscored `diagnostics.py` to keep
+the scored set lean. Before that: iter-194's accepted per-epoch batch-reshuffle
+added +811 / +4.6% to `run.py` over the prior 17,631 — which was iter-165's
+16,938 plus +693 of off-by-default tuning tooling re-baselined 2026-06-10 per
+the `compute_seconds` precedent). The +5% gate is measured against this current
+baseline — update this number in lock-step with any accepted variant. The full lineage of how the score moved
 from 16,766 (when C++ scoring was added) to here is archived in
 `docs/architecture_history.md`.
 
@@ -697,6 +701,16 @@ Diagnostics:
     Log loss on Easy  (rating=4) only: __
     Log loss on delta_t <  1 day reviews: __
     Log loss on delta_t >= 1 day reviews: __
+
+    Train/test loss by time-series split        # added 2026-06-11 (user request):
+        split | train (probe) | test | gap      # generalization gap per split, 0 =
+                                                # earliest/shortest history. Train side
+                                                # = fixed probe (<=512 reviews/row,
+                                                # deterministic, final params).
+    Training-loss curve (fixed train probe)     # 13 checkpoints over the training
+        loop frac | mean epoch | probe loss     # loop (~64 reviews/row): smooth vs
+                                                # spiky descent. Pure observation —
+                                                # bit-exact vs pre-instrumentation.
 
     Per-parameter diagnostics
     w[i]:
