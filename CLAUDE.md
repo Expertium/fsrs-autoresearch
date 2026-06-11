@@ -47,6 +47,16 @@ unattended mode and the `ClaudeLoopController` Task Scheduler job is live
   completion re-invokes you. Always yield with a job pending — this is the primary
   keep-alive; the controller is only the failsafe (injects `continue` if you stall:
   no container + stale heartbeat).
+- **!!! The app's background-task tracker is UNRELIABLE (2026-06-11 incident,
+  user-confirmed):** background jobs can die silently, their completion
+  notifications can simply never fire, and the Background-tasks panel can show
+  dead jobs as "Running" for 11+ hours. Never trust the panel or the absence of
+  a notification — on every turn, verify any job you think is running via **OS
+  truth**: `Get-Process` (PID), output-file / `result/*.json` mtimes, `docker ps`.
+- **Pre-flight before relying on the failsafe/injector:** confirm
+  `Get-ScheduledTask ClaudeLoopController` is **Enabled** AND `controller.log`
+  shows fresh ticks. The 2026-06-11 stall happened because the task was Disabled
+  while `loop_active.txt` was on — the master switch alone proves nothing.
 - **Compaction (every 8 iters):** at a clean boundary (no container running),
   create `C:\Users\Andrew\claude-automation\pending_compact.txt` and yield idle —
   the controller injects `/compact` then a `continue`. Bare `/compact` is fine
