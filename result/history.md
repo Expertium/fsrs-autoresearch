@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_215 record(s). Generated from `history.jsonl` — do not edit by hand._
+_216 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -219,3 +219,4 @@ _215 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 213 | 2026-06-11T18:08:08 | 0.0001 | 0.31970 | 0.31972 | -0.00002 | 19,909 | 19,909 | +0.00% | rejected | Widen s_weight_power1 (w[29]) lower clamp 0.0 to -0.3 (short-component weight may grow with s_short). |
 | 214 | 2026-06-11T19:18:56 | 0.0001 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,909 | +0.00% | rejected | Add SAM: per-row gradient-ascent perturbation rho*g/\|g\| before a second gradient eval; rho bracketed, then bundled hp_tune. |
 | 215 | 2026-06-11T22:21:35 | 0.0001 | 0.31970 | 0.32016 | -0.00046 | 19,909 | 20,886 | +4.91% | rejected | Resurrect per-user S0 pretrain: per-row grid-fit w[0..3] from first->second-review outcomes (train segment) before SGD. |
+| 216 | 2026-06-11T23:14:22 | 0.0001 | 0.31970 | 0.31968 | +0.00002 | 19,909 | 20,968 | +5.32% | rejected | S0 pretrain v2: log-space prior toward defaults in the grid fit (precision-weighted shrinkage), replacing the hard pair-count cutoff. |
