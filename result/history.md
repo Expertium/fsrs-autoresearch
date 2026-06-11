@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_209 record(s). Generated from `history.jsonl` — do not edit by hand._
+_210 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -213,3 +213,4 @@ _209 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 207 | 2026-06-11T13:38:43 | 0.0000 | 0.31970 | 0.31971 | -0.00001 | 18,442 | 18,442 | +0.00% | rejected | Pure ablation: pin short-trace sinc_r_mult w[17] to its default 3.8668 (MIN=MAX=DEFAULT); 34->33 trainable params. |
 | 208 | 2026-06-11T14:26:52 | 0.0001 | 0.31970 | 0.31976 | -0.00006 | 18,442 | 18,442 | +0.00% | rejected | Recalibrate 30 L2-active sigmas to realized population spread (p99-p01)/4.653, railed [0.5x, 4x]; bundled hp_tune. |
 | 209 | 2026-06-11T15:47:27 | 0.0001 | 0.31970 | 0.31972 | -0.00002 | 19,909 | 19,909 | +0.00% | rejected | Scale per-row L2 strength by (256/n)^alpha, stronger prior for shorter histories; alpha swept {0.25, 0.5}; bundled hp_tune. |
+| 210 | 2026-06-11T16:06:02 | 0.0000 | 0.31970 | 0.31975 | -0.00005 | 19,909 | 19,909 | +0.00% | rejected | Pure ablation: pin base_weight2 w[28] to 1.0; base_weight1 becomes the mixture ratio, bounds [0.01, 10]. |
