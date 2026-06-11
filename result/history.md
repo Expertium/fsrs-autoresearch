@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_214 record(s). Generated from `history.jsonl` — do not edit by hand._
+_215 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -218,3 +218,4 @@ _214 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 212 | 2026-06-11T17:55:36 | 0.0012 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,965 | +0.28% | rejected | Add 4th state d_short: per-trace difficulty with own adaptation rate w[34]; short-trace stability update reads d_short. |
 | 213 | 2026-06-11T18:08:08 | 0.0001 | 0.31970 | 0.31972 | -0.00002 | 19,909 | 19,909 | +0.00% | rejected | Widen s_weight_power1 (w[29]) lower clamp 0.0 to -0.3 (short-component weight may grow with s_short). |
 | 214 | 2026-06-11T19:18:56 | 0.0001 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,909 | +0.00% | rejected | Add SAM: per-row gradient-ascent perturbation rho*g/\|g\| before a second gradient eval; rho bracketed, then bundled hp_tune. |
+| 215 | 2026-06-11T22:21:35 | 0.0001 | 0.31970 | 0.32016 | -0.00046 | 19,909 | 20,886 | +4.91% | rejected | Resurrect per-user S0 pretrain: per-row grid-fit w[0..3] from first->second-review outcomes (train segment) before SGD. |
