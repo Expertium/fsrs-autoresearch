@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_204 record(s). Generated from `history.jsonl` — do not edit by hand._
+_205 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -208,3 +208,4 @@ _204 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 202 | 2026-06-11T12:09:29 | 0.0002 | 0.31970 | 0.31971 | -0.00001 | 18,442 | 18,442 | +0.00% | rejected | Add trainable w[34] sinc_s_off: long-trace success growth stability factor becomes powf(s_long + s_off, -sinc_s_exp). |
 | 203 | 2026-06-11T12:23:52 | 0.0002 | 0.31970 | 0.31969 | +0.00001 | 18,442 | 18,442 | +0.00% | rejected | Add trainable w[34] sinc_r_hard: on Hard reviews the growth R-coefficient becomes sinc_r_mult * sinc_r_hard, both traces. |
 | 204 | 2026-06-11T12:36:14 | 0.0002 | 0.31970 | 0.31970 | -0.00000 | 18,442 | 18,442 | +0.00% | rejected | Add trainable w[34] sinc_r_easy: on Easy reviews the growth R-coefficient becomes sinc_r_mult * sinc_r_easy, both traces. |
+| 205 | 2026-06-11T12:49:59 | 0.0002 | 0.31970 | 0.31972 | -0.00003 | 18,442 | 18,442 | +0.00% | rejected | Add trainable w[34] sinc_r_s_exp: long-trace growth R-coefficient becomes sinc_r_mult * s_long^sinc_r_s_exp (maturity-tilted spacing sensitivity). |
