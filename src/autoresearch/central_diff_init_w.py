@@ -28,6 +28,18 @@ PHASES.  The recency/SGD-init phase moved log loss only within the GPU-noise
 floor, so the user-facing 'default' phase is now the sole live workflow; the
 'recency' phase is kept only for reference and is gated off by default.
 
+NEW MODE (2026-06-11, user idea) — GATED META-OPT, `--gated-recency`:
+    python src/autoresearch/central_diff_init_w.py --gated-recency [--steps 30]
+        [--recency-every 5]
+Optimize the cheap 0-epoch 'default' loss as the PROXY objective (central-diff
+Adam descent, batch evals), but every --recency-every meta-steps evaluate the
+current params with the REAL metric (full 8-epoch recency benchmark; the
+candidate acts as both per-user init and L2 anchor, exactly as wiring it in
+would) and SELECT the checkpoint with the best recency loss.  Decouples what
+drives the descent (fast proxy) from what picks the winner (the metric we
+care about).  Emits a twin-axis plot of both curves (loss_gated.png), a
+resumable checkpoint, and summary_gated.json with the selected params.
+
 Mechanics
 ---------
 * Each eval writes the candidate into FSRS7_DEFAULT_35_VALUES in
@@ -489,6 +501,48 @@ def _save_plot(history, plot_path, title, ytick=None):
     plt.close(fig)
 
 
+def _save_gated_plot(history, recency_history, plot_path):
+    """One graph, two y-axes: the dense 0-epoch proxy descent (left, blue) and
+    the sparse 8-epoch recency gate evals (right, red).  The two losses sit
+    ~0.03 apart, so a shared axis would flatten both into lines — twin axes
+    keep each curve's structure readable on the same graph."""
+    if not history:
+        return
+    try:
+        import matplotlib
+        matplotlib.use("Agg")  # headless: never open a window during a long run
+        import matplotlib.pyplot as plt
+    except Exception as e:
+        print(f"      (plot skipped: matplotlib unavailable: {e})")
+        return
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+    ax1.plot(
+        [e["step"] for e in history], [e["loss"] for e in history],
+        marker="o", color="tab:blue", label="default (0-epoch proxy)",
+    )
+    ax1.set_xlabel("meta-step")
+    ax1.set_ylabel("logloss_by_user — default (proxy)", color="tab:blue")
+    ax1.tick_params(axis="y", labelcolor="tab:blue")
+    ax1.grid(True)
+    ax2 = ax1.twinx()
+    if recency_history:
+        ax2.plot(
+            [e["step"] for e in recency_history],
+            [e["loss"] for e in recency_history],
+            marker="s", color="tab:red", label="recency (8-epoch, real metric)",
+        )
+    ax2.set_ylabel("logloss_by_user — recency (gate)", color="tab:red")
+    ax2.tick_params(axis="y", labelcolor="tab:red")
+    ax2.ticklabel_format(axis="y", style="plain", useOffset=False)
+    h1, l1 = ax1.get_legend_handles_labels()
+    h2, l2 = ax2.get_legend_handles_labels()
+    ax1.legend(h1 + h2, l1 + l2, loc="upper right")
+    ax1.set_title("Gated meta-opt: optimize proxy (default), select on recency")
+    fig.tight_layout()
+    fig.savefig(plot_path, dpi=120)
+    plt.close(fig)
+
+
 # ============================================================================
 # Run one phase
 # ============================================================================
@@ -594,10 +648,147 @@ def run_phase(phase: dict, starting_params: np.ndarray, bounds: List[tuple]):
 
 
 # ============================================================================
+# Gated meta-opt: optimize the 0-epoch proxy, SELECT on the trained metric
+# ============================================================================
+
+GATED_CKPT = OUTPUT_DIR / "FSRS_7_central_diff_gated_results.json"
+GATED_PLOT = OUTPUT_DIR / "loss_gated.png"
+
+
+def run_gated_phase(starting_params: np.ndarray, bounds: List[tuple],
+                    max_steps: int = 30, recency_every: int = 5):
+    """Gated meta-opt (user idea 2026-06-11): the cheap 0-epoch 'default' loss
+    drives the central-diff Adam descent; every `recency_every` steps the
+    current params are evaluated with the full 8-epoch recency benchmark, and
+    the final selection is the recency-best checkpoint (step 0 = the champion
+    itself is always in the comparison set, so "no improvement" is detectable).
+    Same crash-resumable atomic checkpointing as run_phase."""
+    eval_default = lambda p: evaluate(p, 0)
+    eval_batch   = lambda plist: evaluate_batch(plist, 0)
+    eval_recency = lambda p: evaluate(p, 8)
+
+    print("\n" + "=" * 80)
+    print("GATED META-OPT — proxy: 0-epoch default loss; gate: 8-epoch recency loss")
+    print(f"max_steps={max_steps}, recency eval every {recency_every} steps "
+          f"(+ step-0 baseline)")
+    print("=" * 80)
+
+    optimizer = AdamCentralDiff(
+        starting_params, bounds, check_constraints,
+        lr=LR, beta1=BETA1, beta2=BETA2, eps=EPS, h=H,
+    )
+
+    history = []          # dense: one entry per meta-step (proxy loss)
+    recency_history = []  # sparse: step-0 baseline + every recency_every steps
+    completed_steps = 0
+    if GATED_CKPT.is_file():
+        try:
+            with open(GATED_CKPT) as f:
+                cp = json.load(f)
+            optimizer.params    = np.array(cp["params"], dtype=float)
+            optimizer.m         = np.array(cp["m"], dtype=float)
+            optimizer.v         = np.array(cp["v"], dtype=float)
+            optimizer.t         = int(cp["t"])
+            optimizer.counteval = int(cp["counteval"])
+            history             = cp["history"]
+            recency_history     = cp["recency_history"]
+            completed_steps     = int(cp["completed_steps"])
+            print(f"Resumed from {GATED_CKPT.name}: step {completed_steps}")
+        except Exception as e:
+            print(f"Could not load checkpoint ({e}); starting fresh")
+            history, recency_history, completed_steps = [], [], 0
+
+    def _save():
+        _atomic_write_json(GATED_CKPT, {
+            "params":          optimizer.params.tolist(),
+            "m":               optimizer.m.tolist(),
+            "v":               optimizer.v.tolist(),
+            "t":               int(optimizer.t),
+            "counteval":       int(optimizer.counteval),
+            "history":         history,
+            "recency_history": recency_history,
+            "completed_steps": completed_steps,
+            "phase":           "gated",
+            "max_steps":       max_steps,
+            "recency_every":   recency_every,
+        })
+        _save_gated_plot(history, recency_history, GATED_PLOT)
+
+    if completed_steps == 0 and not recency_history:
+        loss0_default = eval_default(starting_params.tolist())
+        optimizer.counteval += 1
+        loss0_recency = eval_recency(starting_params.tolist())
+        optimizer.counteval += 1
+        history.append({"step": 0, "params": starting_params.tolist(),
+                        "loss": loss0_default, "grad_norm": None, "eval_log": []})
+        recency_history.append({"step": 0, "params": starting_params.tolist(),
+                                "loss": loss0_recency})
+        print(f"  step-0 baseline: default {loss0_default:.6f}  "
+              f"recency {loss0_recency:.8f}")
+        _save()
+
+    for step in range(completed_steps + 1, max_steps + 1):
+        print(f"\n{'-' * 80}\n[gated] Step {step}/{max_steps}")
+        print(f"Computing gradient via central differences "
+              f"({2 * optimizer.n} evals)...")
+        grad, eval_log = optimizer.compute_gradient(eval_default, eval_batch)
+        print(f"Gradient norm: {np.linalg.norm(grad):.6f}")
+
+        new_params = optimizer.step(grad)
+        loss = eval_default(new_params.tolist())
+        optimizer.counteval += 1
+        history.append({"step": step, "params": new_params.tolist(), "loss": loss,
+                        "grad_norm": float(np.linalg.norm(grad)),
+                        "eval_log": eval_log})
+        print(f"[gated] step {step}: default loss={loss:.6f}")
+
+        if step % recency_every == 0:
+            r = eval_recency(new_params.tolist())
+            optimizer.counteval += 1
+            recency_history.append({"step": step, "params": new_params.tolist(),
+                                    "loss": r})
+            best = min(recency_history, key=lambda e: e["loss"])
+            print(f"[gated] step {step}: RECENCY loss={r:.8f}  "
+                  f"(best so far {best['loss']:.8f} @ step {best['step']})")
+
+        completed_steps = step
+        _save()
+
+    best = min(recency_history, key=lambda e: e["loss"])
+    _atomic_write_json(OUTPUT_DIR / "summary_gated.json", {
+        "best_recency_loss": best["loss"],
+        "best_recency_step": best["step"],
+        "best_params":       best["params"],
+        "recency_history":   [{"step": e["step"], "loss": e["loss"]}
+                              for e in recency_history],
+        "final_default_loss": history[-1]["loss"] if history else None,
+    })
+    print(f"\n[gated] complete. best RECENCY loss {best['loss']:.8f} "
+          f"at step {best['step']} (step 0 = unmodified champion)")
+    print(f"[gated] best_params={[round(v, 5) for v in best['params']]}")
+    print(f"[gated] summary -> {OUTPUT_DIR / 'summary_gated.json'}; "
+          f"plot -> {GATED_PLOT}")
+    return np.array(best["params"], dtype=float), float(best["loss"])
+
+
+# ============================================================================
 # Main: default phase first, then recency phase
 # ============================================================================
 
-def main():
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="Adam + central-difference meta-optimizer for FSRS-7 defaults")
+    ap.add_argument("--gated-recency", action="store_true",
+                    help="gated meta-opt: descend on the 0-epoch proxy, evaluate "
+                         "the real 8-epoch recency metric every --recency-every "
+                         "steps, select on recency (user idea 2026-06-11)")
+    ap.add_argument("--steps", type=int, default=30,
+                    help="meta-steps for --gated-recency (default 30)")
+    ap.add_argument("--recency-every", type=int, default=5,
+                    help="recency-gate cadence in meta-steps (default 5)")
+    args = ap.parse_args(argv)
+
     _ensure_backup()
     atexit.register(_restore_constants)
     try:
@@ -612,6 +803,17 @@ def main():
         # The champion default must sit inside the box (sanity).
         for i, (p, (blo, bhi)) in enumerate(zip(start_default, bounds)):
             assert blo <= p <= bhi, f"param {i}={p} outside ({blo}, {bhi})"
+
+        if args.gated_recency:
+            best_params, best_loss = run_gated_phase(
+                start_default.copy(), bounds,
+                max_steps=args.steps, recency_every=args.recency_every,
+            )
+            # Clean completion: same backup-drop semantics as the phase loop.
+            _restore_constants()
+            if BACKUP_PATH.exists():
+                BACKUP_PATH.unlink()
+            return
 
         print("=" * 80)
         print("Adam + central-difference meta-optimization of FSRS-7 defaults")
