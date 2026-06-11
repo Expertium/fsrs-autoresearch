@@ -219,9 +219,11 @@ parameters (plus the param table below and this section).
 | `w[23..30]` | 8-param forgetting curve (short component keyed to `s_short`, long to `s_long`) |
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1). **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
 
-**Current champion: iter-165 (2026-06-07) — by_user 0.31980351, complexity
-16,938, 34 params, 3 state variables (`s_long`, `d`, `s_short`).** The
-mechanisms live in the CUDA forward right now:
+**Current champion: iter-194 (2026-06-11) — by_user 0.31969851, complexity
+18,442, 34 params, 3 state variables (`s_long`, `d`, `s_short`).** Iter-194 is
+a training-loop change (per-epoch batch-composition reshuffle, see the
+Training paragraph below); the model formulas are unchanged since iter-165.
+The mechanisms live in the CUDA forward right now:
 
 - **Dual-trace memory** (iter-43): two stability states, `s_long` + `s_short`,
   each driving its own forgetting-curve component. The short trace's initial
@@ -264,10 +266,19 @@ The full per-iteration narrative (iter-40 → iter-165, incl. the reverted
 iter-138 sub-day mechanism) is archived in `docs/architecture_history.md`;
 `result/history.jsonl` is the per-iteration source of truth.
 
-Training: 8 epochs, batch 256, Adam, lr 0.0188, betas (0.55, 0.9913), recency-weighted
-gradient. Loss = log-loss(per-review) + L2-to-defaults (the sched penalties in
-`fsrs_v7_interval_penalty.py` are dead code — `run.py` never calls them). The live values
-are in `src/main/fsrs/fsrs_v7_constants.py` (source of truth; this line is a snapshot).
+Training: 8 epochs, batch 256, Adam, lr 0.0282, betas (0.55, 0.9942), L2 0.5,
+recency-weighted gradient. Loss = log-loss(per-review) + L2-to-defaults (the sched
+penalties in `fsrs_v7_interval_penalty.py` are dead code — `run.py` never calls them).
+The live values are in `src/main/fsrs/fsrs_v7_constants.py` (source of truth; this line
+is a snapshot). **Per-epoch batch-composition reshuffle (iter-194):** each row's train
+order gets a one-time seeded shuffle (`train_index` + co-permuted `split_review_ord`,
+so recency weights follow their reviews), and the hot path remaps positions through a
+per-(row, epoch) affine bijection `pos' = (a·pos + b) mod n`, `gcd(a,n)=1`
+(`decorrelate_batches` in `run.py`) — batches stop being temporally-contiguous chunks
+and their compositions go fresh each epoch while per-epoch coverage stays exact. This
+regime wants the hotter LR / stronger L2 above. Costs ~+60 s/run host-side; do NOT
+re-vectorize the shuffle for speed — a different permutation realization changes
+results and would need re-judging.
 
 Metrics produced by `run.py`:
 - `logloss_by_user` — **primary**, and the only one that decides accept/reject.
@@ -624,11 +635,10 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 17,631** (iter-165 model; re-baselined
-2026-06-10: the committed off-by-default tuning tooling — `FSRS_N_USERS` subset,
-`FSRS_PARAM_FILE`, `FSRS_VRAM_GB`, cache-RO plumbing in `run.py`/`config.py` —
-added +693 over iter-165's 16,938; tooling re-baselines rather than counting
-against a research iteration, per the `compute_seconds` precedent). The +5%
+**Current champion complexity baseline: 18,442** (iter-194: the accepted
+per-epoch batch-reshuffle added +811 / +4.6% to `run.py` over the prior 17,631
+— which was iter-165's 16,938 plus +693 of off-by-default tuning tooling
+re-baselined 2026-06-10 per the `compute_seconds` precedent). The +5%
 gate is measured against this current baseline — update this number in
 lock-step with any accepted variant. The full lineage of how the score moved
 from 16,766 (when C++ scoring was added) to here is archived in

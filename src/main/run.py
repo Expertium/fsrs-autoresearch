@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import lmdb
+import numpy as np
 import torch
 from tqdm import tqdm
 import time
@@ -273,6 +274,8 @@ def train_iter(
     num_training_steps_per_epoch_cat: torch.Tensor,
     batch_perm_user_flat_offset: torch.Tensor,
     train_split_lengths_offset: torch.Tensor,
+    epoch_affine_a: torch.Tensor,
+    epoch_affine_b: torch.Tensor,
     train_index: torch.Tensor,
     split_review_ord: torch.Tensor,
     elapsed_days_real: torch.Tensor,
@@ -308,9 +311,19 @@ def train_iter(
     ).view(1, -1).expand(train_l.size(0), -1)
 
     legal = (train_range <= train_r.unsqueeze(-1)) & active_mask.unsqueeze(-1)
+    # iter-194: epoch-dependent affine remap of within-row positions (see
+    # decorrelate_batches). legal/train_r stay keyed to the un-mapped positions
+    # (they only define batch sizes); the bijection keeps per-epoch coverage exact.
+    epoch_i = (
+        safe_step_i // num_training_steps_per_epoch_cat[indices].clamp_min(1)
+    ).clamp_max(N_EPOCHS - 1).to(torch.int64)
+    affine_a_i = epoch_affine_a[indices, epoch_i].unsqueeze(-1)
+    affine_b_i = epoch_affine_b[indices, epoch_i].unsqueeze(-1)
+    row_len = train_split_lengths_cat[indices].to(torch.int64).clamp_min(1).unsqueeze(-1)
+    remapped_range = (train_range.to(torch.int64) * affine_a_i + affine_b_i) % row_len
     index_within_flat = (
-            train_split_lengths_offset[user_indices, split_indices].unsqueeze(-1)
-            + train_range
+            train_split_lengths_offset[user_indices, split_indices].to(torch.int64).unsqueeze(-1)
+            + remapped_range
         ).clamp_max(train_index.size(0) - 1)
     review_data_indices = train_index[index_within_flat]
     batch_seq_lens = seq_len[review_data_indices]
@@ -409,10 +422,57 @@ def build_train_setup(data: Data, users: list[int]) -> TrainSetup:
     )
 
 
+def decorrelate_batches(
+    users: list[int],
+    train_data: Data,
+    train_setup: TrainSetup,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    # iter-194: per-epoch batch-composition reshuffle. Batches are contiguous
+    # chunks of the row's review order, so without this every epoch revisits the
+    # same BATCH_SIZE groupings of temporally-adjacent (correlated) reviews. Fix:
+    # (1) shuffle each row's train order once (train_index + split_review_ord
+    # co-permuted in place, so recency weights follow their reviews), and
+    # (2) per epoch, remap positions through pos' = (a*pos + b) mod n with
+    # gcd(a, n) = 1 — a bijection, so each epoch still covers every review
+    # exactly once, but with epoch-fresh batch compositions.
+    lengths = train_data.train_split_lengths.cpu().numpy()
+    offsets = train_setup.train_split_lengths_offset.view(-1).cpu().numpy()
+    train_index = train_data.train_index.cpu().numpy().copy()
+    review_ord = train_setup.split_review_ord.cpu().numpy().copy()
+    n_rows = lengths.size
+    affine_a = np.ones((n_rows, N_EPOCHS), dtype=np.int64)
+    affine_b = np.zeros((n_rows, N_EPOCHS), dtype=np.int64)
+    for row in range(n_rows):
+        n = int(lengths[row])
+        if n <= 1:
+            continue
+        # seed per (user, split) so the shuffle is independent of user chunking
+        rng = np.random.default_rng((42, users[row // N_SPLITS], row % N_SPLITS))
+        o = int(offsets[row])
+        perm = rng.permutation(n)
+        train_index[o : o + n] = train_index[o : o + n][perm]
+        review_ord[o : o + n] = review_ord[o : o + n][perm]
+        for e in range(N_EPOCHS):
+            a = int(rng.integers(1, n))
+            while math.gcd(a, n) != 1:
+                a = int(rng.integers(1, n))
+            affine_a[row, e] = a
+            affine_b[row, e] = int(rng.integers(0, n))
+    device = train_data.train_index.device
+    train_data.train_index.copy_(torch.from_numpy(train_index).to(device))
+    train_setup.split_review_ord.copy_(torch.from_numpy(review_ord).to(device))
+    return (
+        torch.from_numpy(affine_a).to(device),
+        torch.from_numpy(affine_b).to(device),
+    )
+
+
 def train(
     fsrs_params: torch.Tensor,
     data: Data,
     train_setup: TrainSetup,
+    epoch_affine_a: torch.Tensor,
+    epoch_affine_b: torch.Tensor,
     tracker: GradTracker | None = None,
 ):
     train_split_lengths_cat = data.train_split_lengths
@@ -445,6 +505,8 @@ def train(
             num_training_steps_per_epoch_cat,
             batch_perm_user_flat_offset,
             train_split_lengths_offset,
+            epoch_affine_a,
+            epoch_affine_b,
             data.train_index,
             split_review_ord,
             data.review_data.elapsed_days_real,
@@ -577,7 +639,10 @@ def run(
     tracker: GradTracker | None = None,
 ) -> torch.Tensor:
     fsrs_params = make_initial_fsrs_params(len(users))
-    fsrs_params = train(fsrs_params, data, train_setup, tracker=tracker)
+    epoch_affine_a, epoch_affine_b = decorrelate_batches(users, data, train_setup)
+    fsrs_params = train(
+        fsrs_params, data, train_setup, epoch_affine_a, epoch_affine_b, tracker=tracker
+    )
     return fsrs_params
 
 
