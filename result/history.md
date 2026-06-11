@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_200 record(s). Generated from `history.jsonl` — do not edit by hand._
+_201 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -204,3 +204,4 @@ _200 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 198 | 2026-06-11T10:19:04 | 0.0001 | 0.31970 | 0.32003 | -0.00033 | 18,442 | 18,442 | +0.00% | rejected | Fixed consolidation coupling: long-trace success growth multiplied by (s_short/s_long)^k; sign bracket k in {+0.2, -0.2}. |
 | 199 | 2026-06-11T10:25:16 | 0.0001 | 0.31970 | 0.31985 | -0.00015 | 18,442 | 18,442 | +0.00% | rejected | Widen w[8] (long sinc_s_exp) lower bound 0 -> -0.3; growth may accelerate with stability. |
 | 200 | 2026-06-11T11:00:36 | 0.0001 | 0.31970 | 0.31970 | +0.00000 | 18,442 | 18,442 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate none. |
+| 201 | 2026-06-11T11:09:21 | 0.0001 | 0.31970 | 0.31989 | -0.00019 | 18,442 | 18,442 | +0.00% | rejected | Long-trace growth multiplied by (1-R)^q, suppressing near-massed encoding; fixed bracket q in {0.25, 0.5}. |
