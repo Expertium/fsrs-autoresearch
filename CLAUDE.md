@@ -782,8 +782,9 @@ formula changes. Each iteration tests **one** change against the threshold
 > regime can mask a genuine win (iter-183: batch decorrelation alone was
 > +7.0e-5 — sub-threshold at champion HPs tuned for correlated-chunk noise).
 > This bundling counts as **one** idea, not a lumping violation: tuning numeric
-> HPs for a new training regime is part of the change. On accept, the pass
-> also counts as the cadence hp_tune (update `result/.last_hptune_iter`).
+> HPs for a new training regime is part of the change. On accept, the bundled
+> pass already satisfies the post-change tune the event-driven cadence asks
+> for (update `result/.last_hptune_iter`).
 
 Tuning numeric *training* hyperparameters (LR, Adam betas, L2 strength, recency
 weighting) by hand is mechanical, so it's automated in
@@ -816,7 +817,7 @@ the champion is a deliberate step you finalise (run the regular pass to fine-tun
 LR/betas/L2 at the new point, then record the combined re-anchor as one iteration).
 This is an **outer / rare** recalibration — run it once to set the operating point,
 then again only after a major architectural change; it is **not** part of the
-every-5-iter cadence. Because n_epoch is driven per-cell via the `FSRS_N_EPOCHS`
+regular hp_tune cadence. Because n_epoch is driven per-cell via the `FSRS_N_EPOCHS`
 env var, this is the sanctioned exception to hard-constraint #5.
 
 Run it from the **host** (it shells out to `docker compose` per trial and to
@@ -830,13 +831,19 @@ python src/autoresearch/hp_tune.py --dry-run          # validate edits only, no 
 python src/autoresearch/hp_tune.py --no-commit        # search only, leave best on disk
 ```
 
-**Cadence:** run it every ~5 iterations. It self-maintains
-`result/.last_hptune_iter`; trigger when `latest_iter − last_hptune_iter ≥ 5`.
-Re-tuning matters most right after a structural change shifts the loss landscape
-and the old optima drift. It requires a clean git tree (refuses to auto-commit
-otherwise) and owns one iteration number per pass. The multi-knob pass is one
-logical unit, not a "lumping" violation — per-knob deltas are in the trial log
-(`result/hp_tune_last.json`).
+**Cadence (changed 2026-06-11, user directive): event-driven, not periodic —
+run it after every architectural change or training-pipeline change.** The old
+"every ~5 iterations" clock is retired (it kept coming up changes-none: 4
+straight no-op passes through iter-206 showed champion HPs are stable between
+structural changes). Concretely: (a) training-pipeline change proposals already
+bundle `hp_tune --no-commit` *inside* the iteration (mandatory-bundle rule
+above — unchanged); (b) when an **architectural/formula change is accepted**
+(champion moved → loss landscape shifted), run a full hp_tune pass right after
+as its own iteration; (c) rejected proposals leave the champion unchanged — no
+tune. It still self-maintains `result/.last_hptune_iter`, requires a clean git
+tree (refuses to auto-commit otherwise), and owns one iteration number per
+pass. The multi-knob pass is one logical unit, not a "lumping" violation —
+per-knob deltas are in the trial log (`result/hp_tune_last.json`).
 
 **Default-parameter meta-opt (`central_diff_init_w.py`) — separate from hp_tune, and
 SLOW.** This re-optimizes the user-facing defaults `FSRS7_DEFAULT_35_VALUES` (which are
@@ -863,11 +870,11 @@ slaved to the auto-tuner. Markers (both gitignored, machine-local):
 `result/.last_compact_iter` and `result/.last_hptune_iter`. After a compaction,
 set `echo <latest_iter> > result/.last_compact_iter`.
 
-**Auto-tune is a conditional pre-step, not a gate.** hp_tune keeps its own ~5-iter
-cadence (above). When a compaction comes due, if a tune is *also* due
-(`latest_iter − last_hptune_iter ≥ 5`) run it **first** so the compacted context
-captures the freshly-tuned champion; otherwise compact directly. The two cadences
-(compaction every 8, tuning every ~5) drift in and out of phase — that's expected.
+**Auto-tune is a conditional pre-step, not a gate.** hp_tune is event-driven
+(after every architectural / training-pipeline change — see its Cadence note).
+When a compaction comes due and an accepted structural change has landed
+**untuned** since the last pass, run the tune **first** so the compacted
+context captures the freshly-tuned champion; otherwise compact directly.
 
 ### Iteration cost
 
