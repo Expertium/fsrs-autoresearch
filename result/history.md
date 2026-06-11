@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_213 record(s). Generated from `history.jsonl` — do not edit by hand._
+_214 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -217,3 +217,4 @@ _213 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 211 | 2026-06-11T17:29:05 | 0.0001 | 0.31970 | 0.31968 | +0.00002 | 19,909 | 19,909 | +0.00% | rejected | Defaults re-tune via gated meta-opt: 30 central-diff steps on 0-epoch proxy, recency-evaluated every 5 steps, select on recency. |
 | 212 | 2026-06-11T17:55:36 | 0.0012 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,965 | +0.28% | rejected | Add 4th state d_short: per-trace difficulty with own adaptation rate w[34]; short-trace stability update reads d_short. |
 | 213 | 2026-06-11T18:08:08 | 0.0001 | 0.31970 | 0.31972 | -0.00002 | 19,909 | 19,909 | +0.00% | rejected | Widen s_weight_power1 (w[29]) lower clamp 0.0 to -0.3 (short-component weight may grow with s_short). |
+| 214 | 2026-06-11T19:18:56 | 0.0001 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,909 | +0.00% | rejected | Add SAM: per-row gradient-ascent perturbation rho*g/\|g\| before a second gradient eval; rho bracketed, then bundled hp_tune. |
