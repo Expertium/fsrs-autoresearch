@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_192 record(s). Generated from `history.jsonl` — do not edit by hand._
+_193 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -196,3 +196,4 @@ _192 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 190 | 2026-06-10T18:53:25 | 0.0001 | 0.31980 | 0.31981 | -0.00001 | 17,631 | 17,700 | +0.39% | rejected | Additive encoding floor on long-trace success stability: new_s_long >= s_long + delta, fixed delta swept 0.05/0.15/0.4. |
 | 191 | 2026-06-10T19:18:31 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 17,631 | 17,631 | +0.00% | rejected | AUTO hyperparameter tune (coordinate descent over training hyperparameters (LR/betas/L2/recency C0+EXP)): best candidate none. |
 | 192 | 2026-06-10T19:31:36 | 0.0001 | 0.31980 | 0.31980 | +0.00000 | 17,631 | 17,652 | +0.12% | rejected | Hard-rating high-R stability discount: hard_penalty *= (1 - c*max(0, R-0.9)), fixed c swept 2/5. |
+| 193 | 2026-06-11T07:18:49 | 0.0001 | 0.31980 | 0.31981 | -0.00000 | 17,631 | 17,738 | +0.61% | rejected | Lookahead optimizer (k=5, alpha=0.5, per-row step clock, final-step forced sync; slow weights returned); bundled hp_tune. |
