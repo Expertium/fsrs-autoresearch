@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_211 record(s). Generated from `history.jsonl` — do not edit by hand._
+_212 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -215,3 +215,4 @@ _211 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 209 | 2026-06-11T15:47:27 | 0.0001 | 0.31970 | 0.31972 | -0.00002 | 19,909 | 19,909 | +0.00% | rejected | Scale per-row L2 strength by (256/n)^alpha, stronger prior for shorter histories; alpha swept {0.25, 0.5}; bundled hp_tune. |
 | 210 | 2026-06-11T16:06:02 | 0.0000 | 0.31970 | 0.31975 | -0.00005 | 19,909 | 19,909 | +0.00% | rejected | Pure ablation: pin base_weight2 w[28] to 1.0; base_weight1 becomes the mixture ratio, bounds [0.01, 10]. |
 | 211 | 2026-06-11T17:29:05 | 0.0001 | 0.31970 | 0.31968 | +0.00002 | 19,909 | 19,909 | +0.00% | rejected | Defaults re-tune via gated meta-opt: 30 central-diff steps on 0-epoch proxy, recency-evaluated every 5 steps, select on recency. |
+| 212 | 2026-06-11T17:55:36 | 0.0012 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,965 | +0.28% | rejected | Add 4th state d_short: per-trace difficulty with own adaptation rate w[34]; short-trace stability update reads d_short. |
