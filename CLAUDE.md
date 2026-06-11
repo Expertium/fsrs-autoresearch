@@ -465,7 +465,7 @@ must NOT be used as a reference (they are the stale iter-0 35-param layout).
    epochs. **Exception (2026-06-03): the `hp_tune.py --epoch-batch-grid` Pareto
    search may re-anchor `N_EPOCHS` *and* `batch_size`** as the compute *operating
    point* — but only via the at-least-one-axis rule: a config replaces the gold
-   standard `(n_epoch=8, batch_size=512)` only if it is **no worse on BOTH** log
+   standard `(n_epoch=8, batch_size=256)` only if it is **no worse on BOTH** log
    loss and train+eval compute time (strictly better on ≥1). Because more epochs
    at a fixed batch is strictly slower, brute-force epochs can never win on the
    speed axis; `n_epoch` can rise only when a *larger* batch buys the speed back
@@ -792,7 +792,8 @@ the coordinate descent and both live in a separate **epoch×batch Pareto grid**
 `n_epoch ∈ {5,8,12,16,30}` × `batch_size ∈ {128,256,512,1024}`, measuring each
 with an Adam **√ LR-batch-scaled** learning rate (fairness — the winner is
 fine-tuned precisely afterward), and re-anchors to any cell that **Pareto-
-dominates the gold standard `(8,512)`**: no worse on log loss OR on `compute_seconds`
+dominates the gold standard `(8,256)` = the live operating point (updated from
+`(8,512)` 2026-06-11, user directive)**: no worse on log loss OR on `compute_seconds`
 (the train+eval wall time `run.py` now emits into diagnostics.json), strictly
 better on ≥1. Pick rule: lowest log loss among cells **not slower** than gold
 (tiebreak: fastest). It leaves the winner's `(batch, n_epoch, scaled-LR)` on disk

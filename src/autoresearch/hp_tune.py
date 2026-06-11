@@ -22,7 +22,7 @@ delta is real and reproducible — no averaging needed.
 here.** Those are a speed/log-loss trade-off, not a pure-loss knob (a loss-only
 search always pushes batch down, ignoring the speed cost), so they live in a
 separate, rarely-run **epoch x batch Pareto grid** (``--epoch-batch-grid``). The
-gold standard is ``(n_epoch=8, batch_size=512)``; the grid sweeps the 20 combos of
+gold standard is ``(n_epoch=8, batch_size=256)``; the grid sweeps the 20 combos of
 ``n_epoch in {5,8,12,16,30}`` x ``batch_size in {128,256,512,1024}`` and re-anchors
 to any cell that Pareto-dominates the gold standard (no worse on log loss OR
 compute time, strictly better on >=1). Each cell is measured with an Adam
@@ -87,14 +87,14 @@ GRID_SUMMARY = REPO / "result" / "epoch_batch_grid.json"
 # ── epoch × batch_size Pareto grid (the "gold standard" re-anchor, run rarely) ──
 # A speed-aware OUTER search over the compute operating point, distinct from the
 # per-5-iter LR/betas/L2 coordinate descent. The gold standard is (n_epoch=8,
-# batch_size=512); a cell replaces it only if it Pareto-dominates it — no worse on
+# batch_size=256); a cell replaces it only if it Pareto-dominates it — no worse on
 # either axis (log loss, train+eval compute time) and strictly better on >=1. The
 # fine HPs are conditional on (epoch, batch), so this runs FIRST and the regular
 # tuner re-tunes LR/betas/L2 on the winner afterward; for fairness each cell is
 # measured with an Adam sqrt LR-batch-scaled learning rate (the winner is then
 # fine-tuned precisely). batch_size is OWNED here and was removed from the regular
 # coordinate descent so the loss-only pass can't move it for log loss at a speed cost.
-GOLD_EPOCH, GOLD_BATCH = 8, 512
+GOLD_EPOCH, GOLD_BATCH = 8, 256
 GRID_EPOCHS = [5, 8, 12, 16, 30]
 GRID_BATCHES = [128, 256, 512, 1024]
 SPEED_TOL = 0.03   # fractional compute-time noise band: within +/-3% counts as "same speed"
@@ -341,8 +341,8 @@ def _grid_table(cells: list[dict], gold: dict | None) -> str:
 
 
 def epoch_batch_grid() -> None:
-    """Measure the (8,512) gold standard FIRST, then sweep the 19 OTHER (n_epoch x
-    batch_size) candidates (skipping (8,512) — no point comparing it to itself),
+    """Measure the (8,256) gold standard FIRST, then sweep the 19 OTHER (n_epoch x
+    batch_size) candidates (skipping the gold combo — no point comparing it to itself),
     judging each against the gold reference. Picks the Pareto operating point and
     leaves the winner's (batch, n_epoch, scaled LR) on disk for review. Does NOT
     commit or record history — re-anchoring the champion is a deliberate step the
@@ -408,7 +408,7 @@ def epoch_batch_grid() -> None:
         for epoch in GRID_EPOCHS:
             for batch in GRID_BATCHES:
                 if (epoch, batch) == (GOLD_EPOCH, GOLD_BATCH):
-                    continue  # no point comparing (8,512) to itself
+                    continue  # no point comparing gold to itself
                 c = run_cell(epoch, batch)
                 cells.append(c)
                 if c["by_user"] is not None:
@@ -437,7 +437,8 @@ def epoch_batch_grid() -> None:
     winner = min(not_slower, key=lambda c: (c["by_user"], c["seconds"]))
     improved = (winner["epoch"], winner["batch"]) != (GOLD_EPOCH, GOLD_BATCH) and dominates(winner)
 
-    print(f"\n[grid] gold (8,512): by_user={g_ll:.6f}  compute={g_s:.1f}s", flush=True)
+    print(f"\n[grid] gold ({GOLD_EPOCH},{GOLD_BATCH}): by_user={g_ll:.6f}  compute={g_s:.1f}s",
+          flush=True)
     if dominators:
         print(f"[grid] {len(dominators)} candidate(s) Pareto-dominate gold:", flush=True)
         for c in sorted(dominators, key=lambda c: (c["by_user"], c["seconds"])):
@@ -446,8 +447,8 @@ def epoch_batch_grid() -> None:
                   f"compute={c['seconds']:.1f}s ({100 * (c['seconds'] - g_s) / g_s:+.1f}%)",
                   flush=True)
     else:
-        print("[grid] no candidate Pareto-dominates gold — operating point stays at (8,512).",
-              flush=True)
+        print(f"[grid] no candidate Pareto-dominates gold — operating point stays at "
+              f"({GOLD_EPOCH},{GOLD_BATCH}).", flush=True)
 
     # Persist the winner's operating point (batch, n_epoch default, sqrt-scaled LR).
     new_cfg = set_scalar(base_texts["config"], "BATCH_SIZE", winner["batch"])
@@ -822,9 +823,9 @@ def main() -> None:
                          "disk for review, does not commit.")
     ap.add_argument("--time-noise", type=int, nargs="?", const=5, default=None,
                     metavar="N",
-                    help="measure the compute_seconds noise floor: run the gold config "
-                         "(8,512) N times (default 5, + 1 warm-up) and report the spread "
-                         "+ a suggested SPEED_TOL. No commit, no model change.")
+                    help=f"measure the compute_seconds noise floor: run the gold config "
+                         f"({GOLD_EPOCH},{GOLD_BATCH}) N times (default 5, + 1 warm-up) and "
+                         f"report the spread + a suggested SPEED_TOL. No commit, no model change.")
     args = ap.parse_args()
 
     if args.dry_run:
