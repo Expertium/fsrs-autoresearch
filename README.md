@@ -13,6 +13,7 @@ You can find more details in history.md and history.jsonl. Some notes:
 3) This repo also contains code to find [optimal user-facing default parameters for FSRS-7](https://github.com/Expertium/fsrs-autoresearch/blob/main/src/autoresearch/central_diff_init_w.py) and an [automated hyperparameter tuner](https://github.com/Expertium/fsrs-autoresearch/blob/main/src/autoresearch/hp_tune.py). (An earlier version split the defaults into two separate tuples — a user-facing default and a separate SGD "starting point" — but that didn't help: tuning the starting point separately reduced log loss only within the noise floor, so there's a single default set.)
 4) The CUDA code here optimizes all 3000 users *jointly*, but the real optimizer (FSRS-rs) optimizes one user at a time. It was my oversight not to make *"don't do things that exploit the way the CUDA code jointly optimizes all users"* an explicit constraint. The one accepted change that exploits it is the empirical-Bayes L2 (iter 24): it shrinks each user toward the live population mean, which does nothing for a single user (it degrades to the old default-anchored L2). It's worth only ~0.0001 log loss, so no real harm — but in hindsight it shouldn't have counted.
 5) There are several times when log loss went up, that was either me or Claude reverting changes that were cheating or otherwise undesirable.
+6) The per-epoch batch-composition shuffle (iter 194, the current champion's training-loop change) won't be used in the final Rust version (FSRS-rs) — it makes training slower.
 
 ---
 
