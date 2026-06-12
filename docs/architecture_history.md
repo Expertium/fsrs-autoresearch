@@ -140,17 +140,82 @@ port uses. **There are now no known joint-optimization exploits in the model.**
 
 ---
 
+## The post-194 closure campaign (iters 195–220, 2026-06-11/12)
+
+After iter-194 (per-epoch batch reshuffle, the last accepted change) the loop
+ran **26 consecutive rejections** — but this stretch is the campaign's most
+information-dense product: it converted "we believe these axes are done" into
+**closure by direct experiment** across the entire mutation surface.
+
+**Training loop (195–214, exhaustive):** schedules (195), optimizers, gradient
+clipping, loss shaping, and the flat-minima family — SWA (+6e-5, the best
+training-loop delta ever, still sub-bar), EMA, Lookahead, and finally **SAM
+(214, −1.2e-5)**, which closed the family and showed its doubled scatter_add
+even reintroduces the ~1e-5 atomics noise. The **gated defaults meta-opt
+(211, +1.9e-5)** optimized the cheap `--default` proxy by central differences
+while selecting on `--recency`: the two metrics diverge after ~5 steps, so the
+proxy is unusable — but the `--gated-recency` tooling is kept in
+`central_diff_init_w.py` for re-use after the next structural change. The
+**strain map (213)**: widening the one remaining strained bound (w[29] floor)
+let pinned users take the freedom and *worsened* test loss — strained bounds
+are load-bearing regularization, closing bound-widens as a family. **Dual
+difficulty (212, 4th state d_short)** came out inert (w[34] unused), the third
+4th-state failure. The split instrumentation (added 2026-06-11) confirmed the
+**early-split scarcity** residual (209): split 0 carries a ~0.029
+generalization gap vs ~0.017 for later splits — irreducible without more
+early-history data.
+
+**The S0-evidence family (215–218) — the one real signal found.** Per-user S0
+estimates from each row's own `seq_len==2` card-level (first-rating,
+interval ≥ 0.5 d, outcome) triples, via binned sufficient statistics + a
+64-point log-S0 grid. The ladder of injection strengths tells the story:
+raw MLE init **−4.6e-4** (215: ~20% of estimates are edge-censored and
+*persist through SGD* — w[0..3] are unanchored and recency weighting never
+revisits early history; this also explains the historical "S0 initialization
+made FSRS-7 worse"); log-space shrinkage init (W=32) **+2.2e-5** (216);
+per-row L2 anchor (σ = rel·anchor) **+7.9e-5** (217); joint W×rel grid
+**+8.35e-5 at the interior optimum (W=16, rel=2.0)** (218, mean-of-3
+bit-identical). Lessons: *continuous anchor pressure extracts ~3.5× more than
+a one-shot init*, and *design quality swings the outcome by half a millipoint*
+— but the mechanism's ceiling (~8e-5) sits below the 1e-4 training-pipeline
+bar. The candidate is preserved (C:\Temp\run_iter217.py + helpers_iter217.py,
+W=16/rel=2.0); accepting it under-bar is the user's call, and it would also
+need a ~170-point complexity shave (candidate 21,065 vs gate).
+
+**Formula phase (219–220) — the success gain closed end-to-end.** With the
+2026-06-10 directive's new-params menu: a trainable retrieval-strength gate
+`retention^(w[34]−0.5)` on the success gain (219) came out **dead flat
+(−2.2e-6)** with the diagnostic signature *spread-without-signal* — median
+pinned at neutral, healthy per-user spread (range_frac 0.41) and gradient,
+zero net held-out gain = pure per-user noise-fitting. The shifted
+S-saturation `(s_long + w[34])^−σ` (220, motivated by 20% of users pinning
+w[8] at its 0 floor) was **refuted directly (−1.35e-5)**: the same fifth of
+users pinned the *new* param at *its* 0 floor too — they want no
+S-saturation at all, not a different shape. Together with iter-38 (trainable
+(11−d) ceiling), 79 (concave R-response, −3.7e-4), 124 (easy_bonus floor) and
+181 (w[22] ablation), every factor axis of
+`s_inc = 1 + exp(base)·(11−d)·s^−σ·(exp((1−R)c)−1)·hp·eb` — base, D, S, R,
+rating — has now been probed and rejected against its bar. A 2026-06-12 sweep
+confirmed every remaining hardcoded constant in the model traces to an
+experimentally closed family.
+
+**Methodology lessons banked:** (1) grep history by *formula keyword*, not
+param name — iter-210's mixture ablation was an unknowing third repeat of
+46/62; (2) free reparameterizations are not free under L2+Adam (210); (3) the
+*spread-without-signal* signature (median at neutral + real range_frac + zero
+net) identifies noise-fitting dials in a single run; (4) strained bounds can
+be load-bearing regularization (213); (5) a real, reproducible mechanism can
+still be correctly rejected — the bars exist to price complexity, and the
+~8e-5 S0 anchor is the cleanest example yet.
+
+---
+
 ## Complexity-score lineage
 
-Current champion complexity baseline: **16,938** (iter-165 — moved the
-long-curve D-modulation from the decay exponent to the time-scale, +6 over
-iter-140's 16,932. The 16,932 = iter-105 + the 2026-06-05 cosmetic refactor:
-+2 over 16,930 for the three subtraction literals that shift
-d_weight/d_decay/s_decay1 to non-negative bounds in
-`fsrs7_forgetting_curve`/`fsrs7_short_component_recall`; the
-`s`→`s_long`/`s_fast`→`s_short` rename is token-count-neutral. iter-138's
-continuous sub-day ramp briefly pushed this to 16,964 but was REVERTED by the
-user 2026-06-05 for being "ugly").
+Current champion complexity baseline: **19,904** (2026-06-12 — the dead
+`fmaxf(pls, s*s_inc)` guard removed from `fsrs7.cu`'s success path, −5,
+verified loss-identical; see the lineage tail below for the steps from
+17,631 up through 19,909).
 
 Full history: C++ scoring was added at 16,766 — the 36-param dual-trace
 champion was 15,322 python-only, the two CUDA files add 1,436 (`fsrs7.cu`
@@ -182,5 +247,12 @@ unrelated.) 2026-06-10 re-baseline: the committed off-by-default tuning
 tooling from the joint default+sigma campaign (`FSRS_N_USERS` subset knob,
 `FSRS_PARAM_FILE` per-eval override, `FSRS_VRAM_GB` cap, cache-RO plumbing in
 `run.py`/`config.py`; commits 8cae55a/cc43307/f7b5511) added +693 →
-**17,631**, the current champion baseline. Tooling re-baselines rather than
+**17,631**. Tooling re-baselines rather than
 counting against a research iteration (the `compute_seconds` precedent).
+iter-194 (2026-06-11, accepted) added the per-epoch batch-composition
+reshuffle to `run.py` (+811 / +4.6%) → **18,442**; the 2026-06-11
+user-requested train/test-gap + training-curve instrumentation in `run.py`
+added +1,467 (re-baselined per the tooling precedent; the probe
+builder/forward live in unscored `diagnostics.py`) → **19,909**; the
+2026-06-12 dead-`fmaxf` chore in `fsrs7.cu` (verified mean-of-3 +1.6e-6 =
+noise) removed −5 → **19,904**, the current champion baseline.
