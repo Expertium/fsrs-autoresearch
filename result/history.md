@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_217 record(s). Generated from `history.jsonl` — do not edit by hand._
+_218 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -221,3 +221,4 @@ _217 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 215 | 2026-06-11T22:21:35 | 0.0001 | 0.31970 | 0.32016 | -0.00046 | 19,909 | 20,886 | +4.91% | rejected | Resurrect per-user S0 pretrain: per-row grid-fit w[0..3] from first->second-review outcomes (train segment) before SGD. |
 | 216 | 2026-06-11T23:14:22 | 0.0001 | 0.31970 | 0.31968 | +0.00002 | 19,909 | 20,968 | +5.32% | rejected | S0 pretrain v2: log-space prior toward defaults in the grid fit (precision-weighted shrinkage), replacing the hard pair-count cutoff. |
 | 217 | 2026-06-12T00:16:17 | 0.0001 | 0.31970 | 0.31962 | +0.00008 | 19,909 | 21,065 | +5.81% | rejected | Per-row S0 L2 anchor: anchor+sigma w[0..3] to the shrunk pretrain estimates (sigma = rel*anchor); rel bracketed. |
+| 218 | 2026-06-12T00:55:25 | 0.0001 | 0.31970 | 0.31962 | +0.00008 | 19,909 | 21,065 | +5.81% | rejected | Joint re-tune of the S0-evidence knobs: grid PRETRAIN_PRIOR_W x S0_SIGMA_REL around (32, 2.0) on the iter-217 design. |
