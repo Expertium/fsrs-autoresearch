@@ -180,7 +180,10 @@ float fsrs7_stability_after_review_one_term(
         * (expf((1.0f - retention) * params.sinc_r_mult) - 1.0f)
         * hard_penalty
         * easy_bonus;
-    const float new_s_success = fmaxf(pls, fsrs_state.s_long * s_inc);
+    // s_inc >= 1 always (every gain factor is >= 0), so s * s_inc >= s >=
+    // fminf(s, new_s_fail) = pls and the historical fmaxf(pls, s * s_inc)
+    // guard was dead code (removed 2026-06-12, verified loss-identical).
+    const float new_s_success = fsrs_state.s_long * s_inc;
 
     return rating > 1 ? new_s_success : pls;
 }

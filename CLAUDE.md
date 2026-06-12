@@ -636,7 +636,11 @@ The scored set is wired in `src/main/run.py` (`mutation_files`, passed to
 `score_paths`) and must stay in sync with the mutation-surface list above. It
 includes the `src/main/fsrs/` helpers, optimizer, scheduler, and the two CUDA
 model files so a mutation can't dodge the gate by living in an unscored file.
-**Current champion complexity baseline: 19,909** (2026-06-11: +1,467 of
+**Current champion complexity baseline: 19,904** (2026-06-12: −5 from removing
+the dead `fmaxf(pls, s*s_inc)` guard on the success path in `fsrs7.cu` —
+behavior-identical chore, s_inc ≥ 1 made the guard unreachable; verified
+mean-of-3 +1.6e-6 = within the noise floor. Before that: 19,909 from
+2026-06-11: +1,467 of
 pure-observation loss-probe diagnostics in `run.py` — the user-requested
 train/test-gap + training-curve instrumentation, re-baselined per the tooling
 precedent; the probe builder/forward live in unscored `diagnostics.py` to keep
