@@ -43,9 +43,9 @@ FSRS7_DEFAULT_35_VALUES = (
     0.714473829362035,
     0.0,
     0.5667322886723738,
-    0.3734077003798003,  # 31 d_weight (shifted +0.5; curve subtracts 0.5)
-    0.5333456073318997,  # 32 d_decay  (shifted +0.3; curve subtracts 0.3)
-    0.3047711964822912,  # 33 s_decay1 (shifted +0.3; curve subtracts 0.3)
+    0.3734077003798003,  # 31 d_weight (forgetting curve; shifted +0.5, curve subtracts 0.5)
+    0.5333456073318997,  # 32 d_decay  (forgetting curve; shifted +0.3, curve subtracts 0.3)
+    0.3047711964822912,  # 33 s_decay1 (forgetting curve; shifted +0.3, curve subtracts 0.3)
 )
 
 FSRS_MIN_VALUES = (

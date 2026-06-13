@@ -66,7 +66,8 @@ struct fsrs_params_t {
     // REMOVED here, simplifying the layout 38 -> 36 (this is the rule-compliant
     // accounting for the dual-trace's +1 state variable: +1 state, -2 params).
 
-    // 23..30: Forgetting curve.
+    // 23..30: Forgetting curve — 2-component mixture. (31..33 below are also
+    // forgetting-curve params: the curve's D/S modulation. 11 curve params total.)
     float decay1;
     float decay2;
     float base1;

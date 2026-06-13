@@ -101,9 +101,9 @@ FSRS7_BOUNDS_STATIC: list[tuple[float | str, float | str]] = [
     (0.1,            1.0),             # 28 weight 2
     (0.0,            0.9),             # 29 S weight power 1
     (0.1,            1.1),             # 30 S weight power 2
-    (0.0,            1.0),             # 31 d_weight (difficulty modulation; +0.5-shifted to >=0, curve subtracts 0.5)
-    (0.0,            0.6),             # 32 d_decay (difficulty modulation of long decay; +0.3-shifted, curve subtracts 0.3)
-    (0.0,            0.6),             # 33 s_decay1 (stability modulation of short decay; +0.3-shifted, curve subtracts 0.3)
+    (0.0,            1.0),             # 31 d_weight (forgetting-curve difficulty modulation; +0.5-shifted to >=0, curve subtracts 0.5)
+    (0.0,            0.6),             # 32 d_decay (forgetting-curve difficulty modulation of long decay; +0.3-shifted, curve subtracts 0.3)
+    (0.0,            0.6),             # 33 s_decay1 (forgetting-curve stability modulation of short decay; +0.3-shifted, curve subtracts 0.3)
 ]
 
 # Source of truth for the parameter count — derived from the bounds table so

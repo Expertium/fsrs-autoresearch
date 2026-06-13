@@ -244,8 +244,8 @@ parameters (plus the param table below and this section).
 | `w[4..6]` | Difficulty |
 | `w[7..14]` | Long-term stability update (8 params) — drives the **long** trace `s_long` |
 | `w[15..22]` | Short-term stability update (8 params) — drives the **short** trace `s_short` |
-| `w[23..30]` | 8-param forgetting curve (short component keyed to `s_short`, long to `s_long`) |
-| `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1). **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
+| `w[23..30]` | Forgetting curve — 2-component mixture (short component keyed to `s_short`, long to `s_long`) |
+| `w[31..33]` | Forgetting curve — difficulty/stability modulation of the mixture (d_weight, d_decay, s_decay1). These 3 appear **nowhere else** in the model, so the forgetting curve is **11 learnable params total** (`w[23..33]`); the 8/3 split is just mixture-shape vs. D/S-modulation. **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
 
 **Current champion: iter-194 (2026-06-11) — by_user 0.31969851, complexity
 19,904 (2026-06-12 dead-`fmaxf` chore; see the complexity gate), 34 params, 3
