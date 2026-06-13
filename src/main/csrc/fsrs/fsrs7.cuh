@@ -52,10 +52,10 @@ struct fsrs_params_t {
     float init_d1;
     float next_d_mult;
 
-    // 7..15: Long-term stability after review.
+    // 7..14: Long-term stability after review.
     fsrs_stability_after_review_params_t long_stability;
 
-    // 16..24: Short-term stability after review.
+    // 15..22: Short-term stability after review.
     fsrs_stability_after_review_params_t short_stability;
 
     // NOTE (iter-43): the iter-40 dual-trace removed the elapsed-time transition
@@ -66,7 +66,7 @@ struct fsrs_params_t {
     // REMOVED here, simplifying the layout 38 -> 36 (this is the rule-compliant
     // accounting for the dual-trace's +1 state variable: +1 state, -2 params).
 
-    // 25..32: Forgetting curve.
+    // 23..30: Forgetting curve.
     float decay1;
     float decay2;
     float base1;
