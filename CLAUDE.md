@@ -11,6 +11,30 @@ keeps the winners.
 **Ignore `autoresearcher.md`** — it's an older plan written for a separate
 LLM-API-driven loop. We're rebuilding it inside Claude Code.
 
+## ⏹ STATUS — campaign concluded (2026-06-12)
+
+**The autoresearch loop has ended.** Final champion: **iter-194**
+(`logloss_by_user` 0.31969851, complexity 19,904, 34 learnable params, 3 state
+variables). Iters 195–220 were all rejected — the loss surface is mapped
+end-to-end (full story in `docs/architecture_history.md` → "The post-194
+closure campaign"). The two residual levers that could still move the champion
+are **user decisions**, not open research: the per-user S0-evidence anchor
+(a real but sub-bar ~8e-5 mechanism; candidate preserved in `C:\Temp`) and the
+user-vetoed sub-day curve correction (~1.6e-4).
+
+The overnight automation is **OFF**: `loop_active.txt` removed and the
+`ClaudeLoopController` Task Scheduler job **Disabled** (2026-06-12). The
+self-injection capability is therefore inert.
+
+> **Everything below that reads in the present tense is the historical record
+> of that concluded campaign, not a live to-do list** — specifically the
+> "Running the loop autonomously" operational notes, the "CURRENT RESEARCH
+> FOCUS" directives, the iteration-budget / "spend the iterations" guidance,
+> and the autonomous-wakeup cadence. They're kept verbatim so whoever picks
+> this up understands how it was run and why it stopped. **To restart**, re-add
+> `loop_active.txt` and re-enable the controller (see
+> `C:\Users\Andrew\claude-automation\README.md`), then resume from the rules below.
+
 ## !!! SELF-INJECTION CAPABILITY — STRICT, NON-NEGOTIABLE LIMITS !!!
 
 This repo runs on the Claude Code **Windows desktop app** under **bypass
@@ -36,6 +60,10 @@ removes the human from the loop, which is exactly what the permission system
 guards against; the user accepts it ONLY for this narrow keep-alive/compaction use.
 
 ### Running the loop autonomously (bypass mode)
+
+> **CONCLUDED (2026-06-12) — see the status banner up top.** The loop is
+> currently OFF (`loop_active.txt` removed, `ClaudeLoopController` Disabled);
+> the discipline below applies only if it is restarted.
 
 When `C:\Users\Andrew\claude-automation\loop_active.txt` exists, the loop is in
 unattended mode and the `ClaudeLoopController` Task Scheduler job is live
@@ -326,7 +354,11 @@ AlphaEvolve/Karpathy-style: Claude reads the current champion, proposes a
 mutation, writes the patch, runs the benchmark, accepts or rejects against a
 threshold + complexity gate, and keeps an archive of winners.
 
-> **!!! CURRENT RESEARCH FOCUS (2026-06-10 user directive): scope RE-OPENED —
+> **!!! RESEARCH FOCUS — historical (campaign concluded 2026-06-12; see the
+> status banner). The directives below were live during the run and drove
+> iters through 220; they are kept as the record of what was in/out of scope.**
+>
+> **CURRENT RESEARCH FOCUS (2026-06-10 user directive): scope RE-OPENED —
 > "find ways to improve FSRS's formulas and/or training pipeline."** The
 > 2026-06-06 D-only narrowing is lifted (the D campaign, iters 141–165,
 > comprehensively closed that subsystem — see `result/history.md`). Current
