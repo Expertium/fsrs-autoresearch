@@ -220,7 +220,7 @@ parameters (plus the param table below and this section).
 | `w[31..33]` | Difficulty/stability modulation of the curve (d_weight, d_decay, s_decay1). **All shifted to non-negative bounds (2026-06-05 cosmetic refactor):** d_weight∈[0,1] curve subtracts 0.5; d_decay∈[0,0.6] subtracts 0.3; s_decay1∈[0,0.6] subtracts 0.3. Neutral (no-D/S-dependence) values are 0.5/0.3/0.3. |
 
 **Current champion: iter-194 (2026-06-11) — by_user 0.31969851, complexity
-19,909 (tooling re-baseline 2026-06-11, see the complexity gate), 34 params, 3
+19,904 (2026-06-12 dead-`fmaxf` chore; see the complexity gate), 34 params, 3
 state variables (`s_long`, `d`, `s_short`).** Iter-194 is
 a training-loop change (per-epoch batch-composition reshuffle, see the
 Training paragraph below); the model formulas are unchanged since iter-165.
@@ -395,8 +395,9 @@ Python-side FSRS code only:
   clamps are the CUDA files + constants below. See the ⚠ note under "FSRS-7
   architecture".
 - `src/models/fsrs_v7_interval_penalty.py` — scheduling penalty
-- `src/main/fsrs/fsrs_v7_constants.py` — `LR`, `BETAS`, `RECENCY_C0/C1`,
-  `PENALTY_W_L2`, `FSRS7_DEFAULT_35_VALUES` (init_w), `FSRS_MIN_VALUES`
+- `src/main/fsrs/fsrs_v7_constants.py` — `LR`, `BETAS`, `RECENCY_C0` /
+  `RECENCY_EXP` (C1 was dropped iter-65), `PENALTY_W_L2`,
+  `FSRS7_DEFAULT_35_VALUES` (init_w), `FSRS_MIN_VALUES`
   / `FSRS_MAX_VALUES` (CUDA-path clamps), `FSRS7_L2_SIGMA_35_VALUES`
 - `src/main/run.py` — training loop (`train_iter`, optimizer/scheduler wiring)
 - `src/main/fsrs/fsrs_v7_helpers.py` — L2 penalty (`penalty_loss`), recency
@@ -499,7 +500,7 @@ must NOT be used as a reference (they are the stale iter-0 35-param layout).
     matter how much they help log-loss. The *only* sanctioned deviation is the
     existing numerical clamp to `[1e-5, 1−1e-5]` that keeps the log finite: it
     is symmetric and ~1e-5, not a calibration knob. You may reshape the curve
-    **between** the endpoints freely (that's what the `w[27..34]` 2-component
+    **between** the endpoints freely (that's what the `w[23..30]` 2-component
     mixture does today) — you just may not move the endpoints.
 12. **Forgetting-curve smoothness / shape** (added 2026-05-30). Beyond the
     endpoints (constraint 11), the curve `p(delta_t)` must stay *well-behaved*
@@ -516,7 +517,7 @@ must NOT be used as a reference (they are the stale iter-0 35-param layout).
     `sin(x)/x := 1` at `x = 0`). This lets a curve drop sharply right after a
     review (helpful for sub-day forgetting) without a smooth ramp back up to 1.
     Rationale: keeps any flexible curve family (splines, monotone nets, extra
-    mixture components) from producing weird shapes. The current `w[27..34]`
+    mixture components) from producing weird shapes. The current `w[23..30]`
     mixture **complies** — a fixed convex combination of convex, decreasing
     power-law components is convex and C¹. Combination rules that introduce an
     inflection are **off-limits** — e.g. a probabilistic noisy-OR
@@ -680,12 +681,15 @@ from 16,766 (when C++ scoring was added) to here is archived in
 - [ ] All new stochastic ops seeded?
 - [ ] No eval→train leakage?
 - [ ] Threshold computed correctly?
-- [ ] All new trainable params: initialized in `init_w`, clamped in
-      `FSRS7ParameterClipper`, given an L2 sigma in `batch_process`?
+- [ ] All new trainable params, in the LIVE constants (NOT dead `fsrs_v7.py`):
+      a default in `FSRS7_DEFAULT_35_VALUES`, clamps in `FSRS_MIN_VALUES` /
+      `FSRS_MAX_VALUES`, an L2 sigma in `FSRS7_L2_SIGMA_35_VALUES` (all same
+      length), and a matching field in the `fsrs_params_t` struct (`fsrs7.cuh`)?
 - [ ] If params were added / removed / reordered: did you update
       `FSRS7_BOUNDS_STATIC` in `src/autoresearch/diagnostics.py` AND the
       param table + role description in this CLAUDE.md? Both stay in sync
-      with `FSRS7ParameterClipper` or the diagnostic report goes wrong.
+      with the MIN/MAX arrays (the live `apply_parameter_clipper` reads them)
+      or the diagnostic report goes wrong.
 - [ ] Complexity score within budget?
 
 ### Diagnostics report (shown to Claude each iteration)
@@ -735,8 +739,8 @@ Diagnostics:
 `range_frac` field; column `(p99-p01)/rng` in the Markdown table). The
 numerator is the spread of the central 98% of the population; the denominator
 is the param's static clamp width (the per-user effective bounds — uppers are
-constant per column, chained lowers like `w[1..3]`, `w[28]`, `w[30]` resolve to
-their realized population floor). It answers "how much of the allowed range
+constant per column, chained lowers like `w[1..3]` and `w[26]` (base2≥base1)
+resolve to their realized population floor). It answers "how much of the allowed range
 does the population actually use?":
 - **`frac → 0`** — the population is pinned into a sliver of its range. Either
   the **bound is far wider than needed**, or (more often here) the **L2 prior
@@ -883,10 +887,12 @@ context captures the freshly-tuned champion; otherwise compact directly.
 
 ### Iteration cost
 
-One full training run = **~102 seconds wall** on the RTX 4070 with 3000
-users and 152M reviews (training ~51 s, the rest is build-ext check,
-tensor-cache load, and eval). That's ~35 iterations / hour, so we can
-afford a fairly hungry exploration policy.
+One full training run = **~160 seconds wall** on the RTX 4070 with 3000
+users and 152M reviews (the pre-iter-194 baseline was ~102 s — training ~51 s
+plus build-ext check, tensor-cache load, and eval; iter-194's per-epoch batch
+reshuffle added ~60 s of host-side permutation work). With the mean-of-3 rule
+that's ~8 min/iteration, so we can still afford a fairly hungry exploration
+policy.
 
 ### Baseline (champion to beat)
 
