@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_220 record(s). Generated from `history.jsonl` — do not edit by hand._
+_221 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -224,3 +224,4 @@ _220 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 218 | 2026-06-12T00:55:25 | 0.0001 | 0.31970 | 0.31962 | +0.00008 | 19,909 | 21,065 | +5.81% | rejected | Joint re-tune of the S0-evidence knobs: grid PRETRAIN_PRIOR_W x S0_SIGMA_REL around (32, 2.0) on the iter-217 design. |
 | 219 | 2026-06-12T01:14:26 | 0.0002 | 0.31970 | 0.31970 | -0.00000 | 19,909 | 19,942 | +0.17% | rejected | Retrieval-strength gate on the success stability gain: multiply gain by retention^(w[34]-0.5), shared across traces; +1 trainable param, default neutral. |
 | 220 | 2026-06-12T01:29:46 | 0.0002 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,928 | +0.10% | rejected | Shifted S-saturation in the long-trace success gain: powf(s_long, -sinc_s_exp) becomes powf(s_long + w[34], -sinc_s_exp); +1 trainable param sinc_s_shift, default 0. |
+| 221 | 2026-06-14T13:13:08 | 0.0008 | 0.31970 | 0.31967 | +0.00003 | 19,904 | 19,953 | +0.25% | rejected | Per-rating short-trace init fraction: replace hardcoded short_init_frac=0.8 with 4 trainable per-rating fractions (w[34..37]); s_short init = frac[first_rating] * S0. |
