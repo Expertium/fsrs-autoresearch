@@ -1,6 +1,6 @@
 # FSRS-7 autoresearch — iteration history
 
-_222 record(s). Generated from `history.jsonl` — do not edit by hand._
+_223 record(s). Generated from `history.jsonl` — do not edit by hand._
 
 | # | Time (UTC) | Thresh. | LL before | LL after | Δ LL | Cx before | Cx after | Δ Cx % | Status | Summary |
 |--:|---|---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -226,3 +226,4 @@ _222 record(s). Generated from `history.jsonl` — do not edit by hand._
 | 220 | 2026-06-12T01:29:46 | 0.0002 | 0.31970 | 0.31971 | -0.00001 | 19,909 | 19,928 | +0.10% | rejected | Shifted S-saturation in the long-trace success gain: powf(s_long, -sinc_s_exp) becomes powf(s_long + w[34], -sinc_s_exp); +1 trainable param sinc_s_shift, default 0. |
 | 221 | 2026-06-14T13:13:08 | 0.0008 | 0.31970 | 0.31967 | +0.00003 | 19,904 | 19,953 | +0.25% | rejected | Per-rating short-trace init fraction: replace hardcoded short_init_frac=0.8 with 4 trainable per-rating fractions (w[34..37]); s_short init = frac[first_rating] * S0. |
 | 222 | 2026-06-14T13:31:42 | 0.0004 | 0.31970 | 0.31979 | -0.00009 | 19,904 | 19,926 | +0.11% | rejected | Linear short-trace init: s_short init = a*S0_long + b, with a (w[34]) and b (w[35]) trainable, replacing the hardcoded 0.8*S0. |
+| 223 | 2026-06-14T13:51:03 | 0.0001 | 0.31970 | 0.31969 | +0.00001 | 19,904 | 19,904 | +0.00% | rejected | Hard-coded linear short-trace init: s_short = 0.8*S0 + b, a fixed at 0.8, global b swept (no new trainable params). |
